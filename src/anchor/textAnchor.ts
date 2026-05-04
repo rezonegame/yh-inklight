@@ -21,6 +21,7 @@ export function createTextAnchor(source: string, startOffset: number, endOffset:
     selectedText: normalizedSource.slice(start, end),
     prefix: normalizedSource.slice(Math.max(0, start - CONTEXT_LENGTH), start),
     suffix: normalizedSource.slice(end, Math.min(normalizedSource.length, end + CONTEXT_LENGTH)),
+    isCode: isCodeSelection(normalizedSource, start, end),
   };
 }
 
@@ -134,6 +135,21 @@ function normalizeAnchor(anchor: TextAnchor): TextAnchor {
     prefix: normalizeLineEndings(anchor.prefix),
     suffix: normalizeLineEndings(anchor.suffix),
   };
+}
+
+function isCodeSelection(source: string, start: number, end: number): boolean {
+  const selectedText = source.slice(start, end);
+  return isInsideFencedCode(source, start) || hasCodeIndent(selectedText);
+}
+
+function isInsideFencedCode(source: string, offset: number): boolean {
+  const before = source.slice(0, offset);
+  const fenceMatches = before.match(/^```/gm);
+  return Boolean(fenceMatches && fenceMatches.length % 2 === 1);
+}
+
+function hasCodeIndent(text: string): boolean {
+  return /^[ \t]{2,}/m.test(text) || /\n[ \t]{2,}\S/.test(text);
 }
 
 function normalizeLineEndings(content: string): string {

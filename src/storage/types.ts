@@ -24,6 +24,7 @@ export interface TextAnchor {
   selectedText: string;
   prefix: string;
   suffix: string;
+  isCode?: boolean;
 }
 
 export interface LocatedAnchor {
@@ -76,7 +77,9 @@ export interface StickyPosition {
 
 export interface CommentAnnotation {
   id: string;
+  highlightId?: string;
   anchor: TextAnchor;
+  title?: string;
   content: string;
   color: AnnotationColor;
   position: StickyPosition;
@@ -91,7 +94,9 @@ export interface CommentAnnotation {
 
 export interface PdfCommentAnnotation {
   id: string;
+  highlightId?: string;
   anchor: PdfAnchor;
+  title?: string;
   content: string;
   color: AnnotationColor;
   position: StickyPosition;

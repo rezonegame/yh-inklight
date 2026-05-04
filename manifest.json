@@ -1,9 +1,10 @@
 {
   "id": "axl-light",
   "name": "Axl Light",
-  "version": "0.1.0",
-  "minAppVersion": "1.5.0",
-  "description": "Non-invasive highlights and sticky notes for Obsidian Markdown and PDF reading.",
+  "version": "0.2.0",
+  "minAppVersion": "1.0.0",
+  "description": "Non-invasive reading annotations for Markdown and PDF. Highlights and sticky notes are stored in sidecar files, never modifying your original documents.",
   "author": "Epiphany Xiao",
+  "authorUrl": "https://github.com/little-pond/axl-light",
   "isDesktopOnly": false
 }

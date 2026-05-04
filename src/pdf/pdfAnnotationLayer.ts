@@ -82,7 +82,7 @@ export class PdfAnnotationLayer {
     return true;
   }
 
-  async createComment(color: AnnotationColor, content: string, author: string): Promise<boolean> {
+  async createComment(color: AnnotationColor, content: string, author: string, title = ""): Promise<boolean> {
     const snapshot = this.resolveSelection();
     if (!snapshot) {
       new Notice("Select text in a PDF first.");
@@ -93,6 +93,7 @@ export class PdfAnnotationLayer {
     await this.options.addComment(snapshot.file, {
       id: crypto.randomUUID(),
       anchor: snapshot.anchor,
+      title,
       content,
       color,
       position: { offsetX: 0, offsetY: 0 },
@@ -143,13 +144,13 @@ export class PdfAnnotationLayer {
     const document = await this.options.getDocument(file);
     const settings = this.options.getSettings();
     const host = viewer.closest<HTMLElement>(".workspace-leaf-content") ?? viewer;
-    host.addClass("oa-pdf-host");
-    host.style.setProperty("--oa-sticky-width", `${settings.stickyWidth}px`);
+    host.addClass("axl-pdf-host");
+    host.style.setProperty("--axl-sticky-width", `${settings.stickyWidth}px`);
 
     if (!this.root || this.root.parentElement !== host) {
       this.root?.remove();
-      this.root = host.createDiv({ cls: "oa-pdf-layer" });
-      this.lane = this.root.createDiv({ cls: "oa-pdf-sticky-lane" });
+      this.root = host.createDiv({ cls: "axl-pdf-layer" });
+      this.lane = this.root.createDiv({ cls: "axl-pdf-sticky-lane" });
     }
 
     const hostRect = host.getBoundingClientRect();
@@ -157,7 +158,7 @@ export class PdfAnnotationLayer {
     const collapsed = hostRect.width < settings.stickyCollapseWidth;
     const laneVisible = settings.stickyNotesVisible && !collapsed && activeComments.length > 0;
     this.root.toggleClass("is-collapsed", !laneVisible);
-    host.toggleClass("oa-pdf-sticky-active", laneVisible);
+    host.toggleClass("axl-pdf-sticky-active", laneVisible);
 
     this.renderHighlights(host, document);
     this.renderLane(file, activeComments, settings, laneVisible);
@@ -168,7 +169,7 @@ export class PdfAnnotationLayer {
       return;
     }
 
-    this.root.querySelectorAll(".oa-pdf-highlight").forEach((item) => item.remove());
+    this.root.querySelectorAll(".axl-pdf-highlight").forEach((item) => item.remove());
     const hostRect = host.getBoundingClientRect();
     const annotations = [...document.pdfHighlights, ...document.pdfComments].filter((item) => !item.orphaned);
 
@@ -181,10 +182,10 @@ export class PdfAnnotationLayer {
 
         const pageRect = page.getBoundingClientRect();
         const highlight = this.root.createDiv({
-          cls: "oa-pdf-highlight",
+          cls: "axl-pdf-highlight",
           attr: {
-            "data-oa-id": annotation.id,
-            "data-oa-color": annotation.color,
+            "data-axl-id": annotation.id,
+            "data-axl-color": annotation.color,
           },
         });
         highlight.style.left = `${pageRect.left - hostRect.left + rect.left * pageRect.width}px`;
@@ -211,39 +212,89 @@ export class PdfAnnotationLayer {
       return;
     }
 
+    const laneHeader = this.lane.createDiv({ cls: "axl-sticky-lane-header" });
+    laneHeader.createSpan({ cls: "axl-sticky-lane-title", text: `便利贴 (${comments.length})` });
+    laneHeader.createEl("button", { cls: "axl-icon-button", attr: { type: "button", title: "Filter" } }).setText("⌕");
+    laneHeader.createEl("button", { cls: "axl-icon-button", attr: { type: "button", title: "More" } }).setText("⋯");
+
     for (const comment of comments) {
       const card = this.lane.createDiv({
-        cls: "oa-pdf-sticky-card",
-        attr: { "data-oa-color": comment.color, "data-oa-id": comment.id },
+        cls: "axl-pdf-sticky-card",
+        attr: { "data-axl-color": comment.color, "data-axl-id": comment.id },
       });
 
-      const header = card.createDiv({ cls: "oa-sticky-header" });
-      header.createSpan({ cls: "oa-sticky-color", attr: { "data-oa-color": comment.color } });
-      header.createSpan({ cls: "oa-sticky-author", text: `${comment.author} · p.${comment.anchor.pageNumber}` });
+      const header = card.createDiv({ cls: "axl-sticky-header" });
+      header.createSpan({ cls: "axl-sticky-color", attr: { "data-axl-color": comment.color } });
+      header.createSpan({ cls: "axl-sticky-title", text: comment.title || "便签" });
+      header.createSpan({ cls: "axl-sticky-time", text: formatTime(comment.updatedAt) });
+      const star = header.createEl("button", {
+        cls: "axl-icon-button axl-sticky-star",
+        attr: { type: "button", title: "Star placeholder", "aria-label": "Star placeholder" },
+      });
+      setIcon(star, "star");
 
-      const remove = header.createEl("button", { cls: "oa-icon-button", attr: { type: "button", title: "Delete note" } });
+      const edit = header.createEl("button", { cls: "axl-icon-button", attr: { type: "button", title: "Edit note" } });
+      setIcon(edit, "pencil");
+
+      const remove = header.createEl("button", { cls: "axl-icon-button", attr: { type: "button", title: "Delete note" } });
       setIcon(remove, "trash-2");
       remove.addEventListener("click", () => {
         void this.options.deleteAnnotation(file, comment.id).then(() => this.scheduleRender());
       });
 
-      card.createDiv({ cls: "oa-sticky-excerpt", text: comment.anchor.selectedText });
-      const body = card.createDiv({ cls: "oa-sticky-body" });
-      MarkdownRenderer.render(this.options.app, comment.content, body, file.path, this.options.component);
-
-      const editor = card.createEl("textarea", {
-        cls: "oa-sticky-editor",
-        attr: { rows: "3", placeholder: "Write a Markdown note..." },
-      });
-      editor.value = comment.content;
-      editor.addEventListener("change", () => {
-        void this.options.updateComment(file, {
-          ...comment,
-          content: editor.value,
-          updatedAt: new Date().toISOString(),
-        });
-      });
+      card.createDiv({ cls: "axl-sticky-excerpt", text: comment.anchor.selectedText });
+      const content = card.createDiv({ cls: "axl-sticky-content" });
+      this.renderPdfCommentDisplay(content, file, comment);
+      edit.addEventListener("click", () => this.renderPdfCommentEditor(content, file, comment));
+      card.createDiv({ cls: "axl-sticky-more", text: "..." });
     }
+  }
+
+  private renderPdfCommentDisplay(container: HTMLElement, file: TFile, comment: PdfCommentAnnotation): void {
+    container.empty();
+    const body = container.createDiv({ cls: "axl-sticky-body" });
+    MarkdownRenderer.render(this.options.app, comment.content, body, file.path, this.options.component);
+  }
+
+  private renderPdfCommentEditor(container: HTMLElement, file: TFile, comment: PdfCommentAnnotation): void {
+    container.empty();
+    const title = container.createEl("input", {
+      cls: "axl-sticky-title-editor",
+      attr: { type: "text", placeholder: "Title" },
+    });
+    title.value = comment.title ?? "";
+    const editor = container.createEl("textarea", {
+      cls: "axl-sticky-editor",
+      attr: { rows: "5", placeholder: "Write a Markdown note..." },
+    });
+    editor.value = comment.content;
+    editor.focus();
+    editor.setSelectionRange(editor.value.length, editor.value.length);
+
+    const actions = container.createDiv({ cls: "axl-sticky-edit-actions" });
+    const save = actions.createEl("button", { text: "Save", cls: "mod-cta", attr: { type: "button" } });
+    const cancel = actions.createEl("button", { text: "Cancel", attr: { type: "button" } });
+    const saveContent = (): void => {
+      const next = {
+        ...comment,
+        title: title.value.trim(),
+        content: editor.value,
+        updatedAt: new Date().toISOString(),
+      };
+      void this.options.updateComment(file, next).then(() => {
+        this.renderPdfCommentDisplay(container, file, next);
+        this.scheduleRender();
+      });
+    };
+
+    save.addEventListener("click", saveContent);
+    cancel.addEventListener("click", () => this.renderPdfCommentDisplay(container, file, comment));
+    editor.addEventListener("keydown", (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+        event.preventDefault();
+        saveContent();
+      }
+    });
   }
 
   private captureSelection(): void {
@@ -307,16 +358,16 @@ export class PdfAnnotationLayer {
       return;
     }
 
-    const highlight = target.closest<HTMLElement>(".oa-pdf-highlight");
+    const highlight = target.closest<HTMLElement>(".axl-pdf-highlight");
     if (!highlight) {
-      if (!target.closest(".oa-pdf-popover")) {
+      if (!target.closest(".axl-pdf-popover")) {
         this.hidePopover();
       }
       return;
     }
 
     const file = this.activePdfFile();
-    const id = highlight.dataset.oaId;
+    const id = highlight.dataset.axlId;
     if (!file || !id) {
       return;
     }
@@ -335,20 +386,20 @@ export class PdfAnnotationLayer {
 
   private showPopover(sourcePath: string, rect: DOMRect, annotation: PdfHighlightAnnotation | PdfCommentAnnotation): void {
     this.hidePopover();
-    this.popover = document.body.createDiv({ cls: "oa-pdf-popover oa-annotation-popover is-visible" });
-    const header = this.popover.createDiv({ cls: "oa-popover-header" });
-    header.createSpan({ cls: "oa-popover-title", text: `PDF page ${annotation.anchor.pageNumber}` });
-    const close = header.createEl("button", { cls: "oa-icon-button", attr: { type: "button", title: "Close" } });
+    this.popover = document.body.createDiv({ cls: "axl-pdf-popover axl-annotation-popover is-visible" });
+    const header = this.popover.createDiv({ cls: "axl-popover-header" });
+    header.createSpan({ cls: "axl-popover-title", text: `PDF page ${annotation.anchor.pageNumber}` });
+    const close = header.createEl("button", { cls: "axl-icon-button", attr: { type: "button", title: "Close" } });
     setIcon(close, "x");
     close.addEventListener("click", () => this.hidePopover());
 
     const card = this.popover.createDiv({
-      cls: "oa-popover-card",
-      attr: { "data-oa-color": annotation.color, "data-oa-id": annotation.id },
+      cls: "axl-popover-card",
+      attr: { "data-axl-color": annotation.color, "data-axl-id": annotation.id },
     });
-    card.createDiv({ cls: "oa-popover-quote", text: annotation.anchor.selectedText });
+    card.createDiv({ cls: "axl-popover-quote", text: annotation.anchor.selectedText });
     if ("content" in annotation && annotation.content) {
-      const body = card.createDiv({ cls: "oa-popover-body" });
+      const body = card.createDiv({ cls: "axl-popover-body" });
       MarkdownRenderer.render(this.options.app, annotation.content, body, sourcePath, this.options.component);
     }
 
@@ -417,4 +468,8 @@ export class PdfAnnotationLayer {
     const file = this.options.app.workspace.getActiveFile();
     return file instanceof TFile && file.extension.toLowerCase() === "pdf" ? file : null;
   }
+}
+
+function formatTime(value: string): string {
+  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }

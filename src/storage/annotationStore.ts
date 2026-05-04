@@ -125,6 +125,54 @@ export class AnnotationStore {
     return document;
   }
 
+  async updateCommentContent(
+    file: TFile,
+    commentId: string,
+    content: string,
+    title?: string,
+  ): Promise<FileAnnotationDocument> {
+    const document = await this.getDocument(file);
+    document.comments = document.comments.map((item) => {
+      if (item.id !== commentId) {
+        return item;
+      }
+
+      return {
+        ...item,
+        title,
+        content,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    document.lastModified = new Date().toISOString();
+    await this.saveDocument(document);
+    return document;
+  }
+
+  async updatePdfCommentContent(
+    file: TFile,
+    commentId: string,
+    content: string,
+    title?: string,
+  ): Promise<FileAnnotationDocument> {
+    const document = await this.getDocument(file);
+    document.pdfComments = document.pdfComments.map((item) => {
+      if (item.id !== commentId) {
+        return item;
+      }
+
+      return {
+        ...item,
+        title,
+        content,
+        updatedAt: new Date().toISOString(),
+      };
+    });
+    document.lastModified = new Date().toISOString();
+    await this.saveDocument(document);
+    return document;
+  }
+
   async removeAnnotation(file: TFile, annotationId: string): Promise<FileAnnotationDocument> {
     const document = await this.getDocument(file);
     document.highlights = document.highlights.filter((item) => item.id !== annotationId);
@@ -146,7 +194,7 @@ export class AnnotationStore {
 
     const nextDocument: FileAnnotationDocument = {
       ...oldDocument,
-      filePath: file.path,
+      filePath: this.normalizeVaultPath(file.path),
       fileHash: await this.hashFile(file),
       lastModified: new Date().toISOString(),
     };

@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Obsidian MarkdownRenderer、CommentAnnotation 数据与便签操作回调
  * [OUTPUT]: 对外提供 renderStickyNoteCard，用于渲染可折叠、可编辑的便签卡片
- * [POS]: views 模块的便签卡片组件，被 editor/stickyNoteWidget 管理
+ * [POS]: views 模块的便签卡片组件，当前保留为 PDF/弹层卡片样式的兼容组件
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
@@ -15,84 +15,99 @@ interface StickyNoteCardOptions {
   sourcePath: string;
   comment: CommentAnnotation;
   onToggle: (comment: CommentAnnotation) => void;
-  onUpdate: (comment: CommentAnnotation, content: string) => void;
+  onUpdate: (comment: CommentAnnotation, content: string, title?: string) => void;
   onDelete: (comment: CommentAnnotation) => void;
 }
 
 export function renderStickyNoteCard(container: HTMLElement, options: StickyNoteCardOptions): HTMLElement {
   container.empty();
   const card = container.createDiv({
-    cls: "oa-sticky-card",
+    cls: `axl-card axl-card--${options.comment.color} axl-sticky-card`,
     attr: {
-      "data-oa-color": options.comment.color,
-      "data-oa-id": options.comment.id,
+      "data-axl-color": options.comment.color,
+      "data-axl-id": options.comment.id,
+      "data-axl-card-id": options.comment.id,
     },
   });
 
-  const header = card.createDiv({ cls: "oa-sticky-header" });
-  const color = header.createSpan({ cls: "oa-sticky-color", attr: { "data-oa-color": options.comment.color } });
-  color.setAttr("aria-hidden", "true");
-  header.createSpan({ cls: "oa-sticky-author", text: options.comment.author });
+  const header = card.createDiv({ cls: "axl-card-head" });
+  header.createSpan({
+    cls: `axl-card-color-label axl-label--${options.comment.color}`,
+    text: options.comment.color,
+  });
+  header.createSpan({ cls: "axl-card-page", text: "md" });
+  header.createSpan({ cls: "axl-card-time", text: formatTime(options.comment.updatedAt) });
+  header.createSpan({ cls: "axl-card-author", text: options.comment.author });
+  const tools = header.createDiv({ cls: "axl-card-tools" });
 
-  const edit = header.createEl("button", {
-    cls: "oa-icon-button",
+  const edit = tools.createEl("button", {
+    cls: "axl-icon-btn",
     attr: { type: "button", title: "Edit note" },
   });
   setIcon(edit, "pencil");
 
-  const collapse = header.createEl("button", {
-    cls: "oa-icon-button",
+  const collapse = tools.createEl("button", {
+    cls: "axl-icon-btn",
     attr: { type: "button", title: options.comment.collapsed ? "Expand" : "Collapse" },
   });
   setIcon(collapse, options.comment.collapsed ? "chevron-down" : "chevron-up");
   collapse.addEventListener("click", () => options.onToggle(options.comment));
 
-  const remove = header.createEl("button", {
-    cls: "oa-icon-button",
+  const remove = tools.createEl("button", {
+    cls: "axl-icon-btn",
     attr: { type: "button", title: "Delete note" },
   });
   setIcon(remove, "trash-2");
   remove.addEventListener("click", () => options.onDelete(options.comment));
 
   if (options.comment.collapsed) {
-    card.createDiv({ cls: "oa-sticky-excerpt", text: options.comment.anchor.selectedText });
+    const body = card.createDiv({ cls: "axl-card-body" });
+    body.createDiv({ cls: "axl-card-quote", text: options.comment.anchor.selectedText });
     return card;
   }
 
-  card.createDiv({ cls: "oa-sticky-excerpt", text: options.comment.anchor.selectedText });
-  const content = card.createDiv({ cls: "oa-sticky-content" });
+  const body = card.createDiv({ cls: "axl-card-body" });
+  body.createDiv({ cls: "axl-card-quote", text: options.comment.anchor.selectedText });
+  const content = body.createDiv({ cls: "axl-card-content" });
   renderDisplayMode(content, options);
   edit.addEventListener("click", () => renderEditMode(content, options));
+  const foot = card.createDiv({ cls: "axl-card-foot" });
+  foot.createEl("button", { cls: "axl-card-more", text: "···", attr: { type: "button", title: "More" } });
 
   return card;
 }
 
 function renderDisplayMode(container: HTMLElement, options: StickyNoteCardOptions): void {
   container.empty();
-  const body = container.createDiv({ cls: "oa-sticky-body" });
-  MarkdownRenderer.render(options.app, options.comment.content, body, options.sourcePath, options.component);
+  MarkdownRenderer.render(options.app, options.comment.content, container, options.sourcePath, options.component);
 }
 
 function renderEditMode(container: HTMLElement, options: StickyNoteCardOptions): void {
   container.empty();
+  const title = container.createEl("input", {
+    cls: "axl-sticky-title-editor",
+    attr: { type: "text", placeholder: "Title" },
+  });
+  title.value = options.comment.title ?? "";
   const editor = container.createEl("textarea", {
-    cls: "oa-sticky-editor",
+    cls: "axl-sticky-editor",
     attr: { rows: "5", placeholder: "Write a Markdown note..." },
   });
   editor.value = options.comment.content;
   editor.focus();
   editor.setSelectionRange(editor.value.length, editor.value.length);
 
-  const actions = container.createDiv({ cls: "oa-sticky-edit-actions" });
+  const actions = container.createDiv({ cls: "axl-sticky-edit-actions" });
   const save = actions.createEl("button", { text: "Save", cls: "mod-cta", attr: { type: "button" } });
   const cancel = actions.createEl("button", { text: "Cancel", attr: { type: "button" } });
 
   const saveContent = (): void => {
-    options.onUpdate(options.comment, editor.value);
+    options.onUpdate(options.comment, editor.value, title.value.trim());
     renderDisplayMode(container, {
       ...options,
       comment: {
         ...options.comment,
+        title: title.value.trim(),
         content: editor.value,
       },
     });
@@ -106,4 +121,8 @@ function renderEditMode(container: HTMLElement, options: StickyNoteCardOptions):
       saveContent();
     }
   });
+}
+
+function formatTime(value: string): string {
+  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }

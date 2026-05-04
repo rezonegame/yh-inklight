@@ -84,10 +84,10 @@ export function createHighlightExtension(options: HighlightExtensionOptions) {
             from,
             to,
             Decoration.mark({
-              class: "oa-highlight",
+              class: "axl-highlight",
               attributes: {
-                "data-oa-color": mark.color,
-                "data-oa-id": mark.id,
+                "data-axl-color": mark.color,
+                "data-axl-id": mark.id,
               },
             }),
           );

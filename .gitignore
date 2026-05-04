@@ -1,7 +1,9 @@
 node_modules/
 main.js
+dist/
 *.map
 .DS_Store
+*.bak
 .obsidian/
 .obsidian-annotations/
 npm-debug.log*

@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 Obsidian Plugin API、CM6 扩展、sidecar AnnotationStore、锚点算法、视图与设置模块
- * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、右侧便签栏、窄屏弹层、侧栏、设置和 vault 事件
+ * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、设置和 vault 事件
  * [POS]: 插件装配根，协调模块但不修改用户 Markdown 原文
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -11,7 +11,6 @@ import { createTextAnchor, relocateDocumentAnchors } from "./src/anchor/textAnch
 import { createHighlightExtension } from "./src/editor/highlightExtension";
 import { installReadingViewHighlights } from "./src/editor/readingViewHighlight";
 import { SelectionToolbar } from "./src/editor/selectionToolbar";
-import { createStickyNoteExtension } from "./src/editor/stickyNoteWidget";
 import { PdfAnnotationLayer } from "./src/pdf/pdfAnnotationLayer";
 import { AnnotationSettingsTab } from "./src/settings/settingsTab";
 import { AnnotationStore } from "./src/storage/annotationStore";
@@ -25,6 +24,17 @@ import {
 } from "./src/storage/types";
 import { AnnotationPopover } from "./src/views/annotationPopover";
 import { ANNOTATION_SIDEBAR_VIEW, AnnotationSidebarView } from "./src/views/sidebarView";
+
+interface CommentModalValue {
+  title: string;
+  content: string;
+}
+
+const NOTE_TITLE_OPTIONS = [
+  { value: "Insight", label: "💡 Insight" },
+  { value: "Question", label: "❓ Question" },
+  { value: "Reminder", label: "🔔 Reminder" },
+] as const;
 
 export default class OverlayAnnotationsPlugin extends Plugin {
   settings: AnnotationPluginSettings = DEFAULT_SETTINGS;
@@ -48,26 +58,6 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         getVersion: () => this.store.version,
         rememberSelection: (filePath, startOffset, endOffset, selectedText) => {
           this.lastSelection = { filePath, startOffset, endOffset, selectedText };
-        },
-      }),
-      createStickyNoteExtension({
-        plugin: this,
-        getDocument: (filePath) => this.store.getCachedDocument(filePath),
-        getSettings: () => this.settings,
-        getVersion: () => this.store.version,
-        onCommentChanged: async (filePath, comment) => {
-          const file = this.app.vault.getAbstractFileByPath(filePath);
-          if (file instanceof TFile) {
-            await this.store.updateComment(file, comment);
-            await this.refreshAnnotations();
-          }
-        },
-        onCommentDeleted: async (filePath, comment) => {
-          const file = this.app.vault.getAbstractFileByPath(filePath);
-          if (file instanceof TFile) {
-            await this.store.removeAnnotation(file, comment.id);
-            await this.refreshAnnotations();
-          }
         },
       }),
     ]);
@@ -145,7 +135,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     const icon = this.addRibbonIcon("highlighter", "Open Axl Light", () => {
       void this.activateSidebar();
     });
-    icon.addClass("oa-ribbon-icon");
+    icon.addClass("axl-ribbon-icon");
   }
 
   private registerCommands(): void {
@@ -165,7 +155,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
     this.addCommand({
       id: "toggle-sticky-notes",
-      name: "Toggle sticky note lane",
+      name: "Toggle annotation popovers",
       hotkeys: [{ modifiers: ["Mod", "Shift"], key: "n" }],
       callback: async () => {
         this.settings.stickyNotesVisible = !this.settings.stickyNotesVisible;
@@ -184,7 +174,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private registerEvents(): void {
     this.registerDomEvent(document, "selectionchange", () => this.toolbar.showForSelection());
     this.registerDomEvent(document, "mousedown", (event) => {
-      if (!(event.target instanceof HTMLElement) || !event.target.closest(".oa-selection-toolbar")) {
+      if (!(event.target instanceof HTMLElement) || !event.target.closest(".axl-selection-toolbar")) {
         window.setTimeout(() => this.toolbar.showForSelection(), 0);
       }
     });
@@ -271,9 +261,14 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
   private async createComment(): Promise<void> {
     if (this.pdfLayer.isPdfActive()) {
-      const content = await new CommentModal(this.app, "").openAndRead();
-      if (content !== null) {
-        await this.pdfLayer.createComment(this.settings.defaultHighlightColor, content, this.settings.defaultAuthor);
+      const note = await new CommentModal(this.app, "", "").openAndRead();
+      if (note !== null) {
+        await this.pdfLayer.createComment(
+          this.settings.defaultHighlightColor,
+          note.content,
+          this.settings.defaultAuthor,
+          note.title,
+        );
       }
       this.toolbar.hide();
       return;
@@ -290,8 +285,8 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       return;
     }
 
-    const content = await new CommentModal(this.app, "").openAndRead();
-    if (content === null) {
+    const note = await new CommentModal(this.app, "", "").openAndRead();
+    if (note === null) {
       return;
     }
 
@@ -299,7 +294,8 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     const comment: CommentAnnotation = {
       id: crypto.randomUUID(),
       anchor: createTextAnchor(await this.app.vault.cachedRead(file), snapshot.startOffset, snapshot.endOffset),
-      content,
+      title: note.title,
+      content: note.content,
       color: this.settings.defaultHighlightColor,
       position: { offsetX: 20, offsetY: 0 },
       collapsed: false,
@@ -351,7 +347,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     return view ? { editor: view.editor, file: view.file } : null;
   }
 
-  private async activateSidebar(): Promise<void> {
+  async activateSidebar(): Promise<void> {
     let leaf = this.app.workspace.getLeavesOfType(ANNOTATION_SIDEBAR_VIEW)[0];
     if (!leaf) {
       const nextLeaf = this.app.workspace.getRightLeaf(false);
@@ -379,15 +375,15 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       return;
     }
 
-    const mark = target.closest<HTMLElement>(".oa-highlight, .oa-reading-highlight");
+    const mark = target.closest<HTMLElement>(".axl-highlight, .axl-reading-highlight");
     if (!mark) {
-      if (!target.closest(".oa-annotation-popover")) {
+      if (!target.closest(".axl-annotation-popover")) {
         this.popover.hide();
       }
       return;
     }
 
-    const annotationId = mark.dataset.oaId;
+    const annotationId = mark.dataset.axlId;
     const file = this.app.workspace.getActiveFile();
     if (!annotationId || !(file instanceof TFile)) {
       return;
@@ -437,14 +433,18 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 }
 
 class CommentModal extends Modal {
-  private value: string | null = null;
-  private resolve!: (value: string | null) => void;
+  private value: CommentModalValue | null = null;
+  private resolve!: (value: CommentModalValue | null) => void;
 
-  constructor(app: OverlayAnnotationsPlugin["app"], private readonly initialValue: string) {
+  constructor(
+    app: OverlayAnnotationsPlugin["app"],
+    private readonly initialTitle: string,
+    private readonly initialContent: string,
+  ) {
     super(app);
   }
 
-  openAndRead(): Promise<string | null> {
+  openAndRead(): Promise<CommentModalValue | null> {
     this.open();
     return new Promise((resolve) => {
       this.resolve = resolve;
@@ -454,20 +454,35 @@ class CommentModal extends Modal {
   onOpen(): void {
     this.contentEl.empty();
     this.contentEl.createEl("h2", { text: "Sticky note" });
-    const input = this.contentEl.createEl("textarea", {
-      cls: "oa-modal-textarea",
-      attr: { rows: "8", placeholder: "Write Markdown..." },
+
+    const titleRow = this.contentEl.createDiv({ cls: "axl-modal-row" });
+    titleRow.createEl("label", { cls: "axl-modal-label", text: "Type" });
+    const title = titleRow.createEl("select", { cls: "axl-modal-select" });
+    for (const option of NOTE_TITLE_OPTIONS) {
+      title.createEl("option", { text: option.label, attr: { value: option.value } });
+    }
+    title.value = normalizedNoteTitle(this.initialTitle);
+
+    const contentRow = this.contentEl.createDiv({ cls: "axl-modal-row" });
+    contentRow.createEl("label", { cls: "axl-modal-label", text: "Note" });
+    const input = contentRow.createEl("textarea", {
+      cls: "axl-modal-textarea",
+      attr: { rows: "8", placeholder: "Write your thoughts..." },
     });
-    input.value = this.initialValue;
-    const actions = this.contentEl.createDiv({ cls: "oa-modal-actions" });
-    const cancel = actions.createEl("button", { text: "Cancel", attr: { type: "button" } });
-    const save = actions.createEl("button", { text: "Save", cls: "mod-cta", attr: { type: "button" } });
+    input.value = this.initialContent;
+
+    const actions = this.contentEl.createDiv({ cls: "axl-modal-actions" });
+    const cancel = actions.createEl("button", { text: "Cancel", cls: "axl-modal-cancel", attr: { type: "button" } });
+    const save = actions.createEl("button", { text: "Save", cls: "axl-modal-save", attr: { type: "button" } });
     cancel.addEventListener("click", () => {
       this.value = null;
       this.close();
     });
     save.addEventListener("click", () => {
-      this.value = input.value.trim();
+      this.value = {
+        title: title.value.trim(),
+        content: input.value.trim(),
+      };
       this.close();
     });
   }
@@ -475,4 +490,8 @@ class CommentModal extends Modal {
   onClose(): void {
     this.resolve?.(this.value);
   }
+}
+
+function normalizedNoteTitle(value: string): string {
+  return NOTE_TITLE_OPTIONS.some((option) => option.value === value) ? value : NOTE_TITLE_OPTIONS[0].value;
 }

@@ -1,72 +1,25 @@
 # Axl Light
 
-Axl Light is a non-invasive Obsidian plugin for reading highlights and sticky notes. It keeps Markdown and PDF files clean: highlights, notes, replies, positions, and recovery metadata are stored in `.obsidian-annotations/` sidecar JSON files.
+Axl Light is a non-invasive Obsidian reading annotation plugin for Markdown and PDF files. It adds overlay highlights, sticky notes, search, jump, and Markdown export while keeping your original documents clean.
 
-## Quick Start
+**This plugin never modifies your Markdown or PDF files.** Annotation data is stored separately in sidecar JSON files under `.obsidian-annotations/`.
 
-Do **not** download the source code ZIP from the green `Code` button. The source repo contains `main.ts` for development. Obsidian needs the built release file `main.js`.
+## Features
 
-Run this in **Terminal**. Replace the path with your Obsidian vault path:
+- Overlay highlights for Markdown Live Preview, Source Mode, Reading View, and PDFs
+- Mobile-friendly Reading View highlight recovery with delayed rendering and DOM observation
+- Floating toolbar with six colors, sticky note, copy, and annotation overview actions
+- Right-side sticky note lane with Markdown-rendered notes
+- Inline editing for sticky notes and sidebar notes
+- Sidebar overview with search, color filtering, sorting, jump, delete, add-note, and export
+- Sidecar JSON storage with fuzzy text-anchor relocation
+- Windows-safe path normalization and rename migration handling
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/little-pond/axl-light/main/scripts/install.sh | bash -s -- "$HOME/Documents/Obsidian Vault"
-```
+## Installation
 
-Then restart Obsidian, open `Settings -> Community plugins`, and enable `Axl Light`.
+### BRAT
 
-## Install
-
-![Install Axl Light from Terminal](docs/images/install-axl-light-command.png)
-
-### Option 1: One-command install
-
-Run this in **Terminal**:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/little-pond/axl-light/main/scripts/install.sh | bash -s -- "/path/to/your/Obsidian Vault"
-```
-
-You can also install a specific release version:
-
-```bash
-AXL_LIGHT_VERSION="0.1.0" curl -fsSL https://raw.githubusercontent.com/little-pond/axl-light/main/scripts/install.sh | bash -s -- "/path/to/your/Obsidian Vault"
-```
-
-This downloads `main.js`, `manifest.json`, and `styles.css` into:
-
-```text
-<your-vault>/.obsidian/plugins/axl-light/
-```
-
-### Option 2: Manual install
-
-1. Go to the latest release: https://github.com/little-pond/axl-light/releases/latest
-2. Scroll to `Assets`. Do **not** download `Source code`.
-3. Download these three files:
-
-- `main.js`
-- `manifest.json`
-- `styles.css`
-
-4. Create this folder inside your Obsidian vault:
-
-```text
-<your-vault>/.obsidian/plugins/axl-light/
-```
-
-5. Move the three downloaded files into that folder.
-6. Restart Obsidian.
-7. Open `Settings -> Community plugins`.
-8. Turn off `Restricted mode` if needed.
-9. Enable `Axl Light`.
-
-If you only see `main.ts`, you are looking at the source code page, not the release assets. Open the latest release link above and download `main.js` from `Assets`.
-
-### Option 3: BRAT install
-
-If you use the Obsidian BRAT plugin:
-
-1. Install and enable `BRAT`.
+1. Install the Obsidian BRAT plugin.
 2. Run `BRAT: Add a beta plugin for testing`.
 3. Paste this repository URL:
 
@@ -76,45 +29,60 @@ https://github.com/little-pond/axl-light
 
 4. Enable `Axl Light` in `Settings -> Community plugins`.
 
-## How to use
+### Manual Install
 
-### Highlight Markdown or PDF text
+Do **not** download the source code ZIP from the green `Code` button. Obsidian needs the built release files.
+
+1. Open the latest release:
+
+```text
+https://github.com/little-pond/axl-light/releases/latest
+```
+
+2. Download these three files from `Assets`:
+
+- `main.js`
+- `manifest.json`
+- `styles.css`
+
+3. Create this folder in your vault:
+
+```text
+<your-vault>/.obsidian/plugins/axl-light/
+```
+
+4. Move the three files into that folder.
+5. Restart Obsidian.
+6. Open `Settings -> Community plugins`.
+7. Enable `Axl Light`.
+
+### Terminal Install
+
+Run this in Terminal and replace the vault path:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/little-pond/axl-light/main/scripts/install.sh | bash -s -- "$HOME/Documents/Obsidian Vault"
+```
+
+![Install Axl Light from Terminal](docs/images/install-axl-light-command.png)
+
+## Usage
+
+### Highlight Text
+
+Select text in Markdown or PDF. Use the floating toolbar to choose a color, add a sticky note, copy the selection, or open the overview.
 
 ![Highlight with Axl Light](docs/images/highlight-with-axl-light.png)
 
-Select text in a Markdown note or PDF, then use the floating toolbar to choose a highlight color, add a sticky note, copy the selection, or open the annotation overview.
+### Edit Sticky Notes
 
-### Review sticky notes
+Open the right-side sticky note lane or the annotation overview. Click the pencil button to edit a note inline. Press `Cmd/Ctrl + Enter` to save.
 
 ![Sticky notes and annotation overview](docs/images/sticky-notes-overview.png)
 
-On desktop, sticky notes live in the right-side reader lane. On narrow panes, click a highlight to open the note popover. The overview panel lets you search, filter, jump, delete, and export annotations.
+### Search, Jump, and Export
 
-## Features
-
-- CodeMirror 6 overlay highlights with `Decoration.mark()`
-- Floating selection toolbar with six highlight colors, sticky note, copy, and sidebar actions
-- Sticky notes in a side lane with Markdown-rendered content and SVG leader lines
-- Sidecar storage per Markdown file plus a global index
-- Text anchors with exact offsets, selected text, prefix, and suffix
-- Fuzzy relocation for lightly edited files
-- Sidebar overview with search, color filtering, sorting, jump, delete, and export
-- Rename migration for sidecar data when enabled
-- PDF overlay highlights using page-number plus page-relative rectangle anchors
-- PDF sticky notes in the same right-side reader lane, collapsing to popovers on narrow panes
-
-## Storage
-
-Annotations are written to:
-
-```text
-.obsidian-annotations/
-  index.json
-  notes__reading__book.md.json
-  papers__example.pdf.json
-```
-
-Markdown source files and PDF binaries are never modified by this plugin.
+Use the annotation overview to search highlights and notes, jump back to the source position, delete annotations, add notes to existing highlights, or export everything into a new Markdown notes file.
 
 ## Commands
 
@@ -123,6 +91,28 @@ Markdown source files and PDF binaries are never modified by this plugin.
 - `Toggle sticky note lane`: `Cmd/Ctrl + Shift + N`
 - `Open annotation overview`
 
+## Data Storage
+
+Axl Light stores annotations in your vault:
+
+```text
+.obsidian-annotations/
+  index.json
+  notes__reading__book.md.json
+  papers__example.pdf.json
+```
+
+The sidecar files contain anchors, selected text, colors, sticky note content, optional titles, timestamps, and PDF page rectangles.
+
+Your original `.md` and `.pdf` files remain unchanged. If you disable or remove the plugin, your documents stay clean.
+
+## Known Limitations
+
+- Reading View highlights are matched against rendered DOM text, so unusual themes or plugins that heavily rewrite rendered HTML may affect placement.
+- PDF support depends on Obsidian's built-in PDF viewer DOM structure.
+- PDF text selection and rectangle anchors may need relocation improvements for rotated pages or unusual PDF layouts.
+- Very large annotation sets currently render directly in the sidebar; virtual scrolling is planned.
+
 ## Development
 
 ```bash
@@ -130,28 +120,18 @@ npm install
 npm run dev
 ```
 
-Copy or symlink `main.js`, `manifest.json`, and `styles.css` into:
-
-```text
-<vault>/.obsidian/plugins/axl-light/
-```
-
-## Release
-
-This repo publishes release assets automatically when a version tag is pushed. The tag must match `manifest.json`:
+For production builds:
 
 ```bash
-npm install
 npm run build
-git add .
-git commit -m "Release Axl Light 0.1.0"
-git tag 0.1.0
-git push origin main
-git push origin 0.1.0
 ```
 
-GitHub Actions will attach `main.js`, `manifest.json`, and `styles.css` to the release.
+Copy `main.js`, `manifest.json`, and `styles.css` into:
 
-## Known Limits
+```text
+<your-vault>/.obsidian/plugins/axl-light/
+```
 
-Reading View highlights are rendered by matching selected text in the rendered DOM. Live Preview and Source Mode use CodeMirror offsets and are more precise. PDF support is DOM-based and stores page-relative rectangles, so it depends on Obsidian's built-in PDF viewer structure. For very large annotation sets, the sidebar is ready for virtual scrolling but currently renders the filtered list directly.
+## License
+
+MIT. See [LICENSE](LICENSE).

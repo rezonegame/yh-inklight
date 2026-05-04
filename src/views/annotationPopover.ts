@@ -35,7 +35,7 @@ export class AnnotationPopover {
   private readonly element: HTMLElement;
 
   constructor(private readonly options: AnnotationPopoverOptions) {
-    this.element = document.body.createDiv({ cls: "oa-annotation-popover" });
+    this.element = document.body.createDiv({ cls: "axl-annotation-popover" });
     this.element.addEventListener("click", (event) => event.stopPropagation());
     this.hide();
   }
@@ -48,16 +48,16 @@ export class AnnotationPopover {
     this.element.empty();
     this.element.toggleClass("is-visible", true);
 
-    const header = this.element.createDiv({ cls: "oa-popover-header" });
-    header.createSpan({ cls: "oa-popover-title", text: "Annotation" });
+    const header = this.element.createDiv({ cls: "axl-popover-header" });
+    header.createSpan({ cls: "axl-popover-title", text: "Annotation" });
     const close = header.createEl("button", {
-      cls: "oa-icon-button",
+      cls: "axl-icon-button",
       attr: { type: "button", title: "Close annotation popover" },
     });
     setIcon(close, "x");
     close.addEventListener("click", () => this.hide());
 
-    const list = this.element.createDiv({ cls: "oa-popover-list" });
+    const list = this.element.createDiv({ cls: "axl-popover-list" });
     for (const item of options.items) {
       this.renderItem(list, item, options.sourcePath);
     }
@@ -84,24 +84,24 @@ export class AnnotationPopover {
 
   private renderItem(container: HTMLElement, item: AnnotationPopoverItem, sourcePath: string): void {
     const card = container.createDiv({
-      cls: "oa-popover-card",
+      cls: "axl-popover-card",
       attr: {
-        "data-oa-color": item.color,
-        "data-oa-id": item.id,
+        "data-axl-color": item.color,
+        "data-axl-id": item.id,
       },
     });
 
-    const meta = card.createDiv({ cls: "oa-popover-meta" });
-    meta.createSpan({ cls: "oa-color-chip", text: item.color, attr: { "data-oa-color": item.color } });
+    const meta = card.createDiv({ cls: "axl-popover-meta" });
+    meta.createSpan({ cls: "axl-color-chip", text: item.color, attr: { "data-axl-color": item.color } });
     meta.createSpan({ text: item.kind === "comment" ? item.author ?? "Reader" : "highlight only" });
 
-    card.createDiv({ cls: "oa-popover-quote", text: item.quote });
+    card.createDiv({ cls: "axl-popover-quote", text: item.quote });
     if (!item.content) {
-      card.createDiv({ cls: "oa-popover-empty", text: "No sticky note attached yet." });
+      card.createDiv({ cls: "axl-popover-empty", text: "No sticky note attached yet." });
       return;
     }
 
-    const body = card.createDiv({ cls: "oa-popover-body" });
+    const body = card.createDiv({ cls: "axl-popover-body" });
     MarkdownRenderer.render(this.options.app, item.content, body, sourcePath, this.options.component);
   }
 

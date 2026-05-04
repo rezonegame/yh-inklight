@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Obsidian ItemView、AnnotationStore 数据与插件主类回调
- * [OUTPUT]: 对外提供 AnnotationSidebarView，总览当前 Markdown/PDF 注释并支持搜索、过滤、排序、导出、跳转
- * [POS]: views 模块的右侧 Leaf 总览面板，被 main.ts 注册
+ * [OUTPUT]: 对外提供 AnnotationSidebarView，将 highlight 与关联 note 合并为同一张总览卡片
+ * [POS]: views 模块的右侧 Leaf 总览面板，是 sticky lane 移除后的主注释工作台
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
@@ -13,52 +13,83 @@ import {
   AnnotationColor,
   AnnotationSortMode,
   CommentAnnotation,
+  HighlightAnnotation,
   PdfCommentAnnotation,
+  PdfHighlightAnnotation,
 } from "../storage/types";
 
 export const ANNOTATION_SIDEBAR_VIEW = "axl-light-sidebar";
 
-type SidebarRow =
+type AnnotationKind = "highlight" | "note";
+type AnnotationMode = "md" | "pdf";
+type TypeFilter = "all" | AnnotationKind;
+
+type HighlightSource =
+  | {
+      mode: "md";
+      highlight: HighlightAnnotation;
+      note: CommentAnnotation | null;
+      pageNumber: null;
+      startOffset: number;
+    }
+  | {
+      mode: "pdf";
+      highlight: PdfHighlightAnnotation;
+      note: PdfCommentAnnotation | null;
+      pageNumber: number;
+      startOffset: number;
+    };
+
+type OrphanNoteSource =
+  | {
+      mode: "md";
+      note: CommentAnnotation;
+      pageNumber: null;
+      startOffset: number;
+    }
+  | {
+      mode: "pdf";
+      note: PdfCommentAnnotation;
+      pageNumber: number;
+      startOffset: number;
+    };
+
+type SidebarCard =
   | {
       id: string;
-      type: "highlight" | "pdf highlight";
+      kind: "highlight";
+      mode: AnnotationMode;
       color: AnnotationColor;
       text: string;
-      content: "";
+      content: string;
       createdAt: string;
       startOffset: number;
       pageNumber: number | null;
       orphaned?: boolean;
-      comment: null;
+      isCode: boolean;
+      highlight: HighlightAnnotation | PdfHighlightAnnotation;
+      note: CommentAnnotation | PdfCommentAnnotation | null;
     }
   | {
       id: string;
-      type: "note";
+      kind: "note";
+      mode: AnnotationMode;
       color: AnnotationColor;
       text: string;
       content: string;
       createdAt: string;
       startOffset: number;
-      pageNumber: null;
+      pageNumber: number | null;
       orphaned?: boolean;
-      comment: CommentAnnotation;
-    }
-  | {
-      id: string;
-      type: "pdf note";
-      color: AnnotationColor;
-      text: string;
-      content: string;
-      createdAt: string;
-      startOffset: number;
-      pageNumber: number;
-      orphaned?: boolean;
-      comment: PdfCommentAnnotation;
+      isCode: boolean;
+      highlight: null;
+      note: CommentAnnotation | PdfCommentAnnotation;
     };
 
 export class AnnotationSidebarView extends ItemView {
   private query = "";
   private color: AnnotationColor | "all" = "all";
+  private type: TypeFilter = "all";
   private sort: AnnotationSortMode = "document";
 
   constructor(leaf: WorkspaceLeaf, private readonly plugin: OverlayAnnotationsPlugin) {
@@ -70,203 +101,250 @@ export class AnnotationSidebarView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "Annotations";
+    return "Axl Light";
   }
 
   getIcon(): string {
-    return "sticky-note";
+    return "pencil";
   }
 
   async onOpen(): Promise<void> {
-    this.containerEl.addClass("oa-sidebar");
+    this.containerEl.addClass("axl-sidebar");
     await this.render();
   }
 
   async render(): Promise<void> {
     const container = this.containerEl.children[1] ?? this.containerEl;
     container.empty();
+    container.addClass("axl-overview");
 
     const file = this.app.workspace.getActiveFile();
-    container.createEl("h3", { text: "Annotations" });
-    this.renderControls(container, file);
+    this.renderHeader(container);
+    this.renderControls(container);
 
     if (!file) {
-      container.createDiv({ cls: "oa-empty", text: "Open a Markdown or PDF file to inspect annotations." });
+      container.createDiv({ cls: "axl-empty", text: "Open a Markdown or PDF file to inspect annotations." });
       return;
     }
 
     const document = await this.plugin.store.getDocument(file);
-    const rawRows: SidebarRow[] = [
-      ...document.highlights.map((item) => ({
-        id: item.id,
-        type: "highlight" as const,
-        color: item.color,
-        text: item.anchor.selectedText,
-        content: "" as const,
-        createdAt: item.createdAt,
-        startOffset: item.anchor.startOffset,
-        pageNumber: null,
-        orphaned: item.orphaned,
-        comment: null,
-      })),
-      ...document.comments.map((item) => ({
-        id: item.id,
-        type: "note" as const,
-        color: item.color,
-        text: item.anchor.selectedText,
-        content: item.content,
-        createdAt: item.createdAt,
-        startOffset: item.anchor.startOffset,
-        pageNumber: null,
-        orphaned: item.orphaned,
-        comment: item,
-      })),
-      ...document.pdfHighlights.map((item) => ({
-        id: item.id,
-        type: "pdf highlight" as const,
-        color: item.color,
-        text: item.anchor.selectedText,
-        content: "" as const,
-        createdAt: item.createdAt,
-        startOffset: Number.MAX_SAFE_INTEGER,
-        pageNumber: item.anchor.pageNumber,
-        orphaned: item.orphaned,
-        comment: null,
-      })),
-      ...document.pdfComments.map((item) => ({
-        id: item.id,
-        type: "pdf note" as const,
-        color: item.color,
-        text: item.anchor.selectedText,
-        content: item.content,
-        createdAt: item.createdAt,
-        startOffset: Number.MAX_SAFE_INTEGER,
-        pageNumber: item.anchor.pageNumber,
-        orphaned: item.orphaned,
-        comment: item,
-      })),
-    ];
-    const rows = rawRows
-      .filter((row) => this.color === "all" || row.color === this.color)
-      .filter((row) => {
-        const haystack = `${row.text} ${row.content}`.toLowerCase();
-        return haystack.includes(this.query.toLowerCase());
-      })
-      .sort((a, b) => {
-        if (this.sort === "newest") {
-          return b.createdAt.localeCompare(a.createdAt);
-        }
-        if (this.sort === "oldest") {
-          return a.createdAt.localeCompare(b.createdAt);
-        }
-        return (a.pageNumber ?? 0) - (b.pageNumber ?? 0) || a.startOffset - b.startOffset;
-      });
+    const rawCards = this.buildCards(
+      document.highlights,
+      document.comments,
+      document.pdfHighlights,
+      document.pdfComments,
+    );
+    const cards = this.filterCards(rawCards);
+    const highlightCount = document.highlights.length + document.pdfHighlights.length;
+    const noteCount = document.comments.length + document.pdfComments.length;
+    container.createDiv({ cls: "axl-ov-count", text: `${highlightCount} highlights · ${noteCount} notes` });
 
-    if (!rows.length) {
-      container.createDiv({ cls: "oa-empty", text: "No matching annotations." });
-      return;
+    const list = container.createDiv({ cls: "axl-ov-list" });
+    if (!cards.length) {
+      list.createDiv({ cls: "axl-empty", text: "No matching annotations." });
+    } else {
+      for (const card of cards) {
+        this.renderCard(list, file, card);
+      }
     }
 
-    const list = container.createDiv({ cls: "oa-sidebar-list" });
-    for (const row of rows) {
-      const item = list.createDiv({ cls: "oa-sidebar-item" });
-      item.toggleClass("is-orphaned", !!row.orphaned);
-      const meta = item.createDiv({ cls: "oa-sidebar-meta" });
-      meta.createSpan({ cls: "oa-color-chip", text: row.color, attr: { "data-oa-color": row.color } });
-      meta.createSpan({ text: row.type });
-      if (row.pageNumber) {
-        meta.createSpan({ text: `page ${row.pageNumber}` });
-      }
-      meta.createSpan({ text: new Date(row.createdAt).toLocaleString() });
-      item.createDiv({ cls: "oa-sidebar-quote", text: row.text });
-      if (row.content) {
-        const content = item.createDiv({ cls: "oa-sidebar-content" });
-        MarkdownRenderer.render(this.app, row.content, content, file.path, this);
-      }
-
-      const actions = item.createDiv({ cls: "oa-sidebar-actions" });
-      if (row.comment) {
-        const edit = actions.createEl("button", { cls: "oa-icon-button", attr: { type: "button", title: "Edit note" } });
-        setIcon(edit, "pencil");
-        edit.addEventListener("click", () => this.renderInlineEditor(item, file, row));
-      }
-      const jump = actions.createEl("button", { text: "Jump", attr: { type: "button" } });
-      jump.addEventListener("click", () => this.jumpTo(file, row.startOffset, row.pageNumber));
-      const remove = actions.createEl("button", { text: "Delete", attr: { type: "button" } });
-      remove.addEventListener("click", async () => {
-        await this.plugin.store.removeAnnotation(file, row.id);
-        new Notice("Annotation deleted");
-        await this.plugin.refreshAnnotations();
-      });
-    }
+    this.renderExportFooter(container, file);
   }
 
-  private renderInlineEditor(item: HTMLElement, file: TFile, row: SidebarRow): void {
-    if (!row.comment) {
-      return;
+  private buildCards(
+    highlights: HighlightAnnotation[],
+    comments: CommentAnnotation[],
+    pdfHighlights: PdfHighlightAnnotation[],
+    pdfComments: PdfCommentAnnotation[],
+  ): SidebarCard[] {
+    const usedNotes = new Set<string>();
+    const cards: SidebarCard[] = [];
+
+    for (const source of this.markdownHighlightSources(highlights, comments, usedNotes)) {
+      cards.push(this.highlightCard(source));
     }
 
-    item.empty();
-    const meta = item.createDiv({ cls: "oa-sidebar-meta" });
-    meta.createSpan({ cls: "oa-color-chip", text: row.color, attr: { "data-oa-color": row.color } });
-    meta.createSpan({ text: row.type });
-    meta.createSpan({ text: "editing" });
-    item.createDiv({ cls: "oa-sidebar-quote", text: row.text });
+    for (const source of this.pdfHighlightSources(pdfHighlights, pdfComments, usedNotes)) {
+      cards.push(this.highlightCard(source));
+    }
 
-    const editor = item.createEl("textarea", {
-      cls: "oa-sidebar-editor",
-      attr: { rows: "6", placeholder: "Edit note..." },
-    });
-    editor.value = row.comment.content;
-    editor.focus();
-    editor.setSelectionRange(editor.value.length, editor.value.length);
+    for (const source of this.orphanNoteSources(comments, pdfComments, usedNotes)) {
+      cards.push(this.orphanNoteCard(source));
+    }
 
-    const actions = item.createDiv({ cls: "oa-sidebar-actions" });
-    const save = actions.createEl("button", { text: "Save", cls: "mod-cta", attr: { type: "button" } });
-    const cancel = actions.createEl("button", { text: "Cancel", attr: { type: "button" } });
+    return cards;
+  }
 
-    const saveContent = async (): Promise<void> => {
-      const next = {
-        ...row.comment,
-        content: editor.value,
-        updatedAt: new Date().toISOString(),
+  private markdownHighlightSources(
+    highlights: HighlightAnnotation[],
+    comments: CommentAnnotation[],
+    usedNotes: Set<string>,
+  ): HighlightSource[] {
+    return highlights.map((highlight) => {
+      const note = this.findAttachedMarkdownNote(highlight, comments, usedNotes);
+      if (note) {
+        usedNotes.add(note.id);
+      }
+
+      return {
+        mode: "md",
+        highlight,
+        note,
+        pageNumber: null,
+        startOffset: highlight.anchor.startOffset,
       };
-
-      if (row.type === "pdf note") {
-        await this.plugin.store.updatePdfComment(file, next as PdfCommentAnnotation);
-      } else {
-        await this.plugin.store.updateComment(file, next as CommentAnnotation);
-      }
-      await this.plugin.refreshAnnotations();
-    };
-
-    save.addEventListener("click", () => {
-      void saveContent();
-    });
-    cancel.addEventListener("click", () => {
-      void this.render();
-    });
-    editor.addEventListener("keydown", (event) => {
-      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
-        event.preventDefault();
-        void saveContent();
-      }
     });
   }
 
-  private renderControls(container: Element, file: TFile | null): void {
-    const controls = container.createDiv({ cls: "oa-sidebar-controls" });
-    const search = controls.createEl("input", {
-      cls: "oa-sidebar-search",
-      attr: { type: "search", placeholder: "Search annotations" },
+  private pdfHighlightSources(
+    highlights: PdfHighlightAnnotation[],
+    comments: PdfCommentAnnotation[],
+    usedNotes: Set<string>,
+  ): HighlightSource[] {
+    return highlights.map((highlight) => {
+      const note = this.findAttachedPdfNote(highlight, comments, usedNotes);
+      if (note) {
+        usedNotes.add(note.id);
+      }
+
+      return {
+        mode: "pdf",
+        highlight,
+        note,
+        pageNumber: highlight.anchor.pageNumber,
+        startOffset: Number.MAX_SAFE_INTEGER,
+      };
+    });
+  }
+
+  private orphanNoteSources(
+    comments: CommentAnnotation[],
+    pdfComments: PdfCommentAnnotation[],
+    usedNotes: Set<string>,
+  ): OrphanNoteSource[] {
+    return [
+      ...comments
+        .filter((note) => !usedNotes.has(note.id))
+        .map((note): OrphanNoteSource => ({
+          mode: "md",
+          note,
+          pageNumber: null,
+          startOffset: note.anchor.startOffset,
+        })),
+      ...pdfComments
+        .filter((note) => !usedNotes.has(note.id))
+        .map((note): OrphanNoteSource => ({
+          mode: "pdf",
+          note,
+          pageNumber: note.anchor.pageNumber,
+          startOffset: Number.MAX_SAFE_INTEGER,
+        })),
+    ];
+  }
+
+  private findAttachedMarkdownNote(
+    highlight: HighlightAnnotation,
+    comments: CommentAnnotation[],
+    usedNotes: Set<string>,
+  ): CommentAnnotation | null {
+    return (
+      comments.find((note) => !usedNotes.has(note.id) && note.highlightId === highlight.id) ??
+      comments.find((note) => {
+        return (
+          !usedNotes.has(note.id) &&
+          !note.highlightId &&
+          note.anchor.startOffset === highlight.anchor.startOffset &&
+          note.anchor.selectedText === highlight.anchor.selectedText
+        );
+      }) ??
+      null
+    );
+  }
+
+  private findAttachedPdfNote(
+    highlight: PdfHighlightAnnotation,
+    comments: PdfCommentAnnotation[],
+    usedNotes: Set<string>,
+  ): PdfCommentAnnotation | null {
+    return (
+      comments.find((note) => !usedNotes.has(note.id) && note.highlightId === highlight.id) ??
+      comments.find((note) => {
+        return (
+          !usedNotes.has(note.id) &&
+          !note.highlightId &&
+          note.anchor.pageNumber === highlight.anchor.pageNumber &&
+          note.anchor.selectedText === highlight.anchor.selectedText
+        );
+      }) ??
+      null
+    );
+  }
+
+  private highlightCard(source: HighlightSource): SidebarCard {
+    return {
+      id: source.highlight.id,
+      kind: "highlight",
+      mode: source.mode,
+      color: source.highlight.color,
+      text: source.highlight.anchor.selectedText,
+      content: source.note?.content ?? "",
+      createdAt: source.highlight.createdAt,
+      startOffset: source.startOffset,
+      pageNumber: source.pageNumber,
+      orphaned: source.highlight.orphaned || source.note?.orphaned,
+      isCode: isCodeAnchor(source.highlight.anchor),
+      highlight: source.highlight,
+      note: source.note,
+    };
+  }
+
+  private orphanNoteCard(source: OrphanNoteSource): SidebarCard {
+    return {
+      id: source.note.id,
+      kind: "note",
+      mode: source.mode,
+      color: source.note.color,
+      text: source.note.anchor.selectedText,
+      content: source.note.content,
+      createdAt: source.note.createdAt,
+      startOffset: source.startOffset,
+      pageNumber: source.pageNumber,
+      orphaned: source.note.orphaned,
+      isCode: isCodeAnchor(source.note.anchor),
+      highlight: null,
+      note: source.note,
+    };
+  }
+
+  private renderHeader(container: Element): void {
+    const header = container.createDiv({ cls: "axl-ov-head" });
+    header.createSpan({ cls: "axl-ov-title", text: "Annotation Overview" });
+    const close = header.createEl("button", {
+      cls: "axl-icon-btn axl-ov-close",
+      attr: { type: "button", title: "Close panel", "aria-label": "Close Axl Light panel" },
+    });
+    setIcon(close, "x");
+    close.addEventListener("click", () => {
+      void this.leaf.detach();
+    });
+  }
+
+  private renderControls(container: Element): void {
+    const searchRow = container.createDiv({ cls: "axl-ov-search-row" });
+    const search = searchRow.createEl("input", {
+      cls: "axl-ov-search",
+      attr: { type: "search", placeholder: "Search annotations..." },
     });
     search.value = this.query;
     search.addEventListener("input", async () => {
       this.query = search.value;
       await this.render();
     });
+    const filterButton = searchRow.createEl("button", { cls: "axl-icon-btn", attr: { type: "button", title: "Filter" } });
+    setIcon(filterButton, "filter");
 
-    const color = controls.createEl("select");
+    const filterRow = container.createDiv({ cls: "axl-ov-filter-row" });
+    const color = filterRow.createEl("select", { cls: "axl-filter-select" });
     color.createEl("option", { text: "All colors", value: "all" });
     for (const item of ANNOTATION_COLORS) {
       color.createEl("option", { text: item, value: item });
@@ -277,7 +355,17 @@ export class AnnotationSidebarView extends ItemView {
       await this.render();
     });
 
-    const sort = controls.createEl("select");
+    const type = filterRow.createEl("select", { cls: "axl-filter-select" });
+    type.createEl("option", { text: "All types", value: "all" });
+    type.createEl("option", { text: "highlight", value: "highlight" });
+    type.createEl("option", { text: "note", value: "note" });
+    type.value = this.type;
+    type.addEventListener("change", async () => {
+      this.type = type.value as TypeFilter;
+      await this.render();
+    });
+
+    const sort = filterRow.createEl("select", { cls: "axl-filter-select" });
     for (const item of ["document", "newest", "oldest"] as const) {
       sort.createEl("option", { text: item, value: item });
     }
@@ -286,8 +374,277 @@ export class AnnotationSidebarView extends ItemView {
       this.sort = sort.value as AnnotationSortMode;
       await this.render();
     });
+  }
 
-    const exportButton = controls.createEl("button", { text: "Export", attr: { type: "button" } });
+  private renderCard(list: Element, file: TFile, cardData: SidebarCard): void {
+    const card = list.createDiv({
+      cls: `axl-ov-card axl-ov-card--${cardData.color}`,
+      attr: this.cardAttributes(cardData),
+    });
+    card.toggleClass("is-orphaned", !!cardData.orphaned);
+
+    const head = card.createDiv({ cls: "axl-ov-card-head" });
+    head.createSpan({ cls: `axl-ov-label axl-label--${cardData.color}`, text: cardData.color });
+    head.createSpan({ cls: "axl-ov-meta", text: cardData.mode });
+    head.createSpan({ cls: "axl-ov-dot", text: "·" });
+    const title = cardData.note?.title ?? "";
+    const type = head.createSpan({
+      cls: "axl-ov-type",
+      text: title ? getTitleLabel(title) : cardData.kind,
+    });
+    if (title) {
+      type.dataset.title = title;
+    }
+    head.createSpan({ cls: "axl-ov-time", text: formatTime(cardData.createdAt) });
+
+    const quote = card.createDiv({ cls: "axl-ov-quote" });
+    quote.textContent = cardData.text;
+    quote.toggleClass("is-code", cardData.isCode || isCodeLikeText(cardData.text));
+    this.addExpandToggle(quote, card);
+    if (cardData.content) {
+      const content = card.createDiv({ cls: "axl-ov-content" });
+      void MarkdownRenderer.render(this.app, cardData.content, content, file.path, this).then(() => {
+        this.addExpandToggle(content, card);
+      });
+    }
+
+    const source = card.createDiv({ cls: "axl-ov-source" });
+    source.createSpan({ cls: "axl-ov-file", text: file.name });
+    source.createSpan({ cls: "axl-ov-mode", text: cardData.pageNumber ? `p.${cardData.pageNumber}` : "Markdown" });
+
+    const actions = card.createDiv({ cls: "axl-ov-actions" });
+    if (cardData.note) {
+      const edit = actions.createEl("button", {
+        cls: "axl-ov-btn axl-ov-btn--icon",
+        attr: { type: "button", title: "Edit note", "data-action": "edit-note" },
+      });
+      setIcon(edit, "pencil");
+      edit.addEventListener("click", () => this.openInlineEditor(card, file, cardData, cardData.content));
+    } else if (cardData.highlight) {
+      const addNote = actions.createEl("button", {
+        cls: "axl-ov-btn",
+        text: "Add note",
+        attr: { type: "button", "data-action": "add-note" },
+      });
+      addNote.addEventListener("click", () => {
+        addNote.addClass("hidden");
+        this.openInlineEditor(card, file, cardData, "");
+      });
+    }
+
+    const jump = actions.createEl("button", {
+      cls: "axl-ov-btn",
+      text: "Jump",
+      attr: { type: "button", "data-action": "jump" },
+    });
+    jump.addEventListener("click", () => this.jumpTo(file, cardData.startOffset, cardData.pageNumber));
+
+    const remove = actions.createEl("button", {
+      cls: "axl-ov-btn axl-ov-btn--danger",
+      text: "Delete",
+      attr: { type: "button", "data-action": "delete" },
+    });
+    remove.addEventListener("click", async () => {
+      await this.deleteCard(file, cardData);
+      new Notice("Annotation deleted");
+      await this.plugin.refreshAnnotations();
+    });
+
+    const edit = card.createDiv({ cls: "axl-ov-edit hidden" });
+    const textarea = edit.createEl("textarea", {
+      cls: "axl-ov-textarea",
+      attr: { placeholder: "写下你的想法..." },
+    });
+    const editActions = edit.createDiv({ cls: "axl-ov-edit-actions" });
+    editActions.createEl("button", { cls: "axl-ov-save", text: "保存", attr: { type: "button" } });
+    editActions.createEl("button", { cls: "axl-ov-cancel", text: "取消", attr: { type: "button" } });
+  }
+
+  private cardAttributes(card: SidebarCard): Record<string, string> {
+    const attrs: Record<string, string> = { "data-id": card.id };
+    if (card.highlight) {
+      attrs["data-highlight-id"] = card.highlight.id;
+    }
+    if (card.note) {
+      attrs["data-note-id"] = card.note.id;
+    }
+    return attrs;
+  }
+
+  private openInlineEditor(card: HTMLElement, file: TFile, cardData: SidebarCard, initialValue: string): void {
+    const edit = card.querySelector<HTMLElement>(".axl-ov-edit");
+    const textarea = card.querySelector<HTMLTextAreaElement>(".axl-ov-textarea");
+    const save = card.querySelector<HTMLButtonElement>(".axl-ov-save");
+    const cancel = card.querySelector<HTMLButtonElement>(".axl-ov-cancel");
+    const addNote = card.querySelector<HTMLElement>('[data-action="add-note"]');
+    if (!edit || !textarea || !save || !cancel) {
+      return;
+    }
+
+    textarea.value = initialValue;
+    edit.removeClass("hidden");
+    textarea.focus();
+    textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+
+    const saveContent = async (): Promise<void> => {
+      await this.saveCardContent(file, cardData, textarea.value);
+      await this.plugin.refreshAnnotations();
+    };
+
+    save.onclick = () => {
+      void saveContent();
+    };
+    cancel.onclick = () => {
+      textarea.value = initialValue;
+      edit.addClass("hidden");
+      addNote?.removeClass("hidden");
+    };
+    textarea.onkeydown = (event) => {
+      if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+        event.preventDefault();
+        void saveContent();
+      }
+      if (event.key === "Escape") {
+        textarea.value = initialValue;
+        edit.addClass("hidden");
+        addNote?.removeClass("hidden");
+      }
+    };
+  }
+
+  private addExpandToggle(contentEl: HTMLElement, wrapperEl: HTMLElement): void {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const lineHeight = parseFloat(getComputedStyle(contentEl).lineHeight);
+        const threshold = lineHeight * 3 + 10;
+        if (contentEl.scrollHeight <= threshold + 2) {
+          return;
+        }
+
+        const button = document.createElement("span");
+        button.className = "axl-ov-expand-btn";
+        button.textContent = "Show more";
+        button.tabIndex = 0;
+        button.setAttribute("role", "button");
+        contentEl.insertAdjacentElement("afterend", button);
+        const toggle = (): void => {
+          const expanded = contentEl.hasClass("expanded");
+          contentEl.toggleClass("expanded", !expanded);
+          button.setText(expanded ? "Show more" : "Show less");
+        };
+        button.addEventListener("click", toggle);
+        button.addEventListener("keydown", (event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            toggle();
+          }
+        });
+      });
+    });
+  }
+
+  private async saveCardContent(file: TFile, card: SidebarCard, content: string): Promise<void> {
+    if (card.note && card.mode === "pdf") {
+      await this.plugin.store.updatePdfComment(file, {
+        ...(card.note as PdfCommentAnnotation),
+        content,
+        updatedAt: new Date().toISOString(),
+      });
+      return;
+    }
+
+    if (card.note && card.mode === "md") {
+      await this.plugin.store.updateComment(file, {
+        ...(card.note as CommentAnnotation),
+        content,
+        updatedAt: new Date().toISOString(),
+      });
+      return;
+    }
+
+    if (card.highlight && card.mode === "pdf") {
+      const now = new Date().toISOString();
+      const highlight = card.highlight as PdfHighlightAnnotation;
+      await this.plugin.store.addPdfComment(file, {
+        id: crypto.randomUUID(),
+        highlightId: highlight.id,
+        anchor: highlight.anchor,
+        content,
+        color: highlight.color,
+        position: { offsetX: 20, offsetY: 0 },
+        collapsed: false,
+        author: this.plugin.settings.defaultAuthor,
+        createdAt: now,
+        updatedAt: now,
+        replies: [],
+        resolved: false,
+      });
+      return;
+    }
+
+    if (card.highlight && card.mode === "md") {
+      const now = new Date().toISOString();
+      const highlight = card.highlight as HighlightAnnotation;
+      await this.plugin.store.addComment(file, {
+        id: crypto.randomUUID(),
+        highlightId: highlight.id,
+        anchor: highlight.anchor,
+        content,
+        color: highlight.color,
+        position: { offsetX: 20, offsetY: 0 },
+        collapsed: false,
+        author: this.plugin.settings.defaultAuthor,
+        createdAt: now,
+        updatedAt: now,
+        replies: [],
+        resolved: false,
+      });
+    }
+  }
+
+  private async deleteCard(file: TFile, card: SidebarCard): Promise<void> {
+    if (card.highlight) {
+      await this.plugin.store.removeAnnotation(file, card.highlight.id);
+    }
+    if (card.note) {
+      await this.plugin.store.removeAnnotation(file, card.note.id);
+    }
+  }
+
+  private filterCards(cards: SidebarCard[]): SidebarCard[] {
+    return cards
+      .filter((card) => this.color === "all" || card.color === this.color)
+      .filter((card) => {
+        if (this.type === "all") {
+          return true;
+        }
+        if (this.type === "highlight") {
+          return card.kind === "highlight";
+        }
+        return Boolean(card.note);
+      })
+      .filter((card) => {
+        const haystack = `${card.text} ${card.content}`.toLowerCase();
+        return haystack.includes(this.query.toLowerCase());
+      })
+      .sort((a, b) => {
+        if (this.sort === "newest") {
+          return this.cardUpdatedAt(b).localeCompare(this.cardUpdatedAt(a));
+        }
+        if (this.sort === "oldest") {
+          return this.cardUpdatedAt(a).localeCompare(this.cardUpdatedAt(b));
+        }
+        return (a.pageNumber ?? 0) - (b.pageNumber ?? 0) || a.startOffset - b.startOffset;
+      });
+  }
+
+  private cardUpdatedAt(card: SidebarCard): string {
+    return card.note?.updatedAt ?? card.createdAt;
+  }
+
+  private renderExportFooter(container: Element, file: TFile | null): void {
+    const footer = container.createDiv({ cls: "axl-ov-foot" });
+    const exportButton = footer.createEl("button", { cls: "axl-export-btn", text: "↑ Export annotations", attr: { type: "button" } });
     exportButton.disabled = !file;
     exportButton.addEventListener("click", async () => {
       if (!file) {
@@ -296,6 +653,7 @@ export class AnnotationSidebarView extends ItemView {
       const exported = await this.plugin.store.exportNotes(file);
       new Notice(`Exported notes to ${exported.path}`);
     });
+    footer.createDiv({ cls: "axl-ov-export-note", text: "Export as Markdown summary" });
   }
 
   private async jumpTo(file: TFile, offset: number, pageNumber: number | null): Promise<void> {
@@ -307,8 +665,8 @@ export class AnnotationSidebarView extends ItemView {
           `.workspace-leaf.mod-active .pdf-page[data-page-number="${pageNumber}"], .workspace-leaf.mod-active .page[data-page-number="${pageNumber}"]`,
         );
         page?.scrollIntoView({ block: "center" });
-        page?.addClass("oa-flash-target");
-        window.setTimeout(() => page?.removeClass("oa-flash-target"), 850);
+        page?.addClass("axl-flash-target");
+        window.setTimeout(() => page?.removeClass("axl-flash-target"), 850);
       }, 120);
       return;
     }
@@ -321,7 +679,28 @@ export class AnnotationSidebarView extends ItemView {
     const pos = view.editor.offsetToPos(offset);
     view.editor.setCursor(pos);
     view.editor.scrollIntoView({ from: pos, to: pos }, true);
-    view.containerEl.addClass("oa-flash-target");
-    window.setTimeout(() => view.containerEl.removeClass("oa-flash-target"), 850);
+    view.containerEl.addClass("axl-flash-target");
+    window.setTimeout(() => view.containerEl.removeClass("axl-flash-target"), 850);
   }
+}
+
+function formatTime(value: string): string {
+  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function getTitleLabel(title: string): string {
+  const labels: Record<string, string> = {
+    Insight: "💡 Insight",
+    Question: "❓ Question",
+    Reminder: "🔔 Reminder",
+  };
+  return labels[title] ?? title;
+}
+
+function isCodeAnchor(anchor: HighlightAnnotation["anchor"] | PdfHighlightAnnotation["anchor"]): boolean {
+  return "isCode" in anchor && Boolean(anchor.isCode);
+}
+
+function isCodeLikeText(text: string): boolean {
+  return /^[ \t]{2,}/m.test(text) || /\n[ \t]{2,}\S/.test(text);
 }

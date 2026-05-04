@@ -29,7 +29,7 @@ interface RenderedRange {
   end: number;
 }
 
-const MARK_SELECTOR = ".oa-reading-highlight";
+const MARK_SELECTOR = ".axl-reading-highlight";
 const MOBILE_RENDER_DELAYS = [0, 80, 220, 520, 900];
 const DESKTOP_RENDER_DELAYS = [0, 40, 160];
 
@@ -84,7 +84,7 @@ function renderReadingHighlights(root: HTMLElement, marks: ReadingMark[]): void 
     .sort((left, right) => right.anchor.selectedText.length - left.anchor.selectedText.length);
 
   for (const mark of liveMarks) {
-    if (root.querySelector(`${MARK_SELECTOR}[data-oa-id="${cssEscape(mark.id)}"]`)) {
+    if (root.querySelector(`${MARK_SELECTOR}[data-axl-id="${cssEscape(mark.id)}"]`)) {
       continue;
     }
 
@@ -174,9 +174,9 @@ function wrapRange(segments: TextSegment[], range: RenderedRange, color: Annotat
 
     const selected = splitTextRange(segment.node, localStart, localEnd);
     const mark = document.createElement("mark");
-    mark.className = "oa-reading-highlight oa-highlight";
-    mark.dataset.oaColor = color;
-    mark.dataset.oaId = id;
+    mark.className = "axl-reading-highlight axl-highlight";
+    mark.dataset.axlColor = color;
+    mark.dataset.axlId = id;
     mark.tabIndex = 0;
     selected.parentNode?.insertBefore(mark, selected);
     mark.appendChild(selected);

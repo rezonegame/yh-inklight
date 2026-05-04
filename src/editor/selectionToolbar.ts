@@ -5,8 +5,6 @@
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
-import { setIcon } from "obsidian";
-
 import { ANNOTATION_COLORS, AnnotationColor } from "../storage/types";
 
 interface SelectionToolbarOptions {
@@ -21,7 +19,7 @@ export class SelectionToolbar {
   private visible = false;
 
   constructor(private readonly options: SelectionToolbarOptions) {
-    this.element = document.body.createDiv({ cls: "oa-selection-toolbar" });
+    this.element = document.body.createDiv({ cls: "axl-toolbar axl-selection-toolbar" });
     this.render();
     this.hide();
   }
@@ -55,39 +53,73 @@ export class SelectionToolbar {
   }
 
   private render(): void {
-    const swatches = this.element.createDiv({ cls: "oa-toolbar-swatches" });
     for (const color of ANNOTATION_COLORS) {
-      const button = swatches.createEl("button", {
-        cls: "oa-toolbar-swatch",
+      const button = this.element.createEl("button", {
+        cls: `axl-toolbar-color axl-toolbar-color--${color}`,
         attr: {
           type: "button",
           "aria-label": `Highlight ${color}`,
-          "data-oa-color": color,
+          "data-axl-color": color,
         },
       });
       button.addEventListener("click", () => this.options.onHighlight(color));
     }
 
-    const commentButton = this.iconButton("message-square", "Add sticky note");
+    this.element.createDiv({ cls: "axl-toolbar-sep" });
+
+    const commentButton = this.iconButton("Add sticky note", NOTE_ICON);
     commentButton.addEventListener("click", () => this.options.onComment());
 
-    const copyButton = this.iconButton("copy", "Copy selection");
+    const copyButton = this.iconButton("Copy", COPY_ICON);
     copyButton.addEventListener("click", () => this.options.onCopy());
 
-    const sidebarButton = this.iconButton("panel-right-open", "Open annotations");
+    const sidebarButton = this.iconButton("Open overview", OVERVIEW_ICON);
     sidebarButton.addEventListener("click", () => this.options.onOpenSidebar());
   }
 
-  private iconButton(icon: string, label: string): HTMLButtonElement {
+  private iconButton(label: string, svg: string): HTMLButtonElement {
     const button = this.element.createEl("button", {
-      cls: "oa-toolbar-button",
+      cls: "axl-toolbar-action",
       attr: {
         type: "button",
         "aria-label": label,
         title: label,
       },
     });
-    setIcon(button, icon);
+    button.innerHTML = svg;
     return button;
   }
 }
+
+const NOTE_ICON = `
+  <svg width="14" height="14" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5
+      a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+`;
+
+const COPY_ICON = `
+  <svg width="14" height="14" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round">
+    <rect x="9" y="9" width="13" height="13"
+      rx="2" ry="2"/>
+    <path d="M5 15H4a2 2 0 0 1-2-2V4
+      a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+  </svg>
+`;
+
+const OVERVIEW_ICON = `
+  <svg width="14" height="14" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor" stroke-width="2"
+    stroke-linecap="round" stroke-linejoin="round">
+    <line x1="8" y1="6" x2="21" y2="6"/>
+    <line x1="8" y1="12" x2="21" y2="12"/>
+    <line x1="8" y1="18" x2="21" y2="18"/>
+    <line x1="3" y1="6" x2="3.01" y2="6"/>
+    <line x1="3" y1="12" x2="3.01" y2="12"/>
+    <line x1="3" y1="18" x2="3.01" y2="18"/>
+  </svg>
+`;

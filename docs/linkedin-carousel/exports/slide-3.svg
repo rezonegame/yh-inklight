@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#fffaf0"/>
+      <stop offset="58%" stop-color="#fffdf8"/>
+      <stop offset="100%" stop-color="#f7ead1"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffe27a"/>
+      <stop offset="100%" stop-color="#f2b712"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="18" flood-color="#6b4a00" flood-opacity="0.16"/>
+    </filter>
+    <filter id="tinyShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#4d3600" flood-opacity="0.14"/>
+    </filter>
+    <pattern id="dots" width="36" height="36" patternUnits="userSpaceOnUse">
+      <circle cx="3" cy="3" r="1.4" fill="#efd28a" opacity="0.35"/>
+    </pattern>
+  </defs>
+  <rect width="1080" height="1350" fill="url(#paper)"/>
+  <rect width="1080" height="1350" fill="url(#dots)" opacity="0.55"/>
+  
+  <circle cx="924" cy="244" r="112" fill="#f5c518" opacity="0.10"/>
+  <circle cx="122" cy="1095" r="132" fill="#f0c15c" opacity="0.10"/>
+  <path d="M890 640 C930 620, 982 620, 1020 650" fill="none" stroke="#d7a51a" stroke-width="5" opacity="0.24"/>
+  <path d="M42 456 C96 426, 154 432, 204 466" fill="none" stroke="#d7a51a" stroke-width="5" opacity="0.18"/>
+  
+  <g transform="translate(58 42)">
+    <rect x="0" y="0" width="58" height="58" rx="16" fill="url(#gold)" filter="url(#tinyShadow)"/>
+    <path d="M19 39 L23 23 L36 10 C41 13 45 17 48 22 L35 35 Z" fill="none" stroke="#121212" stroke-width="5" stroke-linejoin="round"/>
+    <path d="M17 44 H40" stroke="#121212" stroke-width="5" stroke-linecap="round"/>
+    <text x="78" y="25" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800" fill="#121212">Axl Light</text>
+    <text x="78" y="55" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="19" fill="#666">Obsidian reading annotations</text>
+  </g>
+  <g transform="translate(902 50)">
+    <rect x="0" y="0" width="118" height="48" rx="18" fill="url(#gold)" filter="url(#tinyShadow)"/>
+    <text x="59" y="31" text-anchor="middle" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="22" font-weight="800" fill="#121212">03 / 07</text>
+  </g>
+  
+  <g transform="translate(64 154)">
+    <rect x="0" y="0" width="210" height="54" rx="18" fill="#ffe082" opacity="0.92"/>
+    <text x="25" y="35" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="21" font-weight="800" fill="#171717">✦ Highlight flow</text>
+  </g>
+  
+  <text x="70" y="300" font-family="Georgia, 'Times New Roman', serif" font-size="82" font-weight="900" fill="#111" letter-spacing="-2">
+    <tspan x="70" dy="0">Select text.</tspan><tspan x="70" dy="94">Pick a color.</tspan><tspan x="70" dy="94">Keep reading.</tspan>
+  </text>
+  <path d="M72 594 C244 576, 476 577, 810 590" fill="none" stroke="#f5c518" stroke-width="13" stroke-linecap="round" opacity="0.82"/>
+  
+  <text x="74" y="652" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="31" font-weight="600" fill="#1c1c1c">
+    <tspan x="74" dy="0">Highlights are visual overlays. The Markdown source</tspan><tspan x="74" dy="42">is not modified.</tspan>
+  </text>
+  
+  
+  <g transform="translate(70 742)" filter="url(#softShadow)">
+    <rect x="0" y="0" width="940" height="529" rx="28" fill="#fff"/>
+    <clipPath id="clip-70-742">
+      <rect x="0" y="0" width="940" height="529" rx="28"/>
+    </clipPath>
+    <image href="file:///Users/epiphanyxiao/Documents/Playground/obsidian-annotation-plugin/docs/images/highlight-with-axl-light.png" x="0" y="0" width="940" height="529" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-70-742)"/>
+    <rect x="0" y="0" width="940" height="529" rx="28" fill="none" stroke="#eadfca" stroke-width="2"/>
+  </g>
+  <g transform="translate(152 1156)">
+    <rect x="0" y="0" width="508" height="58" rx="29" fill="#fff" stroke="#e9dcc2" filter="url(#tinyShadow)"/>
+    <circle cx="44" cy="29" r="13" fill="#f5c518"/><circle cx="87" cy="29" r="13" fill="#ff8c00"/><circle cx="130" cy="29" r="13" fill="#ff69b4"/><circle cx="173" cy="29" r="13" fill="#52c41a"/><circle cx="216" cy="29" r="13" fill="#1677ff"/><circle cx="259" cy="29" r="13" fill="#722ed1"/>
+    <text x="318" y="37" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="21" font-weight="800" fill="#111">floating toolbar</text>
+  </g>
+  <path d="M264 1110 C340 1140, 470 1134, 612 1104" fill="none" stroke="#f5c518" stroke-width="6" stroke-linecap="round" stroke-dasharray="9 9"/>
+  
+  <path d="M0 1268 C150 1238, 282 1275, 432 1242 C590 1208, 750 1269, 1080 1228 L1080 1350 L0 1350 Z" fill="#fff" opacity="0.78"/>
+  <text x="540" y="1296" text-anchor="middle" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="23" font-weight="700" fill="#2f2a1d">Read deeply. Keep the source clean.</text>
+  <path d="M458 1315 C508 1296, 608 1298, 668 1311" fill="none" stroke="#f5c518" stroke-width="5" stroke-linecap="round"/>
+</svg>

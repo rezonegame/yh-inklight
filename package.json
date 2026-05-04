@@ -1,13 +1,12 @@
 {
   "name": "axl-light",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "Non-invasive Obsidian reading annotations for Markdown and PDF with overlay highlights, sticky notes, and sidecar storage.",
   "main": "main.js",
   "scripts": {
     "build": "node esbuild.config.mjs production",
-    "dev": "node esbuild.config.mjs",
-    "version": "node -e \"const fs=require('fs');const manifest=require('./manifest.json');const versions=require('./versions.json');versions[manifest.minAppVersion]=manifest.version;fs.writeFileSync('./versions.json', JSON.stringify(versions, null, 2)+'\\n');\""
+    "dev": "node esbuild.config.mjs"
   },
   "devDependencies": {
     "@codemirror/state": "6.5.0",
