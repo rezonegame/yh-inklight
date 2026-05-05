@@ -29,42 +29,35 @@ https://github.com/little-pond/axl-light
 
 4. Enable `Axl Light` in `Settings -> Community plugins`.
 
-### Manual Install
+### Quick Install
 
-Do **not** download the source code ZIP from the green `Code` button. Obsidian needs the built release files.
-
-1. Open the latest release:
-
-```text
-https://github.com/little-pond/axl-light/releases/latest
-```
-
-2. Download these three files from `Assets`:
-
-- `main.js`
-- `manifest.json`
-- `styles.css`
-
-3. Create this folder in your vault:
-
-```text
-<your-vault>/.obsidian/plugins/axl-light/
-```
-
-4. Move the three files into that folder.
-5. Restart Obsidian.
-6. Open `Settings -> Community plugins`.
-7. Enable `Axl Light`.
-
-### Terminal Install
-
-Run this in Terminal and replace the vault path:
+Run this in Terminal. Replace the path with your Obsidian vault path:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/little-pond/axl-light/main/scripts/install.sh | bash -s -- "$HOME/Documents/Obsidian Vault"
 ```
 
+Then restart Obsidian, open Settings → Community plugins, and enable Axl Light.
+
 ![Install Axl Light from Terminal](docs/images/install-axl-light-command.png)
+
+### Manual Install
+
+1. Download these three files from the latest release:
+   https://github.com/little-pond/axl-light/releases/latest
+
+   - `main.js`
+   - `manifest.json`
+   - `styles.css`
+
+2. Move them to:
+   `<your-vault>/.obsidian/plugins/axl-light/`
+
+3. Restart Obsidian
+
+4. Settings → Community plugins → Enable "Axl Light"
+
+Do **not** download the source code ZIP from the green `Code` button. Obsidian needs the built release files.
 
 ## Usage
 
