@@ -23,7 +23,7 @@ __export(main_exports, {
   default: () => OverlayAnnotationsPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian8 = require("obsidian");
+var import_obsidian10 = require("obsidian");
 
 // src/anchor/fuzzyMatch.ts
 function findBestFuzzyMatch(source, target, expectedStart) {
@@ -2009,6 +2009,289 @@ function isCodeLikeText(text) {
   return /^[ \t]{2,}/m.test(text) || /\n[ \t]{2,}\S/.test(text);
 }
 
+// src/views/stickyNoteLane.ts
+var import_obsidian9 = require("obsidian");
+
+// src/utils/positioning.ts
+var GAP = 10;
+function layoutStickyNotes(items) {
+  const sorted = [...items].sort((a, b) => a.anchorTop - b.anchorTop);
+  const output = [];
+  let cursor = 0;
+  for (const item of sorted) {
+    const preferred = Math.max(0, item.anchorTop + item.offsetY);
+    const top = Math.max(preferred, cursor);
+    output.push({ id: item.id, top });
+    cursor = top + item.height + GAP;
+  }
+  return output;
+}
+
+// src/views/stickyNoteView.ts
+var import_obsidian8 = require("obsidian");
+function renderStickyNoteCard(container, options) {
+  container.empty();
+  const card = container.createDiv({
+    cls: `yh-card yh-card--${options.comment.color} yh-sticky-card`,
+    attr: {
+      "data-yh-color": options.comment.color,
+      "data-yh-id": options.comment.id,
+      "data-yh-card-id": options.comment.id
+    }
+  });
+  const header = card.createDiv({ cls: "yh-card-head" });
+  header.createSpan({
+    cls: `yh-card-color-label yh-label--${options.comment.color}`,
+    text: options.comment.color
+  });
+  header.createSpan({ cls: "yh-card-page", text: "md" });
+  header.createSpan({ cls: "yh-card-time", text: formatTime2(options.comment.updatedAt) });
+  header.createSpan({ cls: "yh-card-author", text: options.comment.author });
+  const tools = header.createDiv({ cls: "yh-card-tools" });
+  const edit = tools.createEl("button", {
+    cls: "yh-icon-btn",
+    attr: { type: "button", title: "\u7F16\u8F91\u7B14\u8BB0" }
+  });
+  (0, import_obsidian8.setIcon)(edit, "pencil");
+  const collapse = tools.createEl("button", {
+    cls: "yh-icon-btn",
+    attr: { type: "button", title: options.comment.collapsed ? "\u5C55\u5F00" : "\u6298\u53E0" }
+  });
+  (0, import_obsidian8.setIcon)(collapse, options.comment.collapsed ? "chevron-down" : "chevron-up");
+  collapse.addEventListener("click", () => options.onToggle(options.comment));
+  const remove = tools.createEl("button", {
+    cls: "yh-icon-btn",
+    attr: { type: "button", title: "\u5220\u9664\u7B14\u8BB0" }
+  });
+  (0, import_obsidian8.setIcon)(remove, "trash-2");
+  remove.addEventListener("click", () => options.onDelete(options.comment));
+  if (options.comment.collapsed) {
+    const body2 = card.createDiv({ cls: "yh-card-body" });
+    body2.createDiv({ cls: "yh-card-quote", text: options.comment.anchor.selectedText });
+    return card;
+  }
+  const body = card.createDiv({ cls: "yh-card-body" });
+  body.createDiv({ cls: "yh-card-quote", text: options.comment.anchor.selectedText });
+  const content = body.createDiv({ cls: "yh-card-content" });
+  renderDisplayMode(content, options);
+  edit.addEventListener("click", () => renderEditMode(content, options));
+  const foot = card.createDiv({ cls: "yh-card-foot" });
+  foot.createEl("button", { cls: "yh-card-more", text: "\xB7\xB7\xB7", attr: { type: "button", title: "\u66F4\u591A" } });
+  return card;
+}
+function renderDisplayMode(container, options) {
+  container.empty();
+  import_obsidian8.MarkdownRenderer.render(options.app, options.comment.content, container, options.sourcePath, options.component);
+}
+function renderEditMode(container, options) {
+  container.empty();
+  const title = container.createEl("input", {
+    cls: "yh-sticky-title-editor",
+    attr: { type: "text", placeholder: "\u6807\u9898" }
+  });
+  title.value = options.comment.title ?? "";
+  const editor = container.createEl("textarea", {
+    cls: "yh-sticky-editor",
+    attr: { rows: "5", placeholder: "\u5199\u4E0B Markdown \u7B14\u8BB0..." }
+  });
+  editor.value = options.comment.content;
+  editor.focus();
+  editor.setSelectionRange(editor.value.length, editor.value.length);
+  const actions = container.createDiv({ cls: "yh-sticky-edit-actions" });
+  const save = actions.createEl("button", { text: "\u4FDD\u5B58", cls: "mod-cta", attr: { type: "button" } });
+  const cancel = actions.createEl("button", { text: "\u53D6\u6D88", attr: { type: "button" } });
+  const saveContent = () => {
+    options.onUpdate(options.comment, editor.value, title.value.trim());
+    renderDisplayMode(container, {
+      ...options,
+      comment: {
+        ...options.comment,
+        title: title.value.trim(),
+        content: editor.value
+      }
+    });
+  };
+  save.addEventListener("click", saveContent);
+  cancel.addEventListener("click", () => renderDisplayMode(container, options));
+  editor.addEventListener("keydown", (event) => {
+    if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+      event.preventDefault();
+      saveContent();
+    }
+  });
+}
+function formatTime2(value) {
+  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+// src/views/stickyNoteLane.ts
+var StickyNoteLane = class {
+  constructor(options) {
+    this.options = options;
+    this.container = null;
+    this.lane = null;
+    this.observer = null;
+  }
+  register() {
+    this.options.component.registerEvent(
+      this.options.app.workspace.on("active-leaf-change", () => this.render())
+    );
+    this.options.component.registerEvent(
+      this.options.app.workspace.on("layout-change", () => this.render())
+    );
+    this.observer = new ResizeObserver(() => this.render());
+    this.options.component.register(() => this.destroy());
+  }
+  async render() {
+    const view = this.options.app.workspace.getActiveViewOfType(import_obsidian9.MarkdownView);
+    if (!view || !view.file || view.file.extension !== "md") {
+      this.hide();
+      return;
+    }
+    const settings = this.options.getSettings();
+    if (!settings.stickyNotesVisible) {
+      this.hide();
+      return;
+    }
+    const document2 = this.options.getCachedDocument(view.file.path);
+    if (!document2 || document2.comments.length === 0) {
+      this.hide();
+      return;
+    }
+    const visibleComments = document2.comments.filter((comment) => !comment.orphaned);
+    if (visibleComments.length === 0) {
+      this.hide();
+      return;
+    }
+    const editorWidth = view.containerEl.offsetWidth;
+    if (editorWidth < settings.stickyCollapseWidth) {
+      this.hide();
+      return;
+    }
+    this.ensureContainer(view);
+    this.renderLane(view, visibleComments, settings);
+  }
+  ensureContainer(view) {
+    if (this.container && this.container.parentElement === view.containerEl) {
+      return;
+    }
+    this.container?.remove();
+    this.container = view.containerEl.createDiv({ cls: "yh-sticky-lane-container" });
+    this.lane = this.container.createDiv({ cls: "yh-sticky-lane" });
+    if (this.observer) {
+      this.observer.observe(view.containerEl);
+    }
+  }
+  renderLane(view, comments, settings) {
+    if (!this.lane) {
+      return;
+    }
+    this.lane.empty();
+    this.lane.toggleClass("yh-sticky-lane--left", settings.stickySide === "left");
+    const layoutInputs = [];
+    const commentElements = /* @__PURE__ */ new Map();
+    for (const comment of comments) {
+      const anchorTop = this.getAnchorTop(view, comment);
+      if (anchorTop === null) {
+        continue;
+      }
+      const tempCard = this.lane.createDiv({ cls: "yh-card yh-card--temp" });
+      tempCard.style.visibility = "hidden";
+      tempCard.style.position = "absolute";
+      renderStickyNoteCard(tempCard, {
+        app: this.options.app,
+        component: this.options.component,
+        sourcePath: view.file.path,
+        comment,
+        onToggle: (c) => this.handleToggle(view.file, c),
+        onUpdate: (c, content, title) => this.handleUpdate(view.file, c, content, title),
+        onDelete: (c) => this.handleDelete(view.file, c)
+      });
+      const height = tempCard.offsetHeight;
+      tempCard.remove();
+      layoutInputs.push({
+        id: comment.id,
+        anchorTop,
+        height,
+        offsetY: comment.position?.offsetY ?? 0
+      });
+    }
+    const layoutOutputs = layoutStickyNotes(layoutInputs);
+    for (const output of layoutOutputs) {
+      const comment = comments.find((c) => c.id === output.id);
+      if (!comment) {
+        continue;
+      }
+      const card = this.lane.createDiv({
+        cls: `yh-card yh-card--${comment.color} yh-sticky-card`,
+        attr: {
+          "data-yh-color": comment.color,
+          "data-yh-id": comment.id,
+          "data-yh-card-id": comment.id
+        }
+      });
+      card.style.position = "absolute";
+      card.style.top = `${output.top}px`;
+      renderStickyNoteCard(card, {
+        app: this.options.app,
+        component: this.options.component,
+        sourcePath: view.file.path,
+        comment,
+        onToggle: (c) => this.handleToggle(view.file, c),
+        onUpdate: (c, content, title) => this.handleUpdate(view.file, c, content, title),
+        onDelete: (c) => this.handleDelete(view.file, c)
+      });
+      if (settings.stickySide === "right") {
+        const line = this.lane.createDiv({ cls: "yh-leader-line" });
+        line.style.position = "absolute";
+        line.style.left = "0";
+        line.style.top = `${output.top + 20}px`;
+        line.style.width = "20px";
+        line.style.height = "1px";
+        line.style.background = `var(--yh-${comment.color})`;
+      }
+    }
+  }
+  getAnchorTop(view, comment) {
+    const mark = view.containerEl.querySelector(`mark.yh-highlight[data-yh-id="${comment.id}"]`);
+    if (mark) {
+      const rect = mark.getBoundingClientRect();
+      const containerRect = view.containerEl.getBoundingClientRect();
+      return rect.top - containerRect.top + view.containerEl.scrollTop;
+    }
+    try {
+      const pos = view.editor.offsetToPos(comment.anchor.startOffset);
+      const lineHeight = 20;
+      return pos.line * lineHeight;
+    } catch {
+      return null;
+    }
+  }
+  hide() {
+    this.container?.remove();
+    this.container = null;
+    this.lane = null;
+  }
+  async handleToggle(file, comment) {
+    await this.options.onToggleCollapse(file, { ...comment, collapsed: !comment.collapsed });
+    await this.render();
+  }
+  async handleUpdate(file, comment, content, title) {
+    await this.options.onUpdateComment(file, comment, content, title);
+    await this.render();
+  }
+  async handleDelete(file, comment) {
+    await this.options.onDeleteAnnotation(file, comment.id);
+    await this.render();
+  }
+  destroy() {
+    this.observer?.disconnect();
+    this.container?.remove();
+    this.container = null;
+    this.lane = null;
+  }
+};
+
 // main.ts
 var NOTE_TITLE_OPTIONS = [
   { value: "Insight", label: "\u{1F4A1} \u6D1E\u89C1" },
@@ -2027,7 +2310,7 @@ var YH_INKLIGHT_ICON = `
     </g>
   </svg>
 `;
-var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
+var OverlayAnnotationsPlugin = class extends import_obsidian10.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -2035,7 +2318,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
     this.renameMigrationTimer = null;
   }
   async onload() {
-    (0, import_obsidian8.addIcon)("yh-inklight-icon", YH_INKLIGHT_ICON);
+    (0, import_obsidian10.addIcon)("yh-inklight-icon", YH_INKLIGHT_ICON);
     await this.loadSettings();
     this.store = new AnnotationStore(this.app);
     await this.store.initialize();
@@ -2079,11 +2362,31 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
         await this.refreshAnnotations();
       }
     });
+    this.stickyLane = new StickyNoteLane({
+      app: this.app,
+      component: this,
+      getSettings: () => this.settings,
+      getCachedDocument: (filePath) => this.store.getCachedDocument(filePath),
+      onUpdateComment: async (file, comment, content, title) => {
+        await this.store.updateCommentContent(file, comment.id, content, title);
+        await this.refreshAnnotations();
+      },
+      onDeleteAnnotation: async (file, annotationId) => {
+        await this.store.removeAnnotation(file, annotationId);
+        await this.refreshAnnotations();
+      },
+      onToggleCollapse: async (file, comment) => {
+        await this.store.updateComment(file, comment);
+        await this.refreshAnnotations();
+      },
+      refreshAnnotations: () => this.refreshAnnotations()
+    });
     this.addSettingTab(new AnnotationSettingsTab(this));
     this.registerRibbonIcon();
     this.registerCommands();
     this.registerEvents();
     this.pdfLayer.register();
+    this.stickyLane.register();
     this.registerMarkdownPostProcessor((element, context) => this.renderReadingHighlights(element, context));
   }
   onunload() {
@@ -2092,6 +2395,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
     }
     this.toolbar?.destroy();
     this.popover?.destroy();
+    this.stickyLane?.destroy();
     this.app.workspace.detachLeavesOfType(ANNOTATION_SIDEBAR_VIEW);
   }
   async loadSettings() {
@@ -2111,6 +2415,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
         await view.render();
       }
     }
+    await this.stickyLane.render();
   }
   registerRibbonIcon() {
     const icon = this.addRibbonIcon("highlighter", "\u6253\u5F00\u58A8\u5149\u6279\u6CE8", () => {
@@ -2159,7 +2464,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
     });
     this.registerEvent(
       this.app.vault.on("modify", async (file) => {
-        if (!(file instanceof import_obsidian8.TFile) || file.extension !== "md") {
+        if (!(file instanceof import_obsidian10.TFile) || file.extension !== "md") {
           return;
         }
         const document2 = await this.store.getDocument(file);
@@ -2175,7 +2480,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
     );
     this.registerEvent(
       this.app.vault.on("rename", async (file, oldPath) => {
-        if (!this.settings.migrateOnRename || !(file instanceof import_obsidian8.TFile) || file.extension !== "md") {
+        if (!this.settings.migrateOnRename || !(file instanceof import_obsidian10.TFile) || file.extension !== "md") {
           return;
         }
         if (this.renameMigrationTimer !== null) {
@@ -2190,7 +2495,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
     );
     this.registerEvent(
       this.app.workspace.on("file-open", async (file) => {
-        if (file instanceof import_obsidian8.TFile && ["md", "pdf"].includes(file.extension.toLowerCase())) {
+        if (file instanceof import_obsidian10.TFile && ["md", "pdf"].includes(file.extension.toLowerCase())) {
           this.popover.hide();
           await this.store.getDocument(file);
           await this.refreshAnnotations();
@@ -2206,11 +2511,11 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
     }
     const snapshot = await this.resolveSelection();
     if (!snapshot) {
-      new import_obsidian8.Notice("\u8BF7\u5148\u9009\u4E2D\u6587\u672C\u3002");
+      new import_obsidian10.Notice("\u8BF7\u5148\u9009\u4E2D\u6587\u672C\u3002");
       return;
     }
     const file = this.app.vault.getAbstractFileByPath(snapshot.filePath);
-    if (!(file instanceof import_obsidian8.TFile)) {
+    if (!(file instanceof import_obsidian10.TFile)) {
       return;
     }
     const highlight = {
@@ -2240,11 +2545,11 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
     }
     const snapshot = await this.resolveSelection();
     if (!snapshot) {
-      new import_obsidian8.Notice("\u8BF7\u5148\u9009\u4E2D\u6587\u672C\u3002");
+      new import_obsidian10.Notice("\u8BF7\u5148\u9009\u4E2D\u6587\u672C\u3002");
       return;
     }
     const file = this.app.vault.getAbstractFileByPath(snapshot.filePath);
-    if (!(file instanceof import_obsidian8.TFile)) {
+    if (!(file instanceof import_obsidian10.TFile)) {
       return;
     }
     const note = await new CommentModal(this.app, "", "").openAndRead();
@@ -2273,7 +2578,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
   }
   async refreshActiveReadingViewHighlights(filePath) {
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (!(file instanceof import_obsidian8.TFile)) {
+    if (!(file instanceof import_obsidian10.TFile)) {
       return;
     }
     const document2 = this.store.getCachedDocument(filePath) ?? await this.store.getDocument(file);
@@ -2283,7 +2588,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
     }
     for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
       const view = leaf.view;
-      if (!(view instanceof import_obsidian8.MarkdownView) || view.file?.path !== filePath) {
+      if (!(view instanceof import_obsidian10.MarkdownView) || view.file?.path !== filePath) {
         continue;
       }
       const previewRoot = findPreviewRoot(view);
@@ -2336,7 +2641,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
     return this.lastSelection;
   }
   activeEditor() {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian8.MarkdownView);
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian10.MarkdownView);
     return view ? { editor: view.editor, file: view.file } : null;
   }
   async activateSidebar() {
@@ -2355,7 +2660,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
     const text = window.getSelection()?.toString() || this.activeEditor()?.editor.getSelection() || "";
     if (text) {
       navigator.clipboard.writeText(text);
-      new import_obsidian8.Notice("Copied selection");
+      new import_obsidian10.Notice("Copied selection");
     }
   }
   async handleAnnotationClick(event) {
@@ -2373,7 +2678,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
     }
     const annotationId = mark.dataset.yhId;
     const file = this.app.workspace.getActiveFile();
-    if (!annotationId || !(file instanceof import_obsidian8.TFile)) {
+    if (!annotationId || !(file instanceof import_obsidian10.TFile)) {
       return;
     }
     const document2 = this.store.getCachedDocument(file.path) ?? await this.store.getDocument(file);
@@ -2400,7 +2705,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian8.Plugin {
     }
     await sleep(100);
     const file = this.app.vault.getAbstractFileByPath(context.sourcePath);
-    if (!(file instanceof import_obsidian8.TFile)) {
+    if (!(file instanceof import_obsidian10.TFile)) {
       return;
     }
     const document2 = await this.store.getDocument(file);
@@ -2553,7 +2858,7 @@ function nthIndexOf(source, target, occurrenceIndex) {
   }
   return -1;
 }
-var CommentModal = class extends import_obsidian8.Modal {
+var CommentModal = class extends import_obsidian10.Modal {
   constructor(app, initialTitle, initialContent) {
     super(app);
     this.initialTitle = initialTitle;

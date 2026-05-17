@@ -24,6 +24,7 @@ import {
 } from "./src/storage/types";
 import { AnnotationPopover } from "./src/views/annotationPopover";
 import { ANNOTATION_SIDEBAR_VIEW, AnnotationSidebarView } from "./src/views/sidebarView";
+import { StickyNoteLane } from "./src/views/stickyNoteLane";
 
 interface CommentModalValue {
   title: string;
@@ -56,6 +57,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private toolbar!: SelectionToolbar;
   private popover!: AnnotationPopover;
   private pdfLayer!: PdfAnnotationLayer;
+  private stickyLane!: StickyNoteLane;
   private lastSelection: SelectionSnapshot | null = null;
   private renameMigrationTimer: number | null = null;
 
@@ -107,11 +109,32 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       },
     });
 
+    this.stickyLane = new StickyNoteLane({
+      app: this.app,
+      component: this,
+      getSettings: () => this.settings,
+      getCachedDocument: (filePath) => this.store.getCachedDocument(filePath),
+      onUpdateComment: async (file, comment, content, title) => {
+        await this.store.updateCommentContent(file, comment.id, content, title);
+        await this.refreshAnnotations();
+      },
+      onDeleteAnnotation: async (file, annotationId) => {
+        await this.store.removeAnnotation(file, annotationId);
+        await this.refreshAnnotations();
+      },
+      onToggleCollapse: async (file, comment) => {
+        await this.store.updateComment(file, comment);
+        await this.refreshAnnotations();
+      },
+      refreshAnnotations: () => this.refreshAnnotations(),
+    });
+
     this.addSettingTab(new AnnotationSettingsTab(this));
     this.registerRibbonIcon();
     this.registerCommands();
     this.registerEvents();
     this.pdfLayer.register();
+    this.stickyLane.register();
     this.registerMarkdownPostProcessor((element, context) => this.renderReadingHighlights(element, context));
   }
 
@@ -121,6 +144,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
     this.toolbar?.destroy();
     this.popover?.destroy();
+    this.stickyLane?.destroy();
     this.app.workspace.detachLeavesOfType(ANNOTATION_SIDEBAR_VIEW);
   }
 
@@ -143,6 +167,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         await view.render();
       }
     }
+    await this.stickyLane.render();
   }
 
   private registerRibbonIcon(): void {
