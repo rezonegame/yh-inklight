@@ -6,7 +6,13 @@
 
 > 本插件基于 [Axl Light](https://github.com/rezonegame/axl-light) 开发，在原有功能基础上增加了编辑器旁便签栏和行内编辑功能。
 
-## 最新版本：v0.5.4
+## 最新版本：v0.5.5
+
+### v0.5.5 长路径 sidecar 修复
+
+- ✅ **长路径可保存**：新文档 sidecar 文件名过长时自动使用“文件名前缀 + 路径 hash”的紧凑命名
+- ✅ **兼容旧数据**：已有短 sidecar 文件继续按原路径读写，不迁移、不改 schema
+- ✅ **修复新增失败**：解决长中文目录或长 PDF 文件名导致新批注无法创建 JSON 的问题
 
 ### v0.5.4 持久化可靠性修复
 
@@ -111,7 +117,7 @@ curl -fsSL https://raw.githubusercontent.com/rezonegame/yh-inklight/main/scripts
 如果你只想测试指定版本，可以打开：
 
 ```text
-https://github.com/rezonegame/yh-inklight/releases/tag/v0.5.4
+https://github.com/rezonegame/yh-inklight/releases/tag/v0.5.5
 ```
 
 下载该版本的 `main.js`、`manifest.json` 和 `styles.css`，放入 `<你的仓库>/.obsidian/plugins/yh-inklight/` 后重启 Obsidian。

@@ -23,6 +23,8 @@ import {
 const STORE_DIR = ".obsidian-annotations";
 const INDEX_PATH = normalizePath(`${STORE_DIR}/index.json`);
 const BACKUP_DIR = normalizePath(`${STORE_DIR}/backups`);
+const MAX_LEGACY_SIDECAR_NAME_LENGTH = 180;
+const MAX_COMPACT_SIDECAR_PREFIX_LENGTH = 96;
 
 interface ExportDocumentSource {
   filePath: string;
@@ -392,12 +394,30 @@ export class AnnotationStore {
   }
 
   toSidecarPath(filePath: string): string {
+    const legacyPath = this.toLegacySidecarPath(filePath);
+    const legacyName = legacyPath.split("/").pop() ?? "";
+    if (legacyName.length <= MAX_LEGACY_SIDECAR_NAME_LENGTH) {
+      return legacyPath;
+    }
+
+    return this.toCompactSidecarPath(filePath);
+  }
+
+  private toLegacySidecarPath(filePath: string): string {
     const safeName = this.normalizeVaultPath(filePath)
       .toLowerCase()
       .split(/[\\/]/)
       .map((part) => encodeURIComponent(part))
       .join("__");
     return normalizePath(`${STORE_DIR}/${safeName}.json`);
+  }
+
+  private toCompactSidecarPath(filePath: string): string {
+    const normalizedPath = this.normalizeVaultPath(filePath).toLowerCase();
+    const fileName = normalizedPath.split(/[\\/]/).pop() ?? "annotation";
+    const encodedName = encodeURIComponent(fileName).replace(/%/g, "_").replace(/[^a-z0-9._-]/g, "_");
+    const prefix = encodedName.slice(0, MAX_COMPACT_SIDECAR_PREFIX_LENGTH).replace(/[._-]+$/g, "") || "annotation";
+    return normalizePath(`${STORE_DIR}/${prefix}--${hashPath(normalizedPath)}.json`);
   }
 
   private async createEmptyDocument(file: TFile): Promise<FileAnnotationDocument> {
@@ -527,6 +547,15 @@ export class AnnotationStore {
 
 function backupTimestamp(): string {
   return new Date().toISOString().replace(/[:.]/g, "-");
+}
+
+function hashPath(value: string): string {
+  let hash = 0x811c9dc5;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 function buildExportLines(

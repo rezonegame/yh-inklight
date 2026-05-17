@@ -1199,6 +1199,8 @@ var import_obsidian5 = require("obsidian");
 var STORE_DIR = ".obsidian-annotations";
 var INDEX_PATH = (0, import_obsidian5.normalizePath)(`${STORE_DIR}/index.json`);
 var BACKUP_DIR = (0, import_obsidian5.normalizePath)(`${STORE_DIR}/backups`);
+var MAX_LEGACY_SIDECAR_NAME_LENGTH = 180;
+var MAX_COMPACT_SIDECAR_PREFIX_LENGTH = 96;
 var AnnotationStoreReadError = class extends Error {
   constructor(path, originalError) {
     super(`Failed to read annotation sidecar JSON: ${path}`);
@@ -1495,8 +1497,23 @@ var AnnotationStore = class {
     return this.hashBytes(bytes);
   }
   toSidecarPath(filePath) {
+    const legacyPath = this.toLegacySidecarPath(filePath);
+    const legacyName = legacyPath.split("/").pop() ?? "";
+    if (legacyName.length <= MAX_LEGACY_SIDECAR_NAME_LENGTH) {
+      return legacyPath;
+    }
+    return this.toCompactSidecarPath(filePath);
+  }
+  toLegacySidecarPath(filePath) {
     const safeName = this.normalizeVaultPath(filePath).toLowerCase().split(/[\\/]/).map((part) => encodeURIComponent(part)).join("__");
     return (0, import_obsidian5.normalizePath)(`${STORE_DIR}/${safeName}.json`);
+  }
+  toCompactSidecarPath(filePath) {
+    const normalizedPath = this.normalizeVaultPath(filePath).toLowerCase();
+    const fileName = normalizedPath.split(/[\\/]/).pop() ?? "annotation";
+    const encodedName = encodeURIComponent(fileName).replace(/%/g, "_").replace(/[^a-z0-9._-]/g, "_");
+    const prefix = encodedName.slice(0, MAX_COMPACT_SIDECAR_PREFIX_LENGTH).replace(/[._-]+$/g, "") || "annotation";
+    return (0, import_obsidian5.normalizePath)(`${STORE_DIR}/${prefix}--${hashPath(normalizedPath)}.json`);
   }
   async createEmptyDocument(file) {
     return {
@@ -1594,6 +1611,14 @@ var AnnotationStore = class {
 };
 function backupTimestamp() {
   return (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
+}
+function hashPath(value) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 function buildExportLines(title, sources, format) {
   const entries = sources.flatMap((source) => collectExportEntries(source));
