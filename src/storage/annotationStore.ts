@@ -48,6 +48,13 @@ export class AnnotationStoreReadError extends Error {
   }
 }
 
+export class AnnotationStoreWriteError extends Error {
+  constructor(readonly path: string, readonly originalError: unknown) {
+    super(`Failed to write annotation sidecar JSON: ${path}`);
+    this.name = "AnnotationStoreWriteError";
+  }
+}
+
 export class AnnotationStore {
   private readonly documents = new Map<string, FileAnnotationDocument>();
   private index: AnnotationIndex = EMPTY_INDEX;
@@ -103,69 +110,94 @@ export class AnnotationStore {
     const filePath = this.normalizeVaultPath(document.filePath);
     const sidecarPath = this.toSidecarPath(filePath);
     const normalized = this.normalizeDocument(document, filePath);
-    await this.ensureStoreDir();
-    await this.app.vault.adapter.write(sidecarPath, JSON.stringify(normalized, null, 2));
+    const nextIndex: AnnotationIndex = {
+      ...this.index,
+      files: {
+        ...this.index.files,
+        [normalized.filePath]: this.toIndexEntry(normalized, sidecarPath),
+      },
+    };
+
+    try {
+      await this.ensureStoreDir();
+      await this.app.vault.adapter.write(sidecarPath, JSON.stringify(normalized, null, 2));
+      const persisted = await this.readExistingJson<FileAnnotationDocument>(sidecarPath);
+      this.verifyPersistedDocument(normalized, persisted, sidecarPath);
+      await this.writeIndex(nextIndex);
+    } catch (error) {
+      new Notice(`墨光批注未保存，请检查写入权限或同步状态：${sidecarPath}`);
+      throw new AnnotationStoreWriteError(sidecarPath, error);
+    }
 
     this.documents.set(this.toCacheKey(normalized.filePath), normalized);
-    this.index.files[normalized.filePath] = this.toIndexEntry(normalized, sidecarPath);
-    await this.writeIndex();
+    this.index = nextIndex;
     this.changeVersion += 1;
   }
 
   async addHighlight(file: TFile, highlight: HighlightAnnotation): Promise<FileAnnotationDocument> {
     const document = await this.getDocument(file);
-    document.highlights = [...document.highlights, highlight].sort(
-      (a, b) => a.anchor.startOffset - b.anchor.startOffset,
-    );
-    document.lastModified = new Date().toISOString();
-    await this.saveDocument(document);
-    return document;
+    const nextDocument: FileAnnotationDocument = {
+      ...document,
+      highlights: [...document.highlights, highlight].sort((a, b) => a.anchor.startOffset - b.anchor.startOffset),
+      lastModified: new Date().toISOString(),
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
 
   async addComment(file: TFile, comment: CommentAnnotation): Promise<FileAnnotationDocument> {
     const document = await this.getDocument(file);
-    document.comments = [...document.comments, comment].sort(
-      (a, b) => a.anchor.startOffset - b.anchor.startOffset,
-    );
-    document.lastModified = new Date().toISOString();
-    await this.saveDocument(document);
-    return document;
+    const nextDocument: FileAnnotationDocument = {
+      ...document,
+      comments: [...document.comments, comment].sort((a, b) => a.anchor.startOffset - b.anchor.startOffset),
+      lastModified: new Date().toISOString(),
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
 
   async addPdfHighlight(file: TFile, highlight: PdfHighlightAnnotation): Promise<FileAnnotationDocument> {
     const document = await this.getDocument(file);
-    document.pdfHighlights = [...document.pdfHighlights, highlight].sort(
-      (a, b) => a.anchor.pageNumber - b.anchor.pageNumber,
-    );
-    document.lastModified = new Date().toISOString();
-    await this.saveDocument(document);
-    return document;
+    const nextDocument: FileAnnotationDocument = {
+      ...document,
+      pdfHighlights: [...document.pdfHighlights, highlight].sort((a, b) => a.anchor.pageNumber - b.anchor.pageNumber),
+      lastModified: new Date().toISOString(),
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
 
   async addPdfComment(file: TFile, comment: PdfCommentAnnotation): Promise<FileAnnotationDocument> {
     const document = await this.getDocument(file);
-    document.pdfComments = [...document.pdfComments, comment].sort((a, b) => {
-      return a.anchor.pageNumber - b.anchor.pageNumber;
-    });
-    document.lastModified = new Date().toISOString();
-    await this.saveDocument(document);
-    return document;
+    const nextDocument: FileAnnotationDocument = {
+      ...document,
+      pdfComments: [...document.pdfComments, comment].sort((a, b) => a.anchor.pageNumber - b.anchor.pageNumber),
+      lastModified: new Date().toISOString(),
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
 
   async updatePdfComment(file: TFile, comment: PdfCommentAnnotation): Promise<FileAnnotationDocument> {
     const document = await this.getDocument(file);
-    document.pdfComments = document.pdfComments.map((item) => (item.id === comment.id ? comment : item));
-    document.lastModified = new Date().toISOString();
-    await this.saveDocument(document);
-    return document;
+    const nextDocument: FileAnnotationDocument = {
+      ...document,
+      pdfComments: document.pdfComments.map((item) => (item.id === comment.id ? comment : item)),
+      lastModified: new Date().toISOString(),
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
 
   async updateComment(file: TFile, comment: CommentAnnotation): Promise<FileAnnotationDocument> {
     const document = await this.getDocument(file);
-    document.comments = document.comments.map((item) => (item.id === comment.id ? comment : item));
-    document.lastModified = new Date().toISOString();
-    await this.saveDocument(document);
-    return document;
+    const nextDocument: FileAnnotationDocument = {
+      ...document,
+      comments: document.comments.map((item) => (item.id === comment.id ? comment : item)),
+      lastModified: new Date().toISOString(),
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
 
   async updateCommentContent(
@@ -175,21 +207,25 @@ export class AnnotationStore {
     title?: string,
   ): Promise<FileAnnotationDocument> {
     const document = await this.getDocument(file);
-    document.comments = document.comments.map((item) => {
-      if (item.id !== commentId) {
-        return item;
-      }
+    const now = new Date().toISOString();
+    const nextDocument: FileAnnotationDocument = {
+      ...document,
+      comments: document.comments.map((item) => {
+        if (item.id !== commentId) {
+          return item;
+        }
 
-      return {
-        ...item,
-        title,
-        content,
-        updatedAt: new Date().toISOString(),
-      };
-    });
-    document.lastModified = new Date().toISOString();
-    await this.saveDocument(document);
-    return document;
+        return {
+          ...item,
+          title,
+          content,
+          updatedAt: now,
+        };
+      }),
+      lastModified: now,
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
 
   async updatePdfCommentContent(
@@ -199,32 +235,39 @@ export class AnnotationStore {
     title?: string,
   ): Promise<FileAnnotationDocument> {
     const document = await this.getDocument(file);
-    document.pdfComments = document.pdfComments.map((item) => {
-      if (item.id !== commentId) {
-        return item;
-      }
+    const now = new Date().toISOString();
+    const nextDocument: FileAnnotationDocument = {
+      ...document,
+      pdfComments: document.pdfComments.map((item) => {
+        if (item.id !== commentId) {
+          return item;
+        }
 
-      return {
-        ...item,
-        title,
-        content,
-        updatedAt: new Date().toISOString(),
-      };
-    });
-    document.lastModified = new Date().toISOString();
-    await this.saveDocument(document);
-    return document;
+        return {
+          ...item,
+          title,
+          content,
+          updatedAt: now,
+        };
+      }),
+      lastModified: now,
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
 
   async removeAnnotation(file: TFile, annotationId: string): Promise<FileAnnotationDocument> {
     const document = await this.getDocument(file);
-    document.highlights = document.highlights.filter((item) => item.id !== annotationId);
-    document.comments = document.comments.filter((item) => item.id !== annotationId);
-    document.pdfHighlights = document.pdfHighlights.filter((item) => item.id !== annotationId);
-    document.pdfComments = document.pdfComments.filter((item) => item.id !== annotationId);
-    document.lastModified = new Date().toISOString();
-    await this.saveDocument(document);
-    return document;
+    const nextDocument: FileAnnotationDocument = {
+      ...document,
+      highlights: document.highlights.filter((item) => item.id !== annotationId),
+      comments: document.comments.filter((item) => item.id !== annotationId),
+      pdfHighlights: document.pdfHighlights.filter((item) => item.id !== annotationId),
+      pdfComments: document.pdfComments.filter((item) => item.id !== annotationId),
+      lastModified: new Date().toISOString(),
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
 
   async migrateFilePath(oldPath: string, file: TFile): Promise<void> {
@@ -283,9 +326,30 @@ export class AnnotationStore {
 
   async touchFileHash(file: TFile): Promise<void> {
     const document = await this.getDocument(file);
-    document.fileHash = await this.hashFile(file);
-    document.lastModified = new Date().toISOString();
-    await this.saveDocument(document);
+    await this.saveDocument({
+      ...document,
+      fileHash: await this.hashFile(file),
+      lastModified: new Date().toISOString(),
+    });
+  }
+
+  async testWriteAccess(): Promise<string> {
+    await this.ensureStoreDir();
+    const testPath = normalizePath(`${STORE_DIR}/.write-test.json`);
+    const payload = JSON.stringify({ ok: true, timestamp: new Date().toISOString() }, null, 2);
+
+    try {
+      await this.app.vault.adapter.write(testPath, payload);
+      const persisted = await this.app.vault.adapter.read(testPath);
+      if (persisted !== payload) {
+        throw new Error("Write test content mismatch");
+      }
+      await this.deleteIfExists(testPath);
+      return testPath;
+    } catch (error) {
+      new Notice(`墨光批注存储测试失败：${testPath}`);
+      throw new AnnotationStoreWriteError(testPath, error);
+    }
   }
 
   async backupDocuments(): Promise<number> {
@@ -382,9 +446,26 @@ export class AnnotationStore {
     }
   }
 
-  private async writeIndex(): Promise<void> {
+  private async writeIndex(nextIndex: AnnotationIndex = this.index): Promise<void> {
     await this.ensureStoreDir();
-    await this.app.vault.adapter.write(INDEX_PATH, JSON.stringify(this.index, null, 2));
+    await this.app.vault.adapter.write(INDEX_PATH, JSON.stringify(nextIndex, null, 2));
+  }
+
+  private verifyPersistedDocument(expected: FileAnnotationDocument, persisted: FileAnnotationDocument, sidecarPath: string): void {
+    const normalizedPersisted = this.normalizeDocument(persisted, expected.filePath);
+    const countsMatch =
+      normalizedPersisted.highlights.length === expected.highlights.length &&
+      normalizedPersisted.comments.length === expected.comments.length &&
+      normalizedPersisted.pdfHighlights.length === expected.pdfHighlights.length &&
+      normalizedPersisted.pdfComments.length === expected.pdfComments.length;
+
+    if (
+      normalizedPersisted.filePath !== expected.filePath ||
+      normalizedPersisted.lastModified !== expected.lastModified ||
+      !countsMatch
+    ) {
+      throw new Error(`Persisted sidecar verification failed: ${sidecarPath}`);
+    }
   }
 
   private async readJson<T>(
@@ -406,6 +487,15 @@ export class AnnotationStore {
       new Notice(`墨光批注无法读取 ${normalizedPath}，已停止写入以保护批注数据。`);
       throw new AnnotationStoreReadError(normalizedPath, error);
     }
+  }
+
+  private async readExistingJson<T>(path: string): Promise<T> {
+    const normalizedPath = normalizePath(path);
+    if (!(await this.app.vault.adapter.exists(normalizedPath))) {
+      throw new Error(`Expected JSON file does not exist: ${normalizedPath}`);
+    }
+
+    return JSON.parse(await this.app.vault.adapter.read(normalizedPath)) as T;
   }
 
   private async deleteIfExists(path: string): Promise<void> {

@@ -1207,6 +1207,14 @@ var AnnotationStoreReadError = class extends Error {
     this.name = "AnnotationStoreReadError";
   }
 };
+var AnnotationStoreWriteError = class extends Error {
+  constructor(path, originalError) {
+    super(`Failed to write annotation sidecar JSON: ${path}`);
+    this.path = path;
+    this.originalError = originalError;
+    this.name = "AnnotationStoreWriteError";
+  }
+};
 var AnnotationStore = class {
   constructor(app) {
     this.app = app;
@@ -1253,106 +1261,141 @@ var AnnotationStore = class {
     const filePath = this.normalizeVaultPath(document2.filePath);
     const sidecarPath = this.toSidecarPath(filePath);
     const normalized = this.normalizeDocument(document2, filePath);
-    await this.ensureStoreDir();
-    await this.app.vault.adapter.write(sidecarPath, JSON.stringify(normalized, null, 2));
+    const nextIndex = {
+      ...this.index,
+      files: {
+        ...this.index.files,
+        [normalized.filePath]: this.toIndexEntry(normalized, sidecarPath)
+      }
+    };
+    try {
+      await this.ensureStoreDir();
+      await this.app.vault.adapter.write(sidecarPath, JSON.stringify(normalized, null, 2));
+      const persisted = await this.readExistingJson(sidecarPath);
+      this.verifyPersistedDocument(normalized, persisted, sidecarPath);
+      await this.writeIndex(nextIndex);
+    } catch (error) {
+      new import_obsidian5.Notice(`\u58A8\u5149\u6279\u6CE8\u672A\u4FDD\u5B58\uFF0C\u8BF7\u68C0\u67E5\u5199\u5165\u6743\u9650\u6216\u540C\u6B65\u72B6\u6001\uFF1A${sidecarPath}`);
+      throw new AnnotationStoreWriteError(sidecarPath, error);
+    }
     this.documents.set(this.toCacheKey(normalized.filePath), normalized);
-    this.index.files[normalized.filePath] = this.toIndexEntry(normalized, sidecarPath);
-    await this.writeIndex();
+    this.index = nextIndex;
     this.changeVersion += 1;
   }
   async addHighlight(file, highlight) {
     const document2 = await this.getDocument(file);
-    document2.highlights = [...document2.highlights, highlight].sort(
-      (a, b) => a.anchor.startOffset - b.anchor.startOffset
-    );
-    document2.lastModified = (/* @__PURE__ */ new Date()).toISOString();
-    await this.saveDocument(document2);
-    return document2;
+    const nextDocument = {
+      ...document2,
+      highlights: [...document2.highlights, highlight].sort((a, b) => a.anchor.startOffset - b.anchor.startOffset),
+      lastModified: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
   async addComment(file, comment) {
     const document2 = await this.getDocument(file);
-    document2.comments = [...document2.comments, comment].sort(
-      (a, b) => a.anchor.startOffset - b.anchor.startOffset
-    );
-    document2.lastModified = (/* @__PURE__ */ new Date()).toISOString();
-    await this.saveDocument(document2);
-    return document2;
+    const nextDocument = {
+      ...document2,
+      comments: [...document2.comments, comment].sort((a, b) => a.anchor.startOffset - b.anchor.startOffset),
+      lastModified: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
   async addPdfHighlight(file, highlight) {
     const document2 = await this.getDocument(file);
-    document2.pdfHighlights = [...document2.pdfHighlights, highlight].sort(
-      (a, b) => a.anchor.pageNumber - b.anchor.pageNumber
-    );
-    document2.lastModified = (/* @__PURE__ */ new Date()).toISOString();
-    await this.saveDocument(document2);
-    return document2;
+    const nextDocument = {
+      ...document2,
+      pdfHighlights: [...document2.pdfHighlights, highlight].sort((a, b) => a.anchor.pageNumber - b.anchor.pageNumber),
+      lastModified: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
   async addPdfComment(file, comment) {
     const document2 = await this.getDocument(file);
-    document2.pdfComments = [...document2.pdfComments, comment].sort((a, b) => {
-      return a.anchor.pageNumber - b.anchor.pageNumber;
-    });
-    document2.lastModified = (/* @__PURE__ */ new Date()).toISOString();
-    await this.saveDocument(document2);
-    return document2;
+    const nextDocument = {
+      ...document2,
+      pdfComments: [...document2.pdfComments, comment].sort((a, b) => a.anchor.pageNumber - b.anchor.pageNumber),
+      lastModified: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
   async updatePdfComment(file, comment) {
     const document2 = await this.getDocument(file);
-    document2.pdfComments = document2.pdfComments.map((item) => item.id === comment.id ? comment : item);
-    document2.lastModified = (/* @__PURE__ */ new Date()).toISOString();
-    await this.saveDocument(document2);
-    return document2;
+    const nextDocument = {
+      ...document2,
+      pdfComments: document2.pdfComments.map((item) => item.id === comment.id ? comment : item),
+      lastModified: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
   async updateComment(file, comment) {
     const document2 = await this.getDocument(file);
-    document2.comments = document2.comments.map((item) => item.id === comment.id ? comment : item);
-    document2.lastModified = (/* @__PURE__ */ new Date()).toISOString();
-    await this.saveDocument(document2);
-    return document2;
+    const nextDocument = {
+      ...document2,
+      comments: document2.comments.map((item) => item.id === comment.id ? comment : item),
+      lastModified: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
   async updateCommentContent(file, commentId, content, title) {
     const document2 = await this.getDocument(file);
-    document2.comments = document2.comments.map((item) => {
-      if (item.id !== commentId) {
-        return item;
-      }
-      return {
-        ...item,
-        title,
-        content,
-        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-      };
-    });
-    document2.lastModified = (/* @__PURE__ */ new Date()).toISOString();
-    await this.saveDocument(document2);
-    return document2;
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const nextDocument = {
+      ...document2,
+      comments: document2.comments.map((item) => {
+        if (item.id !== commentId) {
+          return item;
+        }
+        return {
+          ...item,
+          title,
+          content,
+          updatedAt: now
+        };
+      }),
+      lastModified: now
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
   async updatePdfCommentContent(file, commentId, content, title) {
     const document2 = await this.getDocument(file);
-    document2.pdfComments = document2.pdfComments.map((item) => {
-      if (item.id !== commentId) {
-        return item;
-      }
-      return {
-        ...item,
-        title,
-        content,
-        updatedAt: (/* @__PURE__ */ new Date()).toISOString()
-      };
-    });
-    document2.lastModified = (/* @__PURE__ */ new Date()).toISOString();
-    await this.saveDocument(document2);
-    return document2;
+    const now = (/* @__PURE__ */ new Date()).toISOString();
+    const nextDocument = {
+      ...document2,
+      pdfComments: document2.pdfComments.map((item) => {
+        if (item.id !== commentId) {
+          return item;
+        }
+        return {
+          ...item,
+          title,
+          content,
+          updatedAt: now
+        };
+      }),
+      lastModified: now
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
   async removeAnnotation(file, annotationId) {
     const document2 = await this.getDocument(file);
-    document2.highlights = document2.highlights.filter((item) => item.id !== annotationId);
-    document2.comments = document2.comments.filter((item) => item.id !== annotationId);
-    document2.pdfHighlights = document2.pdfHighlights.filter((item) => item.id !== annotationId);
-    document2.pdfComments = document2.pdfComments.filter((item) => item.id !== annotationId);
-    document2.lastModified = (/* @__PURE__ */ new Date()).toISOString();
-    await this.saveDocument(document2);
-    return document2;
+    const nextDocument = {
+      ...document2,
+      highlights: document2.highlights.filter((item) => item.id !== annotationId),
+      comments: document2.comments.filter((item) => item.id !== annotationId),
+      pdfHighlights: document2.pdfHighlights.filter((item) => item.id !== annotationId),
+      pdfComments: document2.pdfComments.filter((item) => item.id !== annotationId),
+      lastModified: (/* @__PURE__ */ new Date()).toISOString()
+    };
+    await this.saveDocument(nextDocument);
+    return nextDocument;
   }
   async migrateFilePath(oldPath, file) {
     const normalizedOldPath = this.normalizeVaultPath(oldPath);
@@ -1401,9 +1444,28 @@ var AnnotationStore = class {
   }
   async touchFileHash(file) {
     const document2 = await this.getDocument(file);
-    document2.fileHash = await this.hashFile(file);
-    document2.lastModified = (/* @__PURE__ */ new Date()).toISOString();
-    await this.saveDocument(document2);
+    await this.saveDocument({
+      ...document2,
+      fileHash: await this.hashFile(file),
+      lastModified: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  }
+  async testWriteAccess() {
+    await this.ensureStoreDir();
+    const testPath = (0, import_obsidian5.normalizePath)(`${STORE_DIR}/.write-test.json`);
+    const payload = JSON.stringify({ ok: true, timestamp: (/* @__PURE__ */ new Date()).toISOString() }, null, 2);
+    try {
+      await this.app.vault.adapter.write(testPath, payload);
+      const persisted = await this.app.vault.adapter.read(testPath);
+      if (persisted !== payload) {
+        throw new Error("Write test content mismatch");
+      }
+      await this.deleteIfExists(testPath);
+      return testPath;
+    } catch (error) {
+      new import_obsidian5.Notice(`\u58A8\u5149\u6279\u6CE8\u5B58\u50A8\u6D4B\u8BD5\u5931\u8D25\uFF1A${testPath}`);
+      throw new AnnotationStoreWriteError(testPath, error);
+    }
   }
   async backupDocuments() {
     await this.ensureStoreDir();
@@ -1477,9 +1539,16 @@ var AnnotationStore = class {
       await this.app.vault.adapter.mkdir(normalizedPath);
     }
   }
-  async writeIndex() {
+  async writeIndex(nextIndex = this.index) {
     await this.ensureStoreDir();
-    await this.app.vault.adapter.write(INDEX_PATH, JSON.stringify(this.index, null, 2));
+    await this.app.vault.adapter.write(INDEX_PATH, JSON.stringify(nextIndex, null, 2));
+  }
+  verifyPersistedDocument(expected, persisted, sidecarPath) {
+    const normalizedPersisted = this.normalizeDocument(persisted, expected.filePath);
+    const countsMatch = normalizedPersisted.highlights.length === expected.highlights.length && normalizedPersisted.comments.length === expected.comments.length && normalizedPersisted.pdfHighlights.length === expected.pdfHighlights.length && normalizedPersisted.pdfComments.length === expected.pdfComments.length;
+    if (normalizedPersisted.filePath !== expected.filePath || normalizedPersisted.lastModified !== expected.lastModified || !countsMatch) {
+      throw new Error(`Persisted sidecar verification failed: ${sidecarPath}`);
+    }
   }
   async readJson(path, fallback, options = {}) {
     const normalizedPath = (0, import_obsidian5.normalizePath)(path);
@@ -1495,6 +1564,13 @@ var AnnotationStore = class {
       new import_obsidian5.Notice(`\u58A8\u5149\u6279\u6CE8\u65E0\u6CD5\u8BFB\u53D6 ${normalizedPath}\uFF0C\u5DF2\u505C\u6B62\u5199\u5165\u4EE5\u4FDD\u62A4\u6279\u6CE8\u6570\u636E\u3002`);
       throw new AnnotationStoreReadError(normalizedPath, error);
     }
+  }
+  async readExistingJson(path) {
+    const normalizedPath = (0, import_obsidian5.normalizePath)(path);
+    if (!await this.app.vault.adapter.exists(normalizedPath)) {
+      throw new Error(`Expected JSON file does not exist: ${normalizedPath}`);
+    }
+    return JSON.parse(await this.app.vault.adapter.read(normalizedPath));
   }
   async deleteIfExists(path) {
     const normalizedPath = (0, import_obsidian5.normalizePath)(path);
@@ -2746,6 +2822,18 @@ var OverlayAnnotationsPlugin = class extends import_obsidian10.Plugin {
       id: "open-annotation-sidebar",
       name: "\u6253\u5F00\u6279\u6CE8\u603B\u89C8",
       callback: () => this.activateSidebar()
+    });
+    this.addCommand({
+      id: "test-annotation-storage",
+      name: "\u6D4B\u8BD5\u58A8\u5149\u6279\u6CE8\u5B58\u50A8",
+      callback: async () => {
+        try {
+          const path = await this.store.testWriteAccess();
+          new import_obsidian10.Notice(`\u58A8\u5149\u6279\u6CE8\u5B58\u50A8\u53EF\u5199\uFF1A${path}`);
+        } catch {
+          new import_obsidian10.Notice("\u58A8\u5149\u6279\u6CE8\u5B58\u50A8\u4E0D\u53EF\u5199\uFF0C\u8BF7\u68C0\u67E5 .obsidian-annotations \u76EE\u5F55\u6743\u9650\u6216\u540C\u6B65\u72B6\u6001\u3002");
+        }
+      }
     });
   }
   registerEvents() {

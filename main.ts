@@ -210,6 +210,19 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       name: "打开批注总览",
       callback: () => this.activateSidebar(),
     });
+
+    this.addCommand({
+      id: "test-annotation-storage",
+      name: "测试墨光批注存储",
+      callback: async () => {
+        try {
+          const path = await this.store.testWriteAccess();
+          new Notice(`墨光批注存储可写：${path}`);
+        } catch {
+          new Notice("墨光批注存储不可写，请检查 .obsidian-annotations 目录权限或同步状态。");
+        }
+      },
+    });
   }
 
   private registerEvents(): void {

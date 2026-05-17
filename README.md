@@ -6,7 +6,13 @@
 
 > 本插件基于 [Axl Light](https://github.com/rezonegame/axl-light) 开发，在原有功能基础上增加了编辑器旁便签栏和行内编辑功能。
 
-## 最新版本：v0.5.3
+## 最新版本：v0.5.4
+
+### v0.5.4 持久化可靠性修复
+
+- ✅ **保存后验证**：批注写入 sidecar 后会立即读回验证，避免“重启前可见、重启后消失”
+- ✅ **内存状态保护**：只有磁盘保存成功后才更新内存缓存和索引，写入失败不再伪装成功
+- ✅ **存储诊断命令**：新增“测试墨光批注存储”命令，可检查 `.obsidian-annotations/` 是否真实可写
 
 ### v0.5.3 侧栏刷新修复
 
@@ -105,7 +111,7 @@ curl -fsSL https://raw.githubusercontent.com/rezonegame/yh-inklight/main/scripts
 如果你只想测试指定版本，可以打开：
 
 ```text
-https://github.com/rezonegame/yh-inklight/releases/tag/v0.5.3
+https://github.com/rezonegame/yh-inklight/releases/tag/v0.5.4
 ```
 
 下载该版本的 `main.js`、`manifest.json` 和 `styles.css`，放入 `<你的仓库>/.obsidian/plugins/yh-inklight/` 后重启 Obsidian。
