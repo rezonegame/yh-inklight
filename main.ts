@@ -60,14 +60,12 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private stickyLane!: StickyNoteLane;
   private lastSelection: SelectionSnapshot | null = null;
   private renameMigrationTimer: number | null = null;
-  private lastBackupAt = 0;
 
   async onload(): Promise<void> {
     addIcon("yh-inklight-icon", YH_INKLIGHT_ICON);
     await this.loadSettings();
     this.store = new AnnotationStore(this.app);
     await this.store.initialize();
-    this.registerAutomaticBackups();
 
     this.registerView(ANNOTATION_SIDEBAR_VIEW, (leaf) => new AnnotationSidebarView(leaf, this));
     this.registerEditorExtension([
@@ -283,28 +281,6 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     );
   }
 
-  private registerAutomaticBackups(): void {
-    this.registerInterval(
-      window.setInterval(() => {
-        void this.runScheduledBackup();
-      }, 60_000),
-    );
-  }
-
-  private async runScheduledBackup(): Promise<void> {
-    const intervalMs = Math.max(1, this.settings.backupFrequencyMinutes) * 60_000;
-    const now = Date.now();
-    if (now - this.lastBackupAt < intervalMs) {
-      return;
-    }
-
-    try {
-      await this.store.backupDocuments();
-      this.lastBackupAt = now;
-    } catch {
-      new Notice("墨光批注自动备份失败，请检查 .obsidian-annotations 目录。");
-    }
-  }
 
   private async createHighlight(color: AnnotationColor): Promise<void> {
     if (this.pdfLayer.isPdfActive()) {

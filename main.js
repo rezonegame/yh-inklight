@@ -691,7 +691,6 @@ var DEFAULT_SETTINGS = {
   stickyCollapseWidth: 800,
   showLeaderLines: true,
   defaultAuthor: "\u8BFB\u8005",
-  backupFrequencyMinutes: 30,
   migrateOnRename: true,
   stickyNotesVisible: true
 };
@@ -1179,12 +1178,6 @@ var AnnotationSettingsTab = class extends import_obsidian4.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian4.Setting(containerEl).setName("\u6570\u636E\u5907\u4EFD\u9891\u7387").setDesc("\u81EA\u52A8\u5907\u4EFD\u95F4\u9694\uFF08\u5206\u949F\uFF09\u3002sidecar \u6587\u4EF6\u4ECD\u4F1A\u5373\u65F6\u4FDD\u5B58\u3002").addSlider((slider) => {
-      slider.setLimits(5, 240, 5).setValue(this.plugin.settings.backupFrequencyMinutes).setDynamicTooltip().onChange(async (value) => {
-        this.plugin.settings.backupFrequencyMinutes = value;
-        await this.plugin.saveSettings();
-      });
-    });
     new import_obsidian4.Setting(containerEl).setName("\u91CD\u547D\u540D\u65F6\u8FC1\u79FB\u6279\u6CE8").addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.migrateOnRename).onChange(async (value) => {
         this.plugin.settings.migrateOnRename = value;
@@ -1198,7 +1191,6 @@ var AnnotationSettingsTab = class extends import_obsidian4.PluginSettingTab {
 var import_obsidian5 = require("obsidian");
 var STORE_DIR = ".obsidian-annotations";
 var INDEX_PATH = (0, import_obsidian5.normalizePath)(`${STORE_DIR}/index.json`);
-var BACKUP_DIR = (0, import_obsidian5.normalizePath)(`${STORE_DIR}/backups`);
 var MAX_LEGACY_SIDECAR_NAME_LENGTH = 180;
 var MAX_COMPACT_SIDECAR_PREFIX_LENGTH = 96;
 var AnnotationStoreReadError = class extends Error {
@@ -1469,26 +1461,6 @@ var AnnotationStore = class {
       throw new AnnotationStoreWriteError(testPath, error);
     }
   }
-  async backupDocuments() {
-    await this.ensureStoreDir();
-    await this.ensureDir(BACKUP_DIR);
-    const listed = await this.app.vault.adapter.list(STORE_DIR);
-    const sidecars = listed.files.filter((path) => {
-      const normalizedPath = (0, import_obsidian5.normalizePath)(path);
-      return normalizedPath.endsWith(".json") && normalizedPath !== INDEX_PATH && !normalizedPath.startsWith(`${BACKUP_DIR}/`);
-    });
-    if (!sidecars.length) {
-      return 0;
-    }
-    const snapshotDir = (0, import_obsidian5.normalizePath)(`${BACKUP_DIR}/${backupTimestamp()}`);
-    await this.ensureDir(snapshotDir);
-    for (const sidecar of sidecars) {
-      const content = await this.app.vault.adapter.read(sidecar);
-      const target = (0, import_obsidian5.normalizePath)(`${snapshotDir}/${sidecar.split("/").pop()}`);
-      await this.app.vault.adapter.write(target, content);
-    }
-    return sidecars.length;
-  }
   async hashFile(file) {
     if (file.extension === "md") {
       return this.hashString(await this.app.vault.cachedRead(file));
@@ -1609,9 +1581,6 @@ var AnnotationStore = class {
     return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
   }
 };
-function backupTimestamp() {
-  return (/* @__PURE__ */ new Date()).toISOString().replace(/[:.]/g, "-");
-}
 function hashPath(value) {
   let hash = 2166136261;
   for (let index = 0; index < value.length; index += 1) {
@@ -2711,14 +2680,12 @@ var OverlayAnnotationsPlugin = class extends import_obsidian10.Plugin {
     this.settings = DEFAULT_SETTINGS;
     this.lastSelection = null;
     this.renameMigrationTimer = null;
-    this.lastBackupAt = 0;
   }
   async onload() {
     (0, import_obsidian10.addIcon)("yh-inklight-icon", YH_INKLIGHT_ICON);
     await this.loadSettings();
     this.store = new AnnotationStore(this.app);
     await this.store.initialize();
-    this.registerAutomaticBackups();
     this.registerView(ANNOTATION_SIDEBAR_VIEW, (leaf) => new AnnotationSidebarView(leaf, this));
     this.registerEditorExtension([
       createHighlightExtension({
@@ -2911,26 +2878,6 @@ var OverlayAnnotationsPlugin = class extends import_obsidian10.Plugin {
         }
       })
     );
-  }
-  registerAutomaticBackups() {
-    this.registerInterval(
-      window.setInterval(() => {
-        void this.runScheduledBackup();
-      }, 6e4)
-    );
-  }
-  async runScheduledBackup() {
-    const intervalMs = Math.max(1, this.settings.backupFrequencyMinutes) * 6e4;
-    const now = Date.now();
-    if (now - this.lastBackupAt < intervalMs) {
-      return;
-    }
-    try {
-      await this.store.backupDocuments();
-      this.lastBackupAt = now;
-    } catch {
-      new import_obsidian10.Notice("\u58A8\u5149\u6279\u6CE8\u81EA\u52A8\u5907\u4EFD\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5 .obsidian-annotations \u76EE\u5F55\u3002");
-    }
   }
   async createHighlight(color) {
     if (this.pdfLayer.isPdfActive()) {

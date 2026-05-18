@@ -1,6 +1,6 @@
 {
   "name": "yh-inklight",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "private": true,
   "description": "Non-invasive Obsidian reading annotations for Markdown and PDF with overlay highlights, sticky notes, and sidecar storage.",
   "main": "main.js",

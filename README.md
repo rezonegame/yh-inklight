@@ -33,9 +33,13 @@
 - ✅ **全库导出**：全库模式下可导出 `inklight-all-notes*.md` 汇总文件
 - ✅ **创建便签快捷键**：首次添加便签弹窗支持 `Cmd/Ctrl + Enter` 保存、`Esc` 取消
 
+### v0.5.6 移除自动备份
+
+- 🗑️ **移除自动备份功能**：自动备份在跨设备场景下不可用，且缺少恢复机制；批注数据仍通过 sidecar 文件即时保存，不受影响
+- 🗑️ **移除"数据备份频率"设置项**：设置界面中不再显示备份频率滑块
+
 ### v0.5.1 最小升级
 
-- ✅ **自动备份 sidecar 批注**：根据“数据备份频率”设置，将 `.obsidian-annotations/` 下的批注 JSON 快照保存到 `.obsidian-annotations/backups/`
 - ✅ **选区复用保护**：切换文件后不会继续使用旧文件选区，避免批注写入错误文档
 - ✅ **sidecar 读取保护**：批注 JSON 损坏时停止写入并提示，避免静默覆盖为空数据
 - ✅ **重复文本定位优化**：阅读视图中重复文本会优先使用上下文和原始位置匹配
@@ -209,7 +213,6 @@ https://github.com/rezonegame/yh-inklight/releases/tag/v0.5.5
 - **窄屏折叠阈值**：设置便签栏自动隐藏的宽度阈值（640-1200px）
 - **显示连接线**：显示/隐藏便签与高亮之间的连接线
 - **默认作者**：设置便签的默认作者名称
-- **数据备份频率**：自动备份间隔（分钟）
 - **重命名时迁移批注**：重命名文件时自动迁移批注数据
 - **显示便签**：全局开关便签栏显示
 
@@ -222,14 +225,9 @@ https://github.com/rezonegame/yh-inklight/releases/tag/v0.5.5
   index.json
   notes__reading__book.md.json
   papers__example.pdf.json
-  backups/
-    2026-05-17T12-00-00-000Z/
-      notes__reading__book.md.json
 ```
 
 Sidecar 文件包含锚点、选中文本、颜色、便签内容、可选标题、时间戳和 PDF 页面矩形信息。
-
-`backups/` 目录只保存 sidecar JSON 的历史快照，用于防止批注数据误删或损坏；它不会备份或修改你的原始 Markdown/PDF 文件。
 
 你的原始 `.md` 和 `.pdf` 文件保持不变。即使禁用或卸载插件，文档也不会被修改。
 

@@ -94,20 +94,6 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("数据备份频率")
-      .setDesc("自动备份间隔（分钟）。sidecar 文件仍会即时保存。")
-      .addSlider((slider) => {
-        slider
-          .setLimits(5, 240, 5)
-          .setValue(this.plugin.settings.backupFrequencyMinutes)
-          .setDynamicTooltip()
-          .onChange(async (value) => {
-            this.plugin.settings.backupFrequencyMinutes = value;
-            await this.plugin.saveSettings();
-          });
-      });
-
-    new Setting(containerEl)
       .setName("重命名时迁移批注")
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.migrateOnRename).onChange(async (value) => {

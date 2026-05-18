@@ -22,7 +22,6 @@ import {
 
 const STORE_DIR = ".obsidian-annotations";
 const INDEX_PATH = normalizePath(`${STORE_DIR}/index.json`);
-const BACKUP_DIR = normalizePath(`${STORE_DIR}/backups`);
 const MAX_LEGACY_SIDECAR_NAME_LENGTH = 180;
 const MAX_COMPACT_SIDECAR_PREFIX_LENGTH = 96;
 
@@ -354,35 +353,6 @@ export class AnnotationStore {
     }
   }
 
-  async backupDocuments(): Promise<number> {
-    await this.ensureStoreDir();
-    await this.ensureDir(BACKUP_DIR);
-
-    const listed = await this.app.vault.adapter.list(STORE_DIR);
-    const sidecars = listed.files.filter((path) => {
-      const normalizedPath = normalizePath(path);
-      return (
-        normalizedPath.endsWith(".json") &&
-        normalizedPath !== INDEX_PATH &&
-        !normalizedPath.startsWith(`${BACKUP_DIR}/`)
-      );
-    });
-
-    if (!sidecars.length) {
-      return 0;
-    }
-
-    const snapshotDir = normalizePath(`${BACKUP_DIR}/${backupTimestamp()}`);
-    await this.ensureDir(snapshotDir);
-
-    for (const sidecar of sidecars) {
-      const content = await this.app.vault.adapter.read(sidecar);
-      const target = normalizePath(`${snapshotDir}/${sidecar.split("/").pop()}`);
-      await this.app.vault.adapter.write(target, content);
-    }
-
-    return sidecars.length;
-  }
 
   async hashFile(file: TFile): Promise<string> {
     if (file.extension === "md") {
@@ -543,10 +513,6 @@ export class AnnotationStore {
       .map((byte) => byte.toString(16).padStart(2, "0"))
       .join("");
   }
-}
-
-function backupTimestamp(): string {
-  return new Date().toISOString().replace(/[:.]/g, "-");
 }
 
 function hashPath(value: string): string {

@@ -150,7 +150,6 @@ export interface AnnotationPluginSettings {
   stickyCollapseWidth: number;
   showLeaderLines: boolean;
   defaultAuthor: string;
-  backupFrequencyMinutes: number;
   migrateOnRename: boolean;
   stickyNotesVisible: boolean;
 }
@@ -174,7 +173,6 @@ export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
   stickyCollapseWidth: 800,
   showLeaderLines: true,
   defaultAuthor: "读者",
-  backupFrequencyMinutes: 30,
   migrateOnRename: true,
   stickyNotesVisible: true,
 };
