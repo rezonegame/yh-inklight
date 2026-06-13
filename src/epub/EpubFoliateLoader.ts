@@ -70,6 +70,7 @@ export interface FoliateViewHandle {
   goToFraction?: (fraction: number) => Promise<unknown> | unknown;
   getCFI?: (index: number, range?: Range | null) => string;
   resolveCFI?: (cfi: string) => unknown;
+  init?: (options?: { lastLocation?: unknown; showTextStart?: boolean }) => Promise<unknown> | unknown;
   goToTextStart?: () => Promise<unknown> | unknown;
   prev?: () => Promise<unknown> | unknown;
   next?: () => Promise<unknown> | unknown;
@@ -270,4 +271,20 @@ export async function openBookFromBuffer(
     attachFoliateTransformPipeline(book as FoliateBookHandle);
   }
   await view.open(book);
+}
+
+/** foliate open() only mounts the renderer; callers must explicitly navigate/render the first page. */
+export async function showFoliateStart(view: FoliateViewHandle): Promise<void> {
+  if (typeof view.goToTextStart === "function") {
+    await view.goToTextStart();
+    return;
+  }
+  if (typeof view.init === "function") {
+    await view.init({ showTextStart: true });
+    return;
+  }
+  const renderer = view.renderer as { next?: () => Promise<unknown> | unknown } | undefined;
+  if (typeof renderer?.next === "function") {
+    await renderer.next();
+  }
 }

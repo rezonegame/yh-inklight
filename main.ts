@@ -27,7 +27,7 @@ import { ANNOTATION_SIDEBAR_VIEW, AnnotationSidebarView } from "./src/views/side
 import { StickyNoteLane } from "./src/views/stickyNoteLane";
 import { EpubReaderView, EPUB_READER_VIEW_TYPE } from "./src/epub/EpubReaderView";
 import { EpubBookshelfView, EPUB_BOOKSHELF_VIEW_TYPE } from "./src/epub/EpubBookshelfView";
-import { createFoliateView, openBookFromBuffer } from "./src/epub/EpubFoliateLoader";
+import { createFoliateView, openBookFromBuffer, showFoliateStart } from "./src/epub/EpubFoliateLoader";
 
 interface CommentModalValue {
   title: string;
@@ -588,6 +588,12 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         console.log("[yh-foliate] link", detail?.href);
       });
       await openBookFromBuffer(view, buffer, file.name);
+      view.renderer?.setStyles?.([
+        "body { font-size: 16px !important; line-height: 1.7 !important; color: CanvasText !important; background: Canvas !important; }",
+        "img { max-width: 100% !important; height: auto !important; }",
+      ].join("\n"));
+      view.renderer?.render?.();
+      await showFoliateStart(view);
       new Notice("foliate 已加载，打开控制台查看事件日志（Ctrl+Shift+I）。");
     } catch (error) {
       console.error("[yh-foliate] test failed", error);

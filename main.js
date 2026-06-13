@@ -11220,6 +11220,20 @@ async function openBookFromBuffer(view, buffer, filename) {
   }
   await view.open(book);
 }
+async function showFoliateStart(view) {
+  if (typeof view.goToTextStart === "function") {
+    await view.goToTextStart();
+    return;
+  }
+  if (typeof view.init === "function") {
+    await view.init({ showTextStart: true });
+    return;
+  }
+  const renderer = view.renderer;
+  if (typeof renderer?.next === "function") {
+    await renderer.next();
+  }
+}
 
 // src/epub/EpubReaderView.ts
 var EPUB_READER_VIEW_TYPE = "inklight-epub-reader";
@@ -12058,7 +12072,7 @@ var EpubReaderView = class extends import_obsidian11.FileView {
     const document2 = await this.store.getDocument(this.file);
     const progress = document2.epubProgress;
     if (!progress) {
-      await this.foliateView.goToTextStart?.();
+      await showFoliateStart(this.foliateView);
       this.restoreAnnotations();
       return;
     }
@@ -12069,10 +12083,10 @@ var EpubReaderView = class extends import_obsidian11.FileView {
         await this.foliateView.goTo(cfi);
         this.currentCfi = cfi;
       } catch {
-        await this.foliateView.goToTextStart?.();
+        await showFoliateStart(this.foliateView);
       }
     } else {
-      await this.foliateView.goToTextStart?.();
+      await showFoliateStart(this.foliateView);
     }
     this.currentPercent = normalizePercent(progress.percent);
     this.updateProgressBar(this.currentPercent);
@@ -13148,6 +13162,12 @@ var OverlayAnnotationsPlugin = class extends import_obsidian13.Plugin {
         console.log("[yh-foliate] link", detail?.href);
       });
       await openBookFromBuffer(view, buffer, file.name);
+      view.renderer?.setStyles?.([
+        "body { font-size: 16px !important; line-height: 1.7 !important; color: CanvasText !important; background: Canvas !important; }",
+        "img { max-width: 100% !important; height: auto !important; }"
+      ].join("\n"));
+      view.renderer?.render?.();
+      await showFoliateStart(view);
       new import_obsidian13.Notice("foliate \u5DF2\u52A0\u8F7D\uFF0C\u6253\u5F00\u63A7\u5236\u53F0\u67E5\u770B\u4E8B\u4EF6\u65E5\u5FD7\uFF08Ctrl+Shift+I\uFF09\u3002");
     } catch (error) {
       console.error("[yh-foliate] test failed", error);

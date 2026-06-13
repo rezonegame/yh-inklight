@@ -40,6 +40,7 @@ import {
 	createFoliateView,
 	FoliateViewHandle,
 	openBookFromBuffer,
+	showFoliateStart,
 } from "./EpubFoliateLoader";
 
 // ---- 常量 ----
@@ -1086,7 +1087,7 @@ export class EpubReaderView extends FileView {
 		const document = await this.store.getDocument(this.file);
 		const progress = document.epubProgress;
 		if (!progress) {
-			await this.foliateView.goToTextStart?.();
+			await showFoliateStart(this.foliateView);
 			this.restoreAnnotations();
 			return;
 		}
@@ -1099,10 +1100,10 @@ export class EpubReaderView extends FileView {
 				await this.foliateView.goTo(cfi);
 				this.currentCfi = cfi;
 			} catch {
-				await this.foliateView.goToTextStart?.();
+				await showFoliateStart(this.foliateView);
 			}
 		} else {
-			await this.foliateView.goToTextStart?.();
+			await showFoliateStart(this.foliateView);
 		}
 
 		this.currentPercent = normalizePercent(progress.percent);
