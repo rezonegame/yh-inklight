@@ -555,6 +555,18 @@ export class EpubReaderView extends FileView {
 				attr: { type: "button", title: bm.chapter ?? "" },
 			});
 			item.createSpan({ cls: "yh-epub-bookmark-label", text: bm.label.trim() || "书签" });
+			const delBtn = item.createEl("button", {
+				cls: "yh-epub-bookmark-del",
+				attr: { type: "button", title: "删除书签" },
+				text: "✕",
+			});
+			delBtn.addEventListener("click", (ev) => {
+				ev.stopPropagation();
+				void this.store.removeBookmark(this.file!, bm.id).then(() => {
+					this.renderSidebar();
+					this.refreshAnnotations();
+				});
+			});
 			item.createSpan({ cls: "yh-epub-bookmark-time", text: this.formatBookmarkDate(bm.createdAt) });
 			item.addEventListener("click", () => {
 				if (this.foliateView) {
@@ -1590,12 +1602,12 @@ export class EpubReaderView extends FileView {
 
 	private attachFootnoteHandlers(doc: Document): void {
 		const isFootnoteRef = (el: Element): boolean => {
-			const link = el.tagName.toLowerCase() === "a" ? el : el.querySelector("a");
+			const link = el.tagName.toLowerCase() === "a" ? el : el.querySelector("a") || el.closest("a");
 			if (!link) return false;
 			const href = link.getAttribute("href") || "";
 			if (!href.startsWith("#")) return false;
 			const linkText = link.textContent?.trim() || "";
-			if (/^d+$/.test(linkText)) return true;
+			if (/^\d+$/.test(linkText)) return true;
 			if (linkText.length <= 3) return true;
 			if (/^(fn|note|noteref|_ftn|ftn|_note)/i.test(href.slice(1))) return true;
 			return false;
@@ -1603,11 +1615,12 @@ export class EpubReaderView extends FileView {
 		const showPreview = (event: Event) => {
 			if (this.footnoteHoverTimer !== null) { window.clearTimeout(this.footnoteHoverTimer); this.footnoteHoverTimer = null; }
 			const target = event.target instanceof Element ? event.target : null; if (!target) return;
-			const link = target.tagName === "A" ? target : target.querySelector("a");
-			const href = link?.getAttribute("href") || ""; if (!href.startsWith("#")) return;
+			const link = target.tagName === "A" ? target : target.querySelector("a") || target.closest("a");
+			if (!link) return;
+			const href = link.getAttribute("href") || ""; if (!href.startsWith("#")) return;
 			const fnEl = doc.getElementById(href.slice(1)); if (!fnEl) return;
 			const text = fnEl.textContent?.trim() || ""; if (!text || !this.footnotePopoverEl) return;
-			const rect = link?.getBoundingClientRect(); if (!rect) return;
+			const rect = link.getBoundingClientRect(); if (!rect) return;
 			this.footnotePopoverEl.textContent = text;
 			this.footnotePopoverEl.style.left = (rect.left + rect.width / 2) + "px";
 			this.footnotePopoverEl.style.top = (rect.top - 8) + "px";
@@ -1617,8 +1630,8 @@ export class EpubReaderView extends FileView {
 			if (this.footnoteHoverTimer !== null) window.clearTimeout(this.footnoteHoverTimer);
 			this.footnoteHoverTimer = window.setTimeout(() => { if (this.footnotePopoverEl) this.footnotePopoverEl.removeClass("is-visible"); this.footnoteHoverTimer = null; }, 200);
 		};
-		doc.addEventListener("mouseover", (ev) => { const t = ev.target instanceof Element ? ev.target : null; if (t) showPreview(ev); });
-		doc.addEventListener("mouseout", (ev) => { const t = ev.target instanceof Element ? ev.target : null; if (t) hidePreview(); });
+		doc.addEventListener("mouseover", (ev) => { const t = ev.target instanceof Element ? ev.target : null; if (t && isFootnoteRef(t)) showPreview(ev); });
+		doc.addEventListener("mouseout", (ev) => { const t = ev.target instanceof Element ? ev.target : null; if (t && isFootnoteRef(t)) hidePreview(); });
 	}
 
 	private attachParagraphModeHandlers(doc: Document): void {

@@ -10891,6 +10891,18 @@ var EpubReaderView = class extends import_obsidian9.FileView {
         attr: { type: "button", title: bm.chapter ?? "" }
       });
       item.createSpan({ cls: "yh-epub-bookmark-label", text: bm.label.trim() || "\u4E66\u7B7E" });
+      const delBtn = item.createEl("button", {
+        cls: "yh-epub-bookmark-del",
+        attr: { type: "button", title: "\u5220\u9664\u4E66\u7B7E" },
+        text: "\u2715"
+      });
+      delBtn.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        void this.store.removeBookmark(this.file, bm.id).then(() => {
+          this.renderSidebar();
+          this.refreshAnnotations();
+        });
+      });
       item.createSpan({ cls: "yh-epub-bookmark-time", text: this.formatBookmarkDate(bm.createdAt) });
       item.addEventListener("click", () => {
         if (this.foliateView) {
@@ -11796,12 +11808,12 @@ var EpubReaderView = class extends import_obsidian9.FileView {
   // ================================================================
   attachFootnoteHandlers(doc) {
     const isFootnoteRef = (el) => {
-      const link = el.tagName.toLowerCase() === "a" ? el : el.querySelector("a");
+      const link = el.tagName.toLowerCase() === "a" ? el : el.querySelector("a") || el.closest("a");
       if (!link) return false;
       const href = link.getAttribute("href") || "";
       if (!href.startsWith("#")) return false;
       const linkText = link.textContent?.trim() || "";
-      if (/^d+$/.test(linkText)) return true;
+      if (/^\d+$/.test(linkText)) return true;
       if (linkText.length <= 3) return true;
       if (/^(fn|note|noteref|_ftn|ftn|_note)/i.test(href.slice(1))) return true;
       return false;
@@ -11813,14 +11825,15 @@ var EpubReaderView = class extends import_obsidian9.FileView {
       }
       const target = event.target instanceof Element ? event.target : null;
       if (!target) return;
-      const link = target.tagName === "A" ? target : target.querySelector("a");
-      const href = link?.getAttribute("href") || "";
+      const link = target.tagName === "A" ? target : target.querySelector("a") || target.closest("a");
+      if (!link) return;
+      const href = link.getAttribute("href") || "";
       if (!href.startsWith("#")) return;
       const fnEl = doc.getElementById(href.slice(1));
       if (!fnEl) return;
       const text = fnEl.textContent?.trim() || "";
       if (!text || !this.footnotePopoverEl) return;
-      const rect = link?.getBoundingClientRect();
+      const rect = link.getBoundingClientRect();
       if (!rect) return;
       this.footnotePopoverEl.textContent = text;
       this.footnotePopoverEl.style.left = rect.left + rect.width / 2 + "px";
@@ -11836,11 +11849,11 @@ var EpubReaderView = class extends import_obsidian9.FileView {
     };
     doc.addEventListener("mouseover", (ev) => {
       const t3 = ev.target instanceof Element ? ev.target : null;
-      if (t3) showPreview(ev);
+      if (t3 && isFootnoteRef(t3)) showPreview(ev);
     });
     doc.addEventListener("mouseout", (ev) => {
       const t3 = ev.target instanceof Element ? ev.target : null;
-      if (t3) hidePreview();
+      if (t3 && isFootnoteRef(t3)) hidePreview();
     });
   }
   attachParagraphModeHandlers(doc) {
