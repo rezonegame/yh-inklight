@@ -66,9 +66,6 @@ const SELECTION_SYNC_RETRY_DELAY_MS = 120;
 
 // ---- 辅助类型 ----
 
-/** 侧边栏当前显示的标签页 */
-type SidebarTab = "toc" | "annotations";
-
 /** 阅读时间追踪器状态快照 */
 interface ReadingTimeSnapshot {
 	readingTimeSeconds: number;
@@ -159,7 +156,6 @@ export class EpubReaderView extends FileView {
 	private currentFlowMode: EpubFlowMode;
 	private currentFontSize: number;
 	private currentTheme: EpubReadingTheme;
-	private sidebarTab: SidebarTab = "toc";
 	private sidebarOpen = false;
 	private contextMenuEl: HTMLElement | null = null;
 	private lastSelectedCfiRange = "";
@@ -301,17 +297,11 @@ export class EpubReaderView extends FileView {
 
 		const sidebarTabs = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-tabs" });
 		const tocTab = sidebarTabs.createEl("button", {
-			cls: "yh-epub-sidebar-tab",
+			cls: "yh-epub-sidebar-tab is-active",
 			text: "目录",
 			attr: { type: "button", "data-tab": "toc" },
 		});
-		const annTab = sidebarTabs.createEl("button", {
-			cls: "yh-epub-sidebar-tab",
-			text: "标注",
-			attr: { type: "button", "data-tab": "annotations" },
-		});
-		tocTab.addEventListener("click", () => this.switchSidebarTab("toc"));
-		annTab.addEventListener("click", () => this.switchSidebarTab("annotations"));
+		tocTab.addEventListener("click", () => this.renderSidebar());
 
 		this.sidebarContentEl = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-content" });
 
@@ -426,33 +416,12 @@ export class EpubReaderView extends FileView {
 	}
 
 	/**
-	 * 切换侧边栏标签页并重新渲染内容。
-	 */
-	private switchSidebarTab(tab: SidebarTab): void {
-		this.sidebarTab = tab;
-		const tabs = this.sidebarContainerEl.querySelectorAll<HTMLButtonElement>(".yh-epub-sidebar-tab");
-		for (const element of Array.from(tabs)) {
-			element.toggleClass("is-active", element.dataset.tab === tab);
-		}
-		this.renderSidebar();
-	}
-
-	/**
-	 * 渲染侧边栏内容，根据当前标签页显示目录或标注列表。
+	 * 渲染侧边栏内容（目录）。
+	 * 标注已统一到「墨光批注」共用面板，此处仅保留目录导航。
 	 */
 	private renderSidebar(): void {
 		this.sidebarContentEl.empty();
-
-		const tabs = this.sidebarContainerEl.querySelectorAll<HTMLButtonElement>(".yh-epub-sidebar-tab");
-		for (const element of Array.from(tabs)) {
-			element.toggleClass("is-active", element.dataset.tab === this.sidebarTab);
-		}
-
-		if (this.sidebarTab === "toc") {
-			this.renderTocList();
-		} else {
-			this.renderAnnotationList();
-		}
+		this.renderTocList();
 	}
 
 	/**
@@ -473,73 +442,6 @@ export class EpubReaderView extends FileView {
 				attr: { type: "button" },
 			});
 			item.addEventListener("click", () => this.navigateToSpineIndex(entry.spineIndex));
-		}
-	}
-
-	/**
-	 * 渲染标注列表，显示当前文件的所有 EPUB 高亮和评论标注。
-	 */
-	private renderAnnotationList(): void {
-		if (!this.file) {
-			this.sidebarContentEl.createDiv({ cls: "yh-epub-empty", text: "未打开文件。" });
-			return;
-		}
-
-		const document = this.store.getCachedDocument(this.file.path);
-		if (!document) {
-			this.sidebarContentEl.createDiv({ cls: "yh-epub-empty", text: "暂无标注。" });
-			return;
-		}
-
-		const allAnnotations = [
-			...document.epubHighlights.map((highlight) => ({
-				id: highlight.id,
-				kind: "highlight" as const,
-				color: highlight.color,
-				style: highlight.style,
-				text: highlight.anchor.selectedText,
-				chapter: highlight.anchor.chapter,
-				createdAt: highlight.createdAt,
-			})),
-			...document.epubComments.map((comment) => ({
-				id: comment.id,
-				kind: "comment" as const,
-				color: comment.color,
-				style: comment.style,
-				text: comment.anchor.selectedText,
-				chapter: comment.anchor.chapter,
-				createdAt: comment.createdAt,
-				note: comment.note,
-			})),
-		].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-
-		if (allAnnotations.length === 0) {
-			this.sidebarContentEl.createDiv({ cls: "yh-epub-empty", text: "暂无标注。" });
-			return;
-		}
-
-		const list = this.sidebarContentEl.createDiv({ cls: "yh-epub-annotation-list" });
-
-		for (const annotation of allAnnotations) {
-			const card = list.createDiv({
-				cls: "yh-epub-annotation-card",
-				attr: {
-					"data-yh-id": annotation.id,
-					"data-yh-color": annotation.color,
-				},
-			});
-
-			const header = card.createDiv({ cls: "yh-epub-annotation-header" });
-			header.createSpan({ cls: `yh-epub-color-chip yh-chip--${annotation.color}`, text: COLOR_LABELS[annotation.color] });
-			header.createSpan({ cls: "yh-epub-annotation-kind", text: annotation.kind === "comment" ? "标注" : "画线" });
-
-			card.createDiv({ cls: "yh-epub-annotation-text", text: annotation.text });
-
-			if (annotation.kind === "comment" && annotation.note) {
-				card.createDiv({ cls: "yh-epub-annotation-note", text: annotation.note });
-			}
-
-			card.addEventListener("click", () => this.navigateToAnnotation(annotation.id));
 		}
 	}
 
@@ -1445,6 +1347,19 @@ export class EpubReaderView extends FileView {
 		} catch (error) {
 			console.warn("yh-inklight: navigateToCfi failed", error);
 		}
+	}
+
+	/**
+	 * 外部标注变更后刷新本视图。
+	 * 供共用 AnnotationSidebarView 删除/编辑 EPUB 标注后调用，
+	 * 重新从 sidecar 读取标注并重绘 foliate 高亮层 + 内嵌侧栏。
+	 */
+	refreshExternalAnnotations(): void {
+		if (!this.file || !this.foliateView) {
+			return;
+		}
+		this.refreshRenditionAnnotations();
+		this.renderSidebar();
 	}
 
 	// ================================================================

@@ -193,6 +193,13 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         view.refresh();
       }
     }
+    // 从墨光批注侧栏删除/编辑 EPUB 标注后，刷新打开的 EpubReaderView 高亮层
+    for (const leaf of this.app.workspace.getLeavesOfType(EPUB_READER_VIEW_TYPE)) {
+      const view = leaf.view;
+      if (view instanceof EpubReaderView) {
+        view.refreshExternalAnnotations();
+      }
+    }
     await this.stickyLane.render();
   }
 

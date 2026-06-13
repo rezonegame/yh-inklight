@@ -10529,7 +10529,6 @@ var EpubReaderView = class extends import_obsidian9.FileView {
     this.tocEntries = [];
     this.currentChapter = "";
     this.currentPercent = 0;
-    this.sidebarTab = "toc";
     this.sidebarOpen = false;
     this.contextMenuEl = null;
     this.lastSelectedCfiRange = "";
@@ -10664,17 +10663,11 @@ var EpubReaderView = class extends import_obsidian9.FileView {
     this.sidebarContainerEl.toggleClass("is-open", this.sidebarOpen);
     const sidebarTabs = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-tabs" });
     const tocTab = sidebarTabs.createEl("button", {
-      cls: "yh-epub-sidebar-tab",
+      cls: "yh-epub-sidebar-tab is-active",
       text: "\u76EE\u5F55",
       attr: { type: "button", "data-tab": "toc" }
     });
-    const annTab = sidebarTabs.createEl("button", {
-      cls: "yh-epub-sidebar-tab",
-      text: "\u6807\u6CE8",
-      attr: { type: "button", "data-tab": "annotations" }
-    });
-    tocTab.addEventListener("click", () => this.switchSidebarTab("toc"));
-    annTab.addEventListener("click", () => this.switchSidebarTab("annotations"));
+    tocTab.addEventListener("click", () => this.renderSidebar());
     this.sidebarContentEl = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-content" });
     this.readerContainerEl = body.createDiv({ cls: "yh-epub-reader-area" });
     this.progressEl = this.containerEl.createDiv({ cls: "yh-epub-progress" });
@@ -10769,30 +10762,12 @@ var EpubReaderView = class extends import_obsidian9.FileView {
     }
   }
   /**
-   * 切换侧边栏标签页并重新渲染内容。
-   */
-  switchSidebarTab(tab) {
-    this.sidebarTab = tab;
-    const tabs = this.sidebarContainerEl.querySelectorAll(".yh-epub-sidebar-tab");
-    for (const element of Array.from(tabs)) {
-      element.toggleClass("is-active", element.dataset.tab === tab);
-    }
-    this.renderSidebar();
-  }
-  /**
-   * 渲染侧边栏内容，根据当前标签页显示目录或标注列表。
+   * 渲染侧边栏内容（目录）。
+   * 标注已统一到「墨光批注」共用面板，此处仅保留目录导航。
    */
   renderSidebar() {
     this.sidebarContentEl.empty();
-    const tabs = this.sidebarContainerEl.querySelectorAll(".yh-epub-sidebar-tab");
-    for (const element of Array.from(tabs)) {
-      element.toggleClass("is-active", element.dataset.tab === this.sidebarTab);
-    }
-    if (this.sidebarTab === "toc") {
-      this.renderTocList();
-    } else {
-      this.renderAnnotationList();
-    }
+    this.renderTocList();
   }
   /**
    * 渲染目录列表，点击条目跳转到对应章节。
@@ -10810,63 +10785,6 @@ var EpubReaderView = class extends import_obsidian9.FileView {
         attr: { type: "button" }
       });
       item.addEventListener("click", () => this.navigateToSpineIndex(entry.spineIndex));
-    }
-  }
-  /**
-   * 渲染标注列表，显示当前文件的所有 EPUB 高亮和评论标注。
-   */
-  renderAnnotationList() {
-    if (!this.file) {
-      this.sidebarContentEl.createDiv({ cls: "yh-epub-empty", text: "\u672A\u6253\u5F00\u6587\u4EF6\u3002" });
-      return;
-    }
-    const document2 = this.store.getCachedDocument(this.file.path);
-    if (!document2) {
-      this.sidebarContentEl.createDiv({ cls: "yh-epub-empty", text: "\u6682\u65E0\u6807\u6CE8\u3002" });
-      return;
-    }
-    const allAnnotations = [
-      ...document2.epubHighlights.map((highlight) => ({
-        id: highlight.id,
-        kind: "highlight",
-        color: highlight.color,
-        style: highlight.style,
-        text: highlight.anchor.selectedText,
-        chapter: highlight.anchor.chapter,
-        createdAt: highlight.createdAt
-      })),
-      ...document2.epubComments.map((comment) => ({
-        id: comment.id,
-        kind: "comment",
-        color: comment.color,
-        style: comment.style,
-        text: comment.anchor.selectedText,
-        chapter: comment.anchor.chapter,
-        createdAt: comment.createdAt,
-        note: comment.note
-      }))
-    ].sort((a3, b3) => b3.createdAt.localeCompare(a3.createdAt));
-    if (allAnnotations.length === 0) {
-      this.sidebarContentEl.createDiv({ cls: "yh-epub-empty", text: "\u6682\u65E0\u6807\u6CE8\u3002" });
-      return;
-    }
-    const list = this.sidebarContentEl.createDiv({ cls: "yh-epub-annotation-list" });
-    for (const annotation of allAnnotations) {
-      const card = list.createDiv({
-        cls: "yh-epub-annotation-card",
-        attr: {
-          "data-yh-id": annotation.id,
-          "data-yh-color": annotation.color
-        }
-      });
-      const header = card.createDiv({ cls: "yh-epub-annotation-header" });
-      header.createSpan({ cls: `yh-epub-color-chip yh-chip--${annotation.color}`, text: COLOR_LABELS[annotation.color] });
-      header.createSpan({ cls: "yh-epub-annotation-kind", text: annotation.kind === "comment" ? "\u6807\u6CE8" : "\u753B\u7EBF" });
-      card.createDiv({ cls: "yh-epub-annotation-text", text: annotation.text });
-      if (annotation.kind === "comment" && annotation.note) {
-        card.createDiv({ cls: "yh-epub-annotation-note", text: annotation.note });
-      }
-      card.addEventListener("click", () => this.navigateToAnnotation(annotation.id));
     }
   }
   // ================================================================
@@ -11644,6 +11562,18 @@ var EpubReaderView = class extends import_obsidian9.FileView {
     } catch (error) {
       console.warn("yh-inklight: navigateToCfi failed", error);
     }
+  }
+  /**
+   * 外部标注变更后刷新本视图。
+   * 供共用 AnnotationSidebarView 删除/编辑 EPUB 标注后调用，
+   * 重新从 sidecar 读取标注并重绘 foliate 高亮层 + 内嵌侧栏。
+   */
+  refreshExternalAnnotations() {
+    if (!this.file || !this.foliateView) {
+      return;
+    }
+    this.refreshRenditionAnnotations();
+    this.renderSidebar();
   }
   // ================================================================
   // AI 预留
@@ -13149,6 +13079,12 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
       const view = leaf.view;
       if (view instanceof EpubBookshelfView) {
         view.refresh();
+      }
+    }
+    for (const leaf of this.app.workspace.getLeavesOfType(EPUB_READER_VIEW_TYPE)) {
+      const view = leaf.view;
+      if (view instanceof EpubReaderView) {
+        view.refreshExternalAnnotations();
       }
     }
     await this.stickyLane.render();
