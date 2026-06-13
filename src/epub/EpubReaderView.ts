@@ -169,6 +169,16 @@ export class EpubReaderView extends FileView {
 	private footnoteHoverTimer: number | null = null;
 	private searchInputEl: HTMLInputElement | null = null;
 	private searchResultsEl: HTMLElement | null = null;
+	private searchTimer: number | null = null;
+	private readonly searchDebounce = (): void => {
+		if (this.searchTimer !== null) {
+			window.clearTimeout(this.searchTimer);
+		}
+		this.searchTimer = window.setTimeout(() => {
+			this.searchTimer = null;
+			void this.performSearch();
+		}, 300);
+	};
 	private canvasSendBtn: HTMLElement | null = null;
 
 	// ---- 定时器 / 追踪 ----
@@ -1500,6 +1510,133 @@ export class EpubReaderView extends FileView {
 		new Notice("AI 分析功能即将上线");
 	}
 
+	// ================================================================
+	// 书内搜索（Phase 4-B P4）
+	// ================================================================
+
+	private renderSearchBox(): void {
+		const container = this.sidebarContentEl.createDiv({ cls: "yh-epub-search-box" });
+		this.searchInputEl = container.createEl("input", {
+			cls: "yh-epub-search-input",
+			attr: { type: "text", placeholder: "搜索全文…" },
+		}) as HTMLInputElement;
+		this.searchInputEl.addEventListener("keydown", (ev: KeyboardEvent) => {
+			ev.stopPropagation();
+		}, { capture: true });
+		this.searchResultsEl = container.createDiv({ cls: "yh-epub-search-results" });
+		this.searchInputEl.addEventListener("input", this.searchDebounce, { passive: true });
+	}
+
+	private async performSearch(): Promise<void> {
+		if (!this.searchResultsEl || !this.searchInputEl || !this.foliateView) return;
+		const query = this.searchInputEl.value.trim().toLowerCase();
+		this.searchResultsEl.empty();
+		if (query.length < 2) return;
+		let results: Array<{ cfi: string; excerpt: string }> = [];
+		if (typeof (this.foliateView as any).search === "function") {
+			try {
+				const sr: unknown = await ((this.foliateView as any).search as (q: string) => Promise<unknown>)(query);
+				if (Array.isArray(sr)) results = (sr as any[]).map((i: any) => ({ cfi: String(i.cfi || i.value || ""), excerpt: String(i.excerpt || i.text || "") }));
+			} catch { /* ignore */ }
+		}
+		if (results.length === 0) {
+			const contents = this.foliateView.renderer?.getContents?.() ?? [];
+			for (const c of contents) {
+				if (!c.doc?.body) continue;
+				const text = c.doc.body.textContent || "";
+				const lower = text.toLowerCase();
+				let idx = lower.indexOf(query);
+				while (idx >= 0 && results.length < 50) {
+					const start = Math.max(0, idx - 40);
+					const end = Math.min(text.length, idx + query.length + 60);
+					let excerpt = text.slice(start, end).replace(/\n/g, " ");
+					if (start > 0) excerpt = "…" + excerpt;
+					if (end < text.length) excerpt = excerpt + "…";
+					results.push({ cfi: "", excerpt });
+					idx = lower.indexOf(query, idx + query.length);
+				}
+				if (results.length > 0) break;
+			}
+		}
+		if (results.length === 0) {
+			this.searchResultsEl.createDiv({ cls: "yh-epub-search-empty", text: "未找到匹配" });
+			return;
+		}
+		for (const r of results) {
+			const item = this.searchResultsEl.createEl("button", { cls: "yh-epub-search-result", attr: { type: "button" } });
+			item.createSpan({ cls: "yh-epub-search-text", text: r.excerpt.slice(0, 100) });
+			if (r.cfi) item.addEventListener("click", () => { if (this.foliateView) void this.foliateView.goTo(r.cfi); });
+		}
+	}
+
+	// ================================================================
+	// Canvas 集成（Phase 4-B P4）
+	// ================================================================
+
+	private async sendToCanvas(): Promise<void> {
+		if (!this.file || !this.lastSelectedCfiRange || !this.lastSelectedText) { new Notice("请先选中文本"); return; }
+		try {
+			const doc = this.store.getCachedDocument(this.file.path);
+			const binding = doc?.canvasBinding;
+			if (!binding || !binding.canvasPath) { new Notice("未绑定 Canvas"); return; }
+			await this.store.addCanvasNode(this.file, { annotationId: crypto.randomUUID(), nodeId: crypto.randomUUID(), position: { x: 0, y: 0 } });
+			new Notice("已发送到 Canvas");
+		} catch (error) { console.error("yh-inklight: Canvas send failed", error); new Notice("Canvas 发送失败"); }
+	}
+
+	// ================================================================
+	// 脚注预览 & 段落模式（Phase 4-B P3）
+	// ================================================================
+
+	private attachFootnoteHandlers(doc: Document): void {
+		const isFootnoteRef = (el: Element): boolean => {
+			const link = el.tagName.toLowerCase() === "a" ? el : el.querySelector("a");
+			if (!link) return false;
+			const href = link.getAttribute("href") || "";
+			if (!href.startsWith("#")) return false;
+			const linkText = link.textContent?.trim() || "";
+			if (/^d+$/.test(linkText)) return true;
+			if (linkText.length <= 3) return true;
+			if (/^(fn|note|noteref|_ftn|ftn|_note)/i.test(href.slice(1))) return true;
+			return false;
+		};
+		const showPreview = (event: Event) => {
+			if (this.footnoteHoverTimer !== null) { window.clearTimeout(this.footnoteHoverTimer); this.footnoteHoverTimer = null; }
+			const target = event.target instanceof Element ? event.target : null; if (!target) return;
+			const link = target.tagName === "A" ? target : target.querySelector("a");
+			const href = link?.getAttribute("href") || ""; if (!href.startsWith("#")) return;
+			const fnEl = doc.getElementById(href.slice(1)); if (!fnEl) return;
+			const text = fnEl.textContent?.trim() || ""; if (!text || !this.footnotePopoverEl) return;
+			const rect = link?.getBoundingClientRect(); if (!rect) return;
+			this.footnotePopoverEl.textContent = text;
+			this.footnotePopoverEl.style.left = (rect.left + rect.width / 2) + "px";
+			this.footnotePopoverEl.style.top = (rect.top - 8) + "px";
+			this.footnotePopoverEl.addClass("is-visible");
+		};
+		const hidePreview = () => {
+			if (this.footnoteHoverTimer !== null) window.clearTimeout(this.footnoteHoverTimer);
+			this.footnoteHoverTimer = window.setTimeout(() => { if (this.footnotePopoverEl) this.footnotePopoverEl.removeClass("is-visible"); this.footnoteHoverTimer = null; }, 200);
+		};
+		doc.addEventListener("mouseover", (ev) => { const t = ev.target instanceof Element ? ev.target : null; if (t) showPreview(ev); });
+		doc.addEventListener("mouseout", (ev) => { const t = ev.target instanceof Element ? ev.target : null; if (t) hidePreview(); });
+	}
+
+	private attachParagraphModeHandlers(doc: Document): void {
+		doc.addEventListener("click", (event) => {
+			const target = event.target instanceof Element ? event.target : null;
+			const p = target?.closest("p");
+			if (!p || !p.textContent?.trim()) return;
+			const isFocused = p.hasClass("yh-paragraph-focused");
+			doc.querySelectorAll(".yh-paragraph-focused").forEach((el) => el.removeClass("yh-paragraph-focused"));
+			if (!isFocused) p.addClass("yh-paragraph-focused");
+		});
+	}
+
+	private renderParagraphModeHint(): void {
+		if (!this.pluginSettings.epubParagraphMode) return;
+		const hint = this.sidebarContentEl.createDiv({ cls: "yh-epub-paragraph-hint" });
+		hint.setText("段落模式已开启，点击段落实焦");
+	}
 	// ================================================================
 	// 资源清理
 	// ================================================================

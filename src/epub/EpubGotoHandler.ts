@@ -160,30 +160,17 @@ function wireGotoAnchor(
   });
 }
 
-/** 在 callout 附近查找 CFI 注释 */
+/** 在 callout 内查找 CFI（data-yh-cfi 属性优先，兜底文本匹配） */
 function findCfiNear(container: HTMLElement): string | null {
-  let sibling: Element | null = container;
-  while (sibling) {
-    sibling = sibling.nextElementSibling;
-    if (!sibling) {
-      break;
-    }
-    if (sibling.classList?.contains("callout") || sibling.tagName === "HR") {
-      break;
-    }
-    const cfi = extractCfiFromChunk(sibling.textContent ?? "");
-    if (cfi) {
-      return cfi;
-    }
-    const nested = sibling.querySelector("p, pre, code");
-    if (nested) {
-      const nestedCfi = extractCfiFromChunk(nested.textContent ?? "");
-      if (nestedCfi) {
-        return nestedCfi;
-      }
-    }
+  // 优先从 callout 内的 hidden span data 属性取
+  const span = container.querySelector('[data-yh-cfi]') as HTMLElement | null;
+  if (span?.dataset?.yhCfi) {
+    return span.dataset.yhCfi;
   }
-  return null;
+  // 兜底：从 callout 文本中正则匹配 CFI
+  const text = container.textContent ?? "";
+  const match = text.match(/yh-cfi[=:]\s*(epubcfi\([\s\S]*?\))/i);
+  return match ? match[1] : null;
 }
 
 /** 从摘录文件路径推断 EPUB 文件路径 */

@@ -10543,6 +10543,16 @@ var EpubReaderView = class extends import_obsidian9.FileView {
     this.footnoteHoverTimer = null;
     this.searchInputEl = null;
     this.searchResultsEl = null;
+    this.searchTimer = null;
+    this.searchDebounce = () => {
+      if (this.searchTimer !== null) {
+        window.clearTimeout(this.searchTimer);
+      }
+      this.searchTimer = window.setTimeout(() => {
+        this.searchTimer = null;
+        void this.performSearch();
+      }, 300);
+    };
     this.canvasSendBtn = null;
     // ---- 定时器 / 追踪 ----
     this.readingTimeSeconds = 0;
@@ -11699,6 +11709,154 @@ var EpubReaderView = class extends import_obsidian9.FileView {
    */
   handleAiAction(_text) {
     new import_obsidian9.Notice("AI \u5206\u6790\u529F\u80FD\u5373\u5C06\u4E0A\u7EBF");
+  }
+  // ================================================================
+  // 书内搜索（Phase 4-B P4）
+  // ================================================================
+  renderSearchBox() {
+    const container = this.sidebarContentEl.createDiv({ cls: "yh-epub-search-box" });
+    this.searchInputEl = container.createEl("input", {
+      cls: "yh-epub-search-input",
+      attr: { type: "text", placeholder: "\u641C\u7D22\u5168\u6587\u2026" }
+    });
+    this.searchInputEl.addEventListener("keydown", (ev) => {
+      ev.stopPropagation();
+    }, { capture: true });
+    this.searchResultsEl = container.createDiv({ cls: "yh-epub-search-results" });
+    this.searchInputEl.addEventListener("input", this.searchDebounce, { passive: true });
+  }
+  async performSearch() {
+    if (!this.searchResultsEl || !this.searchInputEl || !this.foliateView) return;
+    const query = this.searchInputEl.value.trim().toLowerCase();
+    this.searchResultsEl.empty();
+    if (query.length < 2) return;
+    let results = [];
+    if (typeof this.foliateView.search === "function") {
+      try {
+        const sr = await this.foliateView.search(query);
+        if (Array.isArray(sr)) results = sr.map((i3) => ({ cfi: String(i3.cfi || i3.value || ""), excerpt: String(i3.excerpt || i3.text || "") }));
+      } catch {
+      }
+    }
+    if (results.length === 0) {
+      const contents = this.foliateView.renderer?.getContents?.() ?? [];
+      for (const c2 of contents) {
+        if (!c2.doc?.body) continue;
+        const text = c2.doc.body.textContent || "";
+        const lower = text.toLowerCase();
+        let idx = lower.indexOf(query);
+        while (idx >= 0 && results.length < 50) {
+          const start = Math.max(0, idx - 40);
+          const end = Math.min(text.length, idx + query.length + 60);
+          let excerpt = text.slice(start, end).replace(/\n/g, " ");
+          if (start > 0) excerpt = "\u2026" + excerpt;
+          if (end < text.length) excerpt = excerpt + "\u2026";
+          results.push({ cfi: "", excerpt });
+          idx = lower.indexOf(query, idx + query.length);
+        }
+        if (results.length > 0) break;
+      }
+    }
+    if (results.length === 0) {
+      this.searchResultsEl.createDiv({ cls: "yh-epub-search-empty", text: "\u672A\u627E\u5230\u5339\u914D" });
+      return;
+    }
+    for (const r3 of results) {
+      const item = this.searchResultsEl.createEl("button", { cls: "yh-epub-search-result", attr: { type: "button" } });
+      item.createSpan({ cls: "yh-epub-search-text", text: r3.excerpt.slice(0, 100) });
+      if (r3.cfi) item.addEventListener("click", () => {
+        if (this.foliateView) void this.foliateView.goTo(r3.cfi);
+      });
+    }
+  }
+  // ================================================================
+  // Canvas 集成（Phase 4-B P4）
+  // ================================================================
+  async sendToCanvas() {
+    if (!this.file || !this.lastSelectedCfiRange || !this.lastSelectedText) {
+      new import_obsidian9.Notice("\u8BF7\u5148\u9009\u4E2D\u6587\u672C");
+      return;
+    }
+    try {
+      const doc = this.store.getCachedDocument(this.file.path);
+      const binding = doc?.canvasBinding;
+      if (!binding || !binding.canvasPath) {
+        new import_obsidian9.Notice("\u672A\u7ED1\u5B9A Canvas");
+        return;
+      }
+      await this.store.addCanvasNode(this.file, { annotationId: crypto.randomUUID(), nodeId: crypto.randomUUID(), position: { x: 0, y: 0 } });
+      new import_obsidian9.Notice("\u5DF2\u53D1\u9001\u5230 Canvas");
+    } catch (error) {
+      console.error("yh-inklight: Canvas send failed", error);
+      new import_obsidian9.Notice("Canvas \u53D1\u9001\u5931\u8D25");
+    }
+  }
+  // ================================================================
+  // 脚注预览 & 段落模式（Phase 4-B P3）
+  // ================================================================
+  attachFootnoteHandlers(doc) {
+    const isFootnoteRef = (el) => {
+      const link = el.tagName.toLowerCase() === "a" ? el : el.querySelector("a");
+      if (!link) return false;
+      const href = link.getAttribute("href") || "";
+      if (!href.startsWith("#")) return false;
+      const linkText = link.textContent?.trim() || "";
+      if (/^d+$/.test(linkText)) return true;
+      if (linkText.length <= 3) return true;
+      if (/^(fn|note|noteref|_ftn|ftn|_note)/i.test(href.slice(1))) return true;
+      return false;
+    };
+    const showPreview = (event) => {
+      if (this.footnoteHoverTimer !== null) {
+        window.clearTimeout(this.footnoteHoverTimer);
+        this.footnoteHoverTimer = null;
+      }
+      const target = event.target instanceof Element ? event.target : null;
+      if (!target) return;
+      const link = target.tagName === "A" ? target : target.querySelector("a");
+      const href = link?.getAttribute("href") || "";
+      if (!href.startsWith("#")) return;
+      const fnEl = doc.getElementById(href.slice(1));
+      if (!fnEl) return;
+      const text = fnEl.textContent?.trim() || "";
+      if (!text || !this.footnotePopoverEl) return;
+      const rect = link?.getBoundingClientRect();
+      if (!rect) return;
+      this.footnotePopoverEl.textContent = text;
+      this.footnotePopoverEl.style.left = rect.left + rect.width / 2 + "px";
+      this.footnotePopoverEl.style.top = rect.top - 8 + "px";
+      this.footnotePopoverEl.addClass("is-visible");
+    };
+    const hidePreview = () => {
+      if (this.footnoteHoverTimer !== null) window.clearTimeout(this.footnoteHoverTimer);
+      this.footnoteHoverTimer = window.setTimeout(() => {
+        if (this.footnotePopoverEl) this.footnotePopoverEl.removeClass("is-visible");
+        this.footnoteHoverTimer = null;
+      }, 200);
+    };
+    doc.addEventListener("mouseover", (ev) => {
+      const t3 = ev.target instanceof Element ? ev.target : null;
+      if (t3) showPreview(ev);
+    });
+    doc.addEventListener("mouseout", (ev) => {
+      const t3 = ev.target instanceof Element ? ev.target : null;
+      if (t3) hidePreview();
+    });
+  }
+  attachParagraphModeHandlers(doc) {
+    doc.addEventListener("click", (event) => {
+      const target = event.target instanceof Element ? event.target : null;
+      const p3 = target?.closest("p");
+      if (!p3 || !p3.textContent?.trim()) return;
+      const isFocused = p3.hasClass("yh-paragraph-focused");
+      doc.querySelectorAll(".yh-paragraph-focused").forEach((el) => el.removeClass("yh-paragraph-focused"));
+      if (!isFocused) p3.addClass("yh-paragraph-focused");
+    });
+  }
+  renderParagraphModeHint() {
+    if (!this.pluginSettings.epubParagraphMode) return;
+    const hint = this.sidebarContentEl.createDiv({ cls: "yh-epub-paragraph-hint" });
+    hint.setText("\u6BB5\u843D\u6A21\u5F0F\u5DF2\u5F00\u542F\uFF0C\u70B9\u51FB\u6BB5\u843D\u5B9E\u7126");
   }
   // ================================================================
   // 资源清理
@@ -13059,13 +13217,6 @@ var EpubBookshelfView = class extends import_obsidian13.ItemView {
 var import_obsidian14 = require("obsidian");
 var CALLOUT_TYPE = "inklight-epub";
 var CFI_COMMENT_RE = /<!--\s*yh-epub-cfi:\s*(epubcfi\([\s\S]*?\))\s*-->/;
-function extractCfiFromChunk(text) {
-  const commentMatch = text.match(CFI_COMMENT_RE);
-  if (commentMatch) {
-    return commentMatch[1];
-  }
-  return null;
-}
 function registerEpubGotoHandler(plugin, openAtCfi, resolveAnn) {
   plugin.registerMarkdownPostProcessor((el, ctx) => {
     if (!ctx.sourcePath.endsWith("\u6458\u5F55.md") && !ctx.sourcePath.endsWith("excerpt.md")) {
@@ -13144,28 +13295,13 @@ function wireGotoAnchor(anchor, sourcePath, goto, resolveAnn, app) {
   });
 }
 function findCfiNear(container) {
-  let sibling = container;
-  while (sibling) {
-    sibling = sibling.nextElementSibling;
-    if (!sibling) {
-      break;
-    }
-    if (sibling.classList?.contains("callout") || sibling.tagName === "HR") {
-      break;
-    }
-    const cfi = extractCfiFromChunk(sibling.textContent ?? "");
-    if (cfi) {
-      return cfi;
-    }
-    const nested = sibling.querySelector("p, pre, code");
-    if (nested) {
-      const nestedCfi = extractCfiFromChunk(nested.textContent ?? "");
-      if (nestedCfi) {
-        return nestedCfi;
-      }
-    }
+  const span = container.querySelector("[data-yh-cfi]");
+  if (span?.dataset?.yhCfi) {
+    return span.dataset.yhCfi;
   }
-  return null;
+  const text = container.textContent ?? "";
+  const match = text.match(/yh-cfi[=:]\s*(epubcfi\([\s\S]*?\))/i);
+  return match ? match[1] : null;
 }
 function findEpubFileFromExcerptPath(excerptPath, app) {
   const basename = excerptPath.split("/").pop() ?? "";
@@ -13298,10 +13434,9 @@ var EpubExcerptExporter = class {
       lines.push(">");
       lines.push(`> [\u56DE\u5230\u539F\u6587](#^${blockId})`);
     }
-    const cfiComment = `<!-- yh-epub-cfi: ${entry.cfiRange} -->`;
+    const cfiLine = `> <span style="display:none" data-yh-cfi="${entry.cfiRange}"></span>`;
     return `${lines.join("\n")}
-
-${cfiComment}
+${cfiLine}
 
 ---`;
   }

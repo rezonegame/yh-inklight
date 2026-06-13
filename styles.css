@@ -1995,3 +1995,65 @@ a.yh-epub-goto-link:hover {
   font-size: var(--yh-font-sm);
   padding: 4px 6px;
 }
+
+.yh-epub-bookmark-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border: none;
+  border-radius: var(--yh-radius-sm);
+  background: transparent;
+  color: var(--text-normal);
+  font-size: var(--yh-font-sm);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.yh-epub-bookmark-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.yh-epub-bookmark-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yh-epub-bookmark-del {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  line-height: 18px;
+  text-align: center;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.yh-epub-bookmark-del:hover {
+  background: var(--background-modifier-error);
+  color: var(--text-on-accent, #fff);
+}
+
+.yh-epub-bookmark-time {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 0.85em;
+  margin-left: auto;
+}
+
+.yh-epub-paragraph-hint {
+  padding: 6px 8px;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  border-top: 1px solid var(--yh-border);
+}

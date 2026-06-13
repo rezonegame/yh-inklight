@@ -171,10 +171,10 @@ export class EpubExcerptExporter {
 			lines.push(`> [回到原文](#^${blockId})`);
 		}
 
-		// CFI 注释作为 callout 之后的独立块，EpubGotoHandler.findCfiNear 据此定位
-		const cfiComment = `<!-- yh-epub-cfi: ${entry.cfiRange} -->`;
+		// CFI 嵌入 callout 内隐藏 span, EpubGotoHandler 据此定位
+		const cfiLine = `> <span style="display:none" data-yh-cfi="${entry.cfiRange}"></span>`;
 
-		return `${lines.join("\n")}\n\n${cfiComment}\n\n---`;
+		return `${lines.join("\n")}\n${cfiLine}\n\n---`;
 	}
 
 	/** 解析导出目标路径：`${excerptFolder}/《书名》摘录.md`。 */
