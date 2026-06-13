@@ -1,9 +1,9 @@
 /**
- * [INPUT]: 依赖 Obsidian FileView/WorkspaceLeaf/TFile、epubjs Book/Rendition API、
+ * [INPUT]: 依赖 Obsidian FileView/WorkspaceLeaf/TFile、foliate-js view API、
  *          storage/types 的 EPUB 标注/进度/主题类型、AnnotationStore 的 sidecar 持久化、
- *          EpubChapterResolver 的 TOC/spine 映射、EpubStylesheetInliner 的安全过滤、
- *          EpubThemeManager 的主题注册与切换
- * [OUTPUT]: 对外提供 EpubReaderView，将 epub.js 渲染引擎嵌入 Obsidian leaf，
+ *          EpubFoliateLoader 的引擎加载与 EpubStylesheetInliner 的安全过滤、
+ *          EpubThemeManager 的主题颜色解析
+ * [OUTPUT]: 对外提供 EpubReaderView，将 foliate-js 渲染引擎嵌入 Obsidian leaf，
  *          承载工具栏、侧边栏（目录/标注）、阅读区（iframe）、进度条、
  *          选区上下文菜单、标注 CRUD、进度持久化与阅读时间追踪
  * [POS]: epub 模块的唯一视图入口，由插件主类通过 registerView 注册
@@ -11,7 +11,6 @@
  */
 
 import { FileView, Notice, setIcon, TFile, WorkspaceLeaf } from "obsidian";
-import ePub from "epubjs";
 
 import {
 	ANNOTATION_COLORS,
@@ -30,15 +29,18 @@ import {
 } from "../storage/types";
 import { AnnotationStore } from "../storage/annotationStore";
 import {
-	buildTocSpineIndex,
 	normalizeCfi,
 	normalizePercent,
 	resolveChapterLabel,
-	spineIndexFromLocation,
 	TocSpineEntry,
 } from "./EpubChapterResolver";
 import { inlineBlockedStylesheets, stripScriptsFromDocument } from "./EpubStylesheetInliner";
 import { EpubThemeManager } from "./EpubThemeManager";
+import {
+	createFoliateView,
+	FoliateViewHandle,
+	openBookFromBuffer,
+} from "./EpubFoliateLoader";
 
 // ---- 常量 ----
 
@@ -68,12 +70,49 @@ interface ReadingTimeSnapshot {
 	lastFlushTimestamp: number;
 }
 
+interface FoliateTocItem {
+	label?: string;
+	href?: string;
+	subitems?: unknown[];
+}
+
+interface FoliateRelocateDetail {
+	cfi?: string;
+	index?: number;
+	fraction?: number;
+	range?: Range;
+	tocItem?: { label?: string };
+}
+
+interface FoliateLoadDetail {
+	doc?: Document;
+	index?: number;
+}
+
+interface FoliateDrawAnnotationDetail {
+	annotation?: {
+		value?: string;
+		color?: AnnotationColor;
+		style?: EpubHighlightStyle;
+	};
+	draw?: (
+		drawer: (rects: Array<DOMRect | { left: number; top: number; width: number; height: number }>) => SVGElement,
+		options?: unknown,
+	) => void;
+}
+
+interface FoliateShowAnnotationDetail {
+	value?: string;
+	index?: number;
+	range?: Range;
+}
+
 // ---- EpubReaderView ----
 
 /**
  * yh-inklight EPUB 阅读器核心视图。
  *
- * 继承 Obsidian FileView，将 epub.js Book/Rendition 嵌入 leaf 容器。
+ * 继承 Obsidian FileView，将 foliate-js <foliate-view> 嵌入 leaf 容器。
  * 负责：
  * - EPUB 文件加载与安全过滤
  * - 工具栏（字号/主题/翻页模式/导航）
@@ -90,10 +129,13 @@ export class EpubReaderView extends FileView {
 	private readonly pluginSettings: AnnotationPluginSettings;
 	private readonly themeManager: EpubThemeManager;
 
-	// ---- epubjs 实例 ----
+	// ---- foliate 实例 ----
 
-	private book: any | null = null;
-	private rendition: any | null = null;
+	private foliateView: FoliateViewHandle | null = null;
+	private loadedSectionDocs = new WeakMap<Document, number>();
+	private documentSelectionCleanups = new WeakMap<Document, () => void>();
+	private currentCfi = "";
+	private currentSectionIndex = 0;
 
 	// ---- 状态 ----
 
@@ -169,7 +211,7 @@ export class EpubReaderView extends FileView {
 		this.startReadingTimeTracker();
 	}
 
-	/** 视图关闭时释放 epubjs 资源与定时器 */
+	/** 视图关闭时释放 foliate 资源与定时器 */
 	override async onClose(): Promise<void> {
 		this.stopReadingTimeTracker();
 		this.dismissContextMenu();
@@ -182,7 +224,7 @@ export class EpubReaderView extends FileView {
 
 	/**
 	 * Obsidian FileView 文件加载钩子。
-	 * 读取 EPUB 二进制内容 → epubjs 解析 → 渲染 → 恢复进度。
+	 * 读取 EPUB 二进制内容 → foliate-js 解析 → 渲染 → 恢复进度。
 	 *
 	 * @param file - 用户打开的 EPUB TFile
 	 */
@@ -191,24 +233,13 @@ export class EpubReaderView extends FileView {
 
 		try {
 			const arrayBuffer = await this.app.vault.readBinary(file);
-			this.book = ePub(arrayBuffer);
-
-			await this.book.ready;
-
-			this.tocEntries = buildTocSpineIndex(this.book, this.book.navigation?.toc ?? []);
-
-			this.rendition = this.book.renderTo(this.readerContainerEl, {
-				width: "100%",
-				height: "100%",
-				flow: this.currentFlowMode,
-				spread: "none",
-			});
-
-			this.registerSecurityHooks();
-			this.registerRenditionEvents();
-			this.themeManager.registerThemes(this.rendition);
-			this.applyFontSize(this.currentFontSize);
-			this.themeManager.applyTheme(this.rendition, this.currentTheme);
+			this.foliateView = await createFoliateView(this.readerContainerEl);
+			this.configureFoliateView(this.foliateView);
+			this.registerFoliateEvents(this.foliateView);
+			await openBookFromBuffer(this.foliateView, arrayBuffer, file.name);
+			this.applyFoliateLayout();
+			this.tocEntries = this.buildFoliateTocEntries(this.foliateView.book?.toc ?? []);
+			this.applyFoliateAppearance();
 
 			await this.restoreProgress();
 
@@ -222,7 +253,7 @@ export class EpubReaderView extends FileView {
 
 	/**
 	 * Obsidian FileView 文件卸载钩子。
-	 * flush 阅读时间并销毁 rendition。
+	 * flush 阅读时间并销毁 foliate-view。
 	 *
 	 * @param _file - 即将卸载的 TFile（未使用）
 	 */
@@ -490,67 +521,50 @@ export class EpubReaderView extends FileView {
 	}
 
 	// ================================================================
-	// epubjs 事件注册
+	// foliate 事件注册
 	// ================================================================
 
 	/**
-	 * 注册 epubjs spine content hook，对每个 section 的 DOM 执行安全过滤和样式内联。
+	 * 配置 foliate-view 的布局属性。
 	 */
-	private registerSecurityHooks(): void {
-		if (!this.book) {
-			return;
-		}
-
-		this.book.spine.hooks.content.register("contents", (contents: any) => {
-			stripScriptsFromDocument(contents.document as Document);
-			void inlineBlockedStylesheets(contents);
-		});
+	private configureFoliateView(view: FoliateViewHandle): void {
+		const element = view as unknown as HTMLElement;
+		element.addClass("yh-epub-foliate-view");
+		element.setAttribute("flow", this.currentFlowMode);
+		element.setAttribute("margin", this.currentFlowMode === "paginated" ? "28px" : "0px");
+		element.setAttribute("gap", "8%");
+		element.setAttribute("max-inline-size", "760px");
 	}
 
 	/**
-	 * 注册 rendition 事件：选区、位置变更、渲染完成、标注点击。
+	 * 注册 foliate 事件：section load、位置变更、标注绘制、标注点击。
 	 */
-	private registerRenditionEvents(): void {
-		if (!this.rendition) {
-			return;
-		}
-
-		this.rendition.on("selected", (cfiRange: string, contents: any) => {
-			this.handleTextSelected(cfiRange, contents);
-		});
-
-		this.rendition.on("relocated", (location: any) => {
-			this.handleRelocated(location);
-		});
-
-		this.rendition.on("rendered", (_section: any) => {
-			this.handleRendered();
-		});
-
-		this.rendition.on("markClicked", (annotationType: string, data: any) => {
-			this.handleMarkClicked(annotationType, data);
-		});
+	private registerFoliateEvents(view: FoliateViewHandle): void {
+		view.addEventListener("load", this.handleFoliateLoad as EventListener);
+		view.addEventListener("relocate", this.handleFoliateRelocate as EventListener);
+		view.addEventListener("draw-annotation", this.handleFoliateDrawAnnotation as EventListener);
+		view.addEventListener("show-annotation", this.handleFoliateShowAnnotation as EventListener);
 	}
 
 	// ================================================================
 	// 安全处理
 	// ================================================================
 
-	// （安全 hook 已在 registerSecurityHooks 中注册）
+	// （安全过滤已在 foliate load 事件中处理）
 
 	// ================================================================
 	// 选区事件 & 上下文菜单
 	// ================================================================
 
 	/**
-	 * 处理 epubjs 文本选区事件。
+	 * 处理 foliate 文本选区事件。
 	 * 记录选区 CFI 和文本，在选区位置显示浮动上下文菜单。
 	 *
-	 * @param cfiRange - epubjs 提供的 CFI 范围字符串
-	 * @param contents - epubjs contents 对象，用于获取 iframe window/selection
+	 * @param cfiRange - foliate 由 Range 生成的 CFI 范围字符串
+	 * @param doc - foliate load 事件提供的 section document
 	 */
-	private handleTextSelected(cfiRange: string, contents: any): void {
-		const selection = contents?.window?.getSelection();
+	private handleTextSelected(cfiRange: string, doc: Document): void {
+		const selection = doc.defaultView?.getSelection?.();
 		const text = selection?.toString().trim() ?? "";
 
 		if (!text) {
@@ -566,14 +580,12 @@ export class EpubReaderView extends FileView {
 			return;
 		}
 
-		const iframeRect = this.readerContainerEl.querySelector("iframe")?.getBoundingClientRect();
-		if (!iframeRect) {
-			return;
-		}
-
 		const selectionRect = range.getBoundingClientRect();
-		const absoluteTop = iframeRect.top + selectionRect.top;
-		const absoluteLeft = iframeRect.left + selectionRect.left;
+		const iframeRect = this.findIframeForDocument(doc)?.getBoundingClientRect();
+		const frameLeft = iframeRect?.left ?? 0;
+		const frameTop = iframeRect?.top ?? 0;
+		const absoluteTop = frameTop + selectionRect.top;
+		const absoluteLeft = frameLeft + selectionRect.left;
 
 		this.showContextMenu(absoluteLeft, absoluteTop + selectionRect.height, text, cfiRange);
 	}
@@ -665,14 +677,14 @@ export class EpubReaderView extends FileView {
 
 	/**
 	 * 在当前选区创建指定颜色的高亮标注。
-	 * 将标注保存到 sidecar 并渲染到 rendition。
+	 * 将标注保存到 sidecar 并渲染到 foliate 高亮层。
 	 *
 	 * @param color - 高亮颜色
 	 * @param cfiRange - CFI 范围
 	 * @param text - 选中的文本
 	 */
 	private async createHighlight(color: AnnotationColor, cfiRange: string, text: string): Promise<void> {
-		if (!this.file || !this.rendition) {
+		if (!this.file || !this.foliateView) {
 			return;
 		}
 
@@ -708,7 +720,7 @@ export class EpubReaderView extends FileView {
 	 * @param text - 选中的文本
 	 */
 	private async openNoteModal(cfiRange: string, text: string): Promise<void> {
-		if (!this.file || !this.rendition) {
+		if (!this.file || !this.foliateView) {
 			return;
 		}
 
@@ -750,50 +762,32 @@ export class EpubReaderView extends FileView {
 	}
 
 	/**
-	 * 将单个标注渲染到 rendition 的高亮层。
+	 * 将单个标注渲染到 foliate 的高亮层。
 	 * 根据 EpubHighlightStyle 选择填充/下划线/波浪线样式。
 	 *
 	 * @param annotation - 高亮或评论标注
 	 */
 	private renderAnnotationOnRendition(annotation: { id: string; color: AnnotationColor; style: EpubHighlightStyle; anchor: EpubCfiAnchor }): void {
-		if (!this.rendition) {
+		if (!this.foliateView) {
 			return;
 		}
 
-		const rgba = EPUB_COLOR_MAP[annotation.color];
 		const cfiRange = annotation.anchor.cfiRange;
 
-		this.rendition.annotations.add(
-			"highlight",
-			cfiRange,
-			{},
-			undefined,
-			"yh-epub-highlight",
-			{
-				fill: rgba,
-				"fill-opacity": "1",
-				"mix-blend-mode": "multiply",
-				...(annotation.style === "underline" ? {
-					"stroke": rgba,
-					"stroke-width": "2px",
-					"fill": "transparent",
-				} : {}),
-				...(annotation.style === "wavy" ? {
-					"stroke": rgba,
-					"stroke-width": "1.5px",
-					"stroke-style": "wavy",
-					"fill": "transparent",
-				} : {}),
-			},
-		);
+		void this.foliateView.addAnnotation({
+			value: cfiRange,
+			id: annotation.id,
+			color: annotation.color,
+			style: annotation.style,
+		});
 	}
 
 	/**
-	 * 恢复已保存的所有标注到 rendition。
+	 * 恢复已保存的所有标注到 foliate 高亮层。
 	 * 在 book 加载完成后调用。
 	 */
 	private restoreAnnotations(): void {
-		if (!this.file || !this.rendition) {
+		if (!this.file || !this.foliateView) {
 			return;
 		}
 
@@ -812,18 +806,18 @@ export class EpubReaderView extends FileView {
 	}
 
 	/**
-	 * 处理 rendition 上的标注点击事件。
+	 * 处理 foliate 标注点击事件。
 	 * 显示编辑菜单（编辑/删除）。
 	 *
-	 * @param _annotationType - epubjs 标注类型
+	 * @param value - foliate 标注 value（CFI 范围）
 	 * @param data - 标注数据，包含 CFI 范围
 	 */
-	private handleMarkClicked(_annotationType: string, data: any): void {
+	private handleMarkClicked(value: string): void {
 		if (!this.file) {
 			return;
 		}
 
-		const cfiRange = data?.cfiRange ?? data?.cfi ?? "";
+		const cfiRange = value;
 		if (!cfiRange) {
 			return;
 		}
@@ -887,7 +881,7 @@ export class EpubReaderView extends FileView {
 	}
 
 	/**
-	 * 删除指定标注并从 rendition 移除高亮。
+	 * 删除指定标注并从 foliate 高亮层移除。
 	 *
 	 * @param annotationId - 要删除的标注 ID
 	 */
@@ -897,7 +891,14 @@ export class EpubReaderView extends FileView {
 		}
 
 		try {
+			const document = this.store.getCachedDocument(this.file.path);
+			const annotation = document
+				? [...document.epubHighlights, ...document.epubComments].find((item) => item.id === annotationId)
+				: null;
 			await this.store.removeAnnotation(this.file, annotationId);
+			if (annotation) {
+				this.removeFoliateAnnotation(annotation);
+			}
 			this.refreshRenditionAnnotations();
 			this.renderSidebar();
 			new Notice("标注已删除");
@@ -908,17 +909,20 @@ export class EpubReaderView extends FileView {
 	}
 
 	/**
-	 * 清除 rendition 上所有标注高亮，然后重新渲染已保存的标注。
+	 * 清除 foliate 上所有标注高亮，然后重新渲染已保存的标注。
 	 * 用于标注增删后的全量刷新。
 	 */
 	private refreshRenditionAnnotations(): void {
-		if (!this.rendition) {
+		if (!this.foliateView || !this.file) {
 			return;
 		}
 
-		const annotations = this.rendition.annotations as any;
-		if (typeof annotations.reset === "function") {
-			annotations.reset();
+		const document = this.store.getCachedDocument(this.file.path);
+		if (document) {
+			const allAnnotations = [...document.epubHighlights, ...document.epubComments];
+			for (const annotation of allAnnotations) {
+				this.removeFoliateAnnotation(annotation);
+			}
 		}
 
 		this.restoreAnnotations();
@@ -929,21 +933,23 @@ export class EpubReaderView extends FileView {
 	// ================================================================
 
 	/**
-	 * 处理 epubjs relocated 事件。
+	 * 处理 foliate relocate 事件。
 	 * 更新当前章节、百分比、进度条显示，并触发进度保存。
 	 *
-	 * @param location - epubjs location 对象
+	 * @param detail - foliate relocate event detail
 	 */
-	private handleRelocated(location: any): void {
-		const cfi = normalizeCfi(location?.start?.cfi);
-		const percent = normalizePercent(location?.start?.percentage ?? 0);
-		const spineIndex = spineIndexFromLocation(location, undefined, this.book ?? undefined);
+	private handleRelocated(detail: FoliateRelocateDetail): void {
+		const cfi = normalizeCfi(detail?.cfi);
+		const percent = normalizePercent(detail?.fraction ?? this.currentPercent);
+		const spineIndex = typeof detail.index === "number" ? detail.index : this.currentSectionIndex;
 
-		this.currentChapter = spineIndex !== null ? resolveChapterLabel(this.tocEntries, spineIndex) : "";
+		this.currentCfi = cfi || this.currentCfi;
+		this.currentSectionIndex = Number.isFinite(spineIndex) ? spineIndex : 0;
+		this.currentChapter = detail?.tocItem?.label ?? resolveChapterLabel(this.tocEntries, this.currentSectionIndex);
 		this.currentPercent = percent;
 
 		this.updateProgressBar(percent);
-		this.debouncedSaveProgress(cfi, percent);
+		this.debouncedSaveProgress(this.currentCfi, percent);
 	}
 
 	/**
@@ -1027,7 +1033,7 @@ export class EpubReaderView extends FileView {
 			return;
 		}
 
-		const cfi = cfiOverride ?? "";
+		const cfi = cfiOverride ?? this.currentCfi;
 		const percent = percentOverride ?? this.currentPercent;
 
 		if (!cfi && percent <= 0) {
@@ -1073,14 +1079,14 @@ export class EpubReaderView extends FileView {
 	 * 从 sidecar 恢复上次阅读进度并跳转。
 	 */
 	private async restoreProgress(): Promise<void> {
-		if (!this.file || !this.rendition) {
+		if (!this.file || !this.foliateView) {
 			return;
 		}
 
 		const document = await this.store.getDocument(this.file);
 		const progress = document.epubProgress;
 		if (!progress) {
-			await this.rendition.display();
+			await this.foliateView.goToTextStart?.();
 			this.restoreAnnotations();
 			return;
 		}
@@ -1090,12 +1096,13 @@ export class EpubReaderView extends FileView {
 		const cfi = normalizeCfi(progress.cfi);
 		if (cfi) {
 			try {
-				await this.rendition.display(cfi);
+				await this.foliateView.goTo(cfi);
+				this.currentCfi = cfi;
 			} catch {
-				await this.rendition.display();
+				await this.foliateView.goToTextStart?.();
 			}
 		} else {
-			await this.rendition.display();
+			await this.foliateView.goToTextStart?.();
 		}
 
 		this.currentPercent = normalizePercent(progress.percent);
@@ -1108,7 +1115,7 @@ export class EpubReaderView extends FileView {
 	// ================================================================
 
 	/**
-	 * 处理 rendition rendered 事件。
+	 * 处理 foliate section 加载后的渲染刷新。
 	 * 刷新标注渲染（确保标注在章节切换后仍然可见）。
 	 */
 	private handleRendered(): void {
@@ -1180,20 +1187,22 @@ export class EpubReaderView extends FileView {
 	 * 翻到下一页。
 	 */
 	private nextPage(): void {
-		if (!this.rendition) {
+		if (!this.foliateView) {
 			return;
 		}
-		this.rendition.next();
+		const action = this.foliateView.next ?? this.foliateView.goRight;
+		void action?.call(this.foliateView);
 	}
 
 	/**
 	 * 翻到上一页。
 	 */
 	private prevPage(): void {
-		if (!this.rendition) {
+		if (!this.foliateView) {
 			return;
 		}
-		this.rendition.prev();
+		const action = this.foliateView.prev ?? this.foliateView.goLeft;
+		void action?.call(this.foliateView);
 	}
 
 	// ================================================================
@@ -1206,14 +1215,10 @@ export class EpubReaderView extends FileView {
 	 * @param spineIndex - 目标章节的 spine 索引
 	 */
 	private navigateToSpineIndex(spineIndex: number): void {
-		if (!this.book || !this.rendition) {
+		if (!this.foliateView) {
 			return;
 		}
-
-		const section = this.book.spine.get(spineIndex);
-		if (section?.href) {
-			void this.rendition.display(section.href);
-		}
+		void this.foliateView.goTo(spineIndex);
 	}
 
 	/**
@@ -1222,7 +1227,7 @@ export class EpubReaderView extends FileView {
 	 * @param annotationId - 标注 ID
 	 */
 	private navigateToAnnotation(annotationId: string): void {
-		if (!this.file || !this.rendition) {
+		if (!this.file || !this.foliateView) {
 			return;
 		}
 
@@ -1237,7 +1242,7 @@ export class EpubReaderView extends FileView {
 			return;
 		}
 
-		void this.rendition.display(annotation.anchor.cfiRange);
+		void this.foliateView.goTo(annotation.anchor.cfiRange);
 	}
 
 	// ================================================================
@@ -1261,16 +1266,12 @@ export class EpubReaderView extends FileView {
 	}
 
 	/**
-	 * 将字号应用到 rendition。
+	 * 将字号应用到 foliate 主题样式。
 	 *
 	 * @param size - 字号像素值
 	 */
 	private applyFontSize(size: number): void {
-		if (!this.rendition) {
-			return;
-		}
-
-		this.rendition.themes.fontSize(`${size}px`);
+		this.applyFoliateAppearance(size);
 	}
 
 	/**
@@ -1285,9 +1286,7 @@ export class EpubReaderView extends FileView {
 
 		this.currentTheme = themeId;
 
-		if (this.rendition) {
-			this.themeManager.applyTheme(this.rendition, themeId);
-		}
+		this.applyFoliateAppearance();
 
 		this.renderToolbar();
 	}
@@ -1299,26 +1298,14 @@ export class EpubReaderView extends FileView {
 		const nextMode: EpubFlowMode = this.currentFlowMode === "paginated" ? "scrolled" : "paginated";
 		this.currentFlowMode = nextMode;
 
-		this.destroyRendition();
-
-		if (!this.book || !this.file) {
+		if (!this.foliateView) {
 			return;
 		}
 
-		this.rendition = this.book.renderTo(this.readerContainerEl, {
-			width: "100%",
-			height: "100%",
-			flow: nextMode,
-			spread: "none",
-		});
-
-		this.registerSecurityHooks();
-		this.registerRenditionEvents();
-		this.themeManager.registerThemes(this.rendition);
-		this.applyFontSize(this.currentFontSize);
-		this.themeManager.applyTheme(this.rendition, this.currentTheme);
-
-		void this.restoreProgress();
+		const element = this.foliateView as unknown as HTMLElement;
+		element.setAttribute("flow", nextMode);
+		this.applyFoliateLayout();
+		this.applyFoliateAppearance();
 		this.renderToolbar();
 	}
 
@@ -1429,7 +1416,7 @@ export class EpubReaderView extends FileView {
 	// ================================================================
 
 	/**
-	 * 销毁 epubjs Book 和 Rendition 实例，释放资源。
+	 * 销毁 foliate-view 实例，释放资源。
 	 */
 	private destroyRendition(): void {
 		if (this.progressSaveTimer !== null) {
@@ -1442,26 +1429,275 @@ export class EpubReaderView extends FileView {
 			this.wheelDebounceTimer = null;
 		}
 
-		if (this.rendition) {
+		if (this.foliateView) {
 			try {
-				this.rendition.destroy();
+				this.foliateView.removeEventListener("load", this.handleFoliateLoad as EventListener);
+				this.foliateView.removeEventListener("relocate", this.handleFoliateRelocate as EventListener);
+				this.foliateView.removeEventListener("draw-annotation", this.handleFoliateDrawAnnotation as EventListener);
+				this.foliateView.removeEventListener("show-annotation", this.handleFoliateShowAnnotation as EventListener);
+				this.foliateView.close?.();
 			} catch {
-				/* rendition 可能已经销毁 */
+				/* foliate-view 可能已经销毁 */
 			}
-			this.rendition = null;
-		}
-
-		if (this.book) {
-			try {
-				this.book.destroy();
-			} catch {
-				/* book 可能已经销毁 */
-			}
-			this.book = null;
+			this.foliateView = null;
 		}
 
 		if (this.readerContainerEl) {
 			this.readerContainerEl.empty();
 		}
+	}
+
+	private buildFoliateTocEntries(tocItems: FoliateTocItem[]): TocSpineEntry[] {
+		const entries: TocSpineEntry[] = [];
+		const walk = (items: FoliateTocItem[]) => {
+			for (const item of items) {
+				const index = this.resolveFoliateHrefIndex(item.href);
+				if (index !== null) {
+					entries.push({ label: (item.label ?? "").trim() || `章节 ${index + 1}`, spineIndex: index });
+				}
+				if (item.subitems?.length) {
+					walk(item.subitems.filter((child): child is FoliateTocItem => typeof child === "object" && child !== null));
+				}
+			}
+		};
+		walk(tocItems);
+		return [...entries].sort((a, b) => a.spineIndex - b.spineIndex);
+	}
+
+	private resolveFoliateHrefIndex(href: string | undefined): number | null {
+		if (!href || !this.foliateView?.book?.sections) {
+			return null;
+		}
+		const normalizedHref = href.split("#")[0];
+		const index = this.foliateView.book.sections.findIndex((section) => {
+			const id = String(section.id ?? "");
+			return id === href || id === normalizedHref || id.endsWith(normalizedHref);
+		});
+		return index >= 0 ? index : null;
+	}
+
+	private handleFoliateLoad = (event: Event): void => {
+		const detail = (event as CustomEvent<FoliateLoadDetail>).detail;
+		const doc = detail?.doc;
+		if (!doc) {
+			return;
+		}
+		const index = typeof detail.index === "number" ? detail.index : this.currentSectionIndex;
+		this.loadedSectionDocs.set(doc, index);
+		stripScriptsFromDocument(doc);
+		void inlineBlockedStylesheets({ document: doc });
+		this.attachSelectionListeners(doc);
+		this.handleRendered();
+	};
+
+	private handleFoliateRelocate = (event: Event): void => {
+		this.handleRelocated((event as CustomEvent<FoliateRelocateDetail>).detail ?? {});
+	};
+
+	private handleFoliateDrawAnnotation = (event: Event): void => {
+		const detail = (event as CustomEvent<FoliateDrawAnnotationDetail>).detail;
+		if (!detail?.annotation || typeof detail.draw !== "function") {
+			return;
+		}
+		const color = detail.annotation.color ?? this.pluginSettings.defaultHighlightColor;
+		const style = detail.annotation.style ?? this.pluginSettings.epubHighlightStyle;
+		detail.draw((rects) => this.createAnnotationOverlay(rects, color, style));
+	};
+
+	private handleFoliateShowAnnotation = (event: Event): void => {
+		const detail = (event as CustomEvent<FoliateShowAnnotationDetail>).detail;
+		if (!detail?.value) {
+			return;
+		}
+		this.handleMarkClicked(detail.value);
+	};
+
+	private attachSelectionListeners(doc: Document): void {
+		if (this.documentSelectionCleanups.has(doc)) {
+			return;
+		}
+
+		let pendingFrame = 0;
+		const scheduleEmit = () => {
+			if (pendingFrame) {
+				window.cancelAnimationFrame(pendingFrame);
+			}
+			pendingFrame = window.requestAnimationFrame(() => {
+				pendingFrame = 0;
+				this.emitFoliateSelection(doc);
+			});
+		};
+
+		doc.addEventListener("selectionchange", scheduleEmit);
+		doc.addEventListener("mouseup", scheduleEmit);
+		doc.addEventListener("touchend", scheduleEmit);
+		doc.addEventListener("keyup", scheduleEmit);
+
+		const cleanup = () => {
+			if (pendingFrame) {
+				window.cancelAnimationFrame(pendingFrame);
+			}
+			doc.removeEventListener("selectionchange", scheduleEmit);
+			doc.removeEventListener("mouseup", scheduleEmit);
+			doc.removeEventListener("touchend", scheduleEmit);
+			doc.removeEventListener("keyup", scheduleEmit);
+		};
+		this.documentSelectionCleanups.set(doc, cleanup);
+	}
+
+	private emitFoliateSelection(doc: Document): void {
+		const selection = doc.defaultView?.getSelection?.();
+		if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
+			return;
+		}
+		const range = selection.getRangeAt(0);
+		const text = selection.toString().trim();
+		if (!text || !this.foliateView?.getCFI) {
+			return;
+		}
+		const index = this.loadedSectionDocs.get(doc) ?? this.currentSectionIndex;
+		const cfiRange = normalizeCfi(this.foliateView.getCFI(index, range.cloneRange()));
+		if (!cfiRange) {
+			return;
+		}
+		this.handleTextSelected(cfiRange, doc);
+	}
+
+	private createAnnotationOverlay(
+		rects: Array<DOMRect | { left: number; top: number; width: number; height: number }>,
+		color: AnnotationColor,
+		style: EpubHighlightStyle,
+	): SVGElement {
+		const svgNS = "http://www.w3.org/2000/svg";
+		const group = activeDocument.createElementNS(svgNS, "g");
+		const rgba = EPUB_COLOR_MAP[color];
+
+		for (const rect of rects) {
+			const x = Number(rect.left) || 0;
+			const y = Number(rect.top) || 0;
+			const width = Number(rect.width) || 0;
+			const height = Number(rect.height) || 0;
+			if (width <= 0 || height <= 0) {
+				continue;
+			}
+
+			if (style === "fill") {
+				const highlight = activeDocument.createElementNS(svgNS, "rect");
+				highlight.setAttribute("x", String(x));
+				highlight.setAttribute("y", String(y));
+				highlight.setAttribute("width", String(width));
+				highlight.setAttribute("height", String(height));
+				highlight.setAttribute("rx", "2");
+				highlight.setAttribute("fill", rgba);
+				highlight.setAttribute("style", "mix-blend-mode:multiply;pointer-events:none");
+				group.appendChild(highlight);
+				continue;
+			}
+
+			const line = activeDocument.createElementNS(svgNS, "line");
+			line.setAttribute("x1", String(x));
+			line.setAttribute("x2", String(x + width));
+			line.setAttribute("y1", String(y + height - 2));
+			line.setAttribute("y2", String(y + height - 2));
+			line.setAttribute("stroke", rgba);
+			line.setAttribute("stroke-width", style === "wavy" ? "1.5" : "2");
+			line.setAttribute("stroke-linecap", "round");
+			if (style === "wavy") {
+				line.setAttribute("stroke-dasharray", "2 2");
+			}
+			line.setAttribute("style", "pointer-events:none");
+			group.appendChild(line);
+		}
+
+		return group;
+	}
+
+	private removeFoliateAnnotation(annotation: { id: string; color: AnnotationColor; style: EpubHighlightStyle; anchor: EpubCfiAnchor }): void {
+		if (!this.foliateView) {
+			return;
+		}
+		try {
+			this.foliateView.deleteAnnotation({
+				value: annotation.anchor.cfiRange,
+				id: annotation.id,
+				color: annotation.color,
+				style: annotation.style,
+			});
+		} catch {
+			/* foliate may already have cleared the visible overlay */
+		}
+	}
+
+	private applyFoliateAppearance(size = this.currentFontSize): void {
+		if (!this.foliateView) {
+			return;
+		}
+		const colors = this.themeManager.resolveThemeColors(this.currentTheme);
+		const css = [
+			":root { color-scheme: light dark; }",
+			"body {",
+			`  background-color: ${colors.background} !important;`,
+			`  color: ${colors.textColor} !important;`,
+			`  font-size: ${size}px !important;`,
+			"  line-height: 1.72 !important;",
+			"}",
+			"p, div, span, li, h1, h2, h3, h4, h5, h6, blockquote, td, th, dt, dd {",
+			`  color: ${colors.textColor} !important;`,
+			"}",
+			`a, a:link, a:visited { color: ${colors.linkColor} !important; }`,
+			`::selection { background: ${colors.selectionBg} !important; }`,
+			"img { max-width: 100% !important; height: auto !important; }",
+		].join("\n");
+		this.foliateView.renderer?.setStyles?.(css);
+		this.foliateView.renderer?.render?.();
+		(this.foliateView as unknown as HTMLElement).style.backgroundColor = colors.background;
+		this.readerContainerEl.style.backgroundColor = colors.background;
+	}
+
+	private applyFoliateLayout(): void {
+		if (!this.foliateView) {
+			return;
+		}
+		const attrs: Record<string, string> = {
+			flow: this.currentFlowMode,
+			margin: this.currentFlowMode === "paginated" ? "28px" : "0px",
+			gap: "8%",
+			"max-inline-size": "760px",
+		};
+		const host = this.foliateView as unknown as HTMLElement;
+		const renderer = this.foliateView.renderer as unknown as HTMLElement | undefined;
+		for (const [name, value] of Object.entries(attrs)) {
+			host.setAttribute(name, value);
+			renderer?.setAttribute?.(name, value);
+		}
+		this.foliateView.renderer?.render?.();
+	}
+
+	private findIframeForDocument(doc: Document): HTMLIFrameElement | null {
+		const visit = (root: ParentNode): HTMLIFrameElement | null => {
+			const iframes = Array.from(root.querySelectorAll("iframe"));
+			for (const iframe of iframes) {
+				try {
+					if (iframe.contentDocument === doc) {
+						return iframe as HTMLIFrameElement;
+					}
+				} catch {
+					/* cross-origin iframes are not expected, but ignore defensively */
+				}
+			}
+			const elements = Array.from(root.querySelectorAll("*"));
+			for (const element of elements) {
+				const shadowRoot = (element as HTMLElement).shadowRoot;
+				if (!shadowRoot) {
+					continue;
+				}
+				const found = visit(shadowRoot);
+				if (found) {
+					return found;
+				}
+			}
+			return null;
+		};
+		return visit(this.readerContainerEl);
 	}
 }

@@ -4,11 +4,14 @@
  * [POS]: epub 模块 foliate 引擎基础设施，移植自 weave foliate-runtime-patches（简化 blob 读取依赖）
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  *
- * 作用：Obsidian 桌面端 CSP 下，foliate 的 iframe 撞两个问题（实测症状）：
- * 1. sandbox 含 allow-scripts → Obsidian 拒绝 sandboxed iframe 执行脚本
- *    → patch setAttribute('sandbox')：对 foliate iframe 移除 allow-scripts token
- * 2. iframe.src = blob:URL → CSP "style-src blob:" 拦截内部 stylesheet
- *    → patch src setter：blob: 改读内容用 srcdoc 注入（绕过 CSP）
+ * 作用：Obsidian 桌面端 CSP 下，foliate 的 blob iframe stylesheet 会被拦截。
+ * 当前正式启用的补丁只处理 iframe.src = blob:URL：
+ * - 读取 blob HTML
+ * - 在 srcdoc 注入前内联 blob stylesheet
+ * - 用 srcdoc 替代 blob src，绕过 style-src 限制
+ *
+ * ⚠️ 历史踩坑：不要启用 sandbox patch 移除 allow-scripts。foliate iframe 依赖脚本渲染，
+ * 移除 allow-scripts 会造成 Modal/阅读区空白，且 prototype patch 需要重启 Obsidian 才能清掉。
  */
 
 import { Platform } from "obsidian";

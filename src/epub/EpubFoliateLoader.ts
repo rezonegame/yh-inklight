@@ -59,6 +59,9 @@ export interface FoliateViewHandle {
   open: (...args: unknown[]) => Promise<unknown> | unknown;
   close?: () => void;
   goTo: (target: unknown) => Promise<unknown> | unknown;
+  goToFraction?: (fraction: number) => Promise<unknown> | unknown;
+  getCFI?: (index: number, range?: Range | null) => string;
+  resolveCFI?: (cfi: string) => unknown;
   goToTextStart?: () => Promise<unknown> | unknown;
   prev?: () => Promise<unknown> | unknown;
   next?: () => Promise<unknown> | unknown;
@@ -72,6 +75,10 @@ export interface FoliateViewHandle {
     setStyles?: (styles: string | [string, string]) => void;
     render?: () => void;
     getContents?: () => Array<{ index?: number; doc?: Document | null }>;
+  };
+  book?: {
+    toc?: Array<{ label?: string; href?: string; subitems?: unknown[] }>;
+    sections?: Array<{ id?: unknown; cfi?: string; size?: number; linear?: string }>;
   };
   [key: string]: unknown;
 }
