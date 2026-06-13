@@ -11240,6 +11240,7 @@ var EPUB_READER_VIEW_TYPE = "inklight-epub-reader";
 var READING_TIME_FLUSH_INTERVAL_MS = 6e4;
 var WHEEL_DEBOUNCE_MS = 400;
 var PROGRESS_SAVE_DEBOUNCE_MS = 2e3;
+var SELECTION_SYNC_RETRY_DELAY_MS = 120;
 var EpubReaderView = class extends import_obsidian11.FileView {
   // ================================================================
   // 构造 & 生命周期
@@ -12412,46 +12413,85 @@ var EpubReaderView = class extends import_obsidian11.FileView {
       return;
     }
     let pendingFrame = 0;
+    let pendingRetry = 0;
     const scheduleEmit = () => {
       if (pendingFrame) {
         window.cancelAnimationFrame(pendingFrame);
       }
       pendingFrame = window.requestAnimationFrame(() => {
         pendingFrame = 0;
-        this.emitFoliateSelection(doc);
+        const emitted = this.emitFoliateSelection(doc);
+        if (!emitted) {
+          if (pendingRetry) {
+            window.clearTimeout(pendingRetry);
+          }
+          pendingRetry = window.setTimeout(() => {
+            pendingRetry = 0;
+            this.emitFoliateSelection(doc);
+          }, SELECTION_SYNC_RETRY_DELAY_MS);
+        }
       });
     };
-    doc.addEventListener("selectionchange", scheduleEmit);
-    doc.addEventListener("mouseup", scheduleEmit);
-    doc.addEventListener("touchend", scheduleEmit);
-    doc.addEventListener("keyup", scheduleEmit);
+    const eventOptions = { capture: true };
+    const win = doc.defaultView;
+    doc.addEventListener("selectionchange", scheduleEmit, eventOptions);
+    doc.addEventListener("mouseup", scheduleEmit, eventOptions);
+    doc.addEventListener("pointerup", scheduleEmit, eventOptions);
+    doc.addEventListener("touchend", scheduleEmit, eventOptions);
+    doc.addEventListener("keyup", scheduleEmit, eventOptions);
+    doc.addEventListener("contextmenu", scheduleEmit, eventOptions);
+    win?.addEventListener("mouseup", scheduleEmit, eventOptions);
+    win?.addEventListener("pointerup", scheduleEmit, eventOptions);
+    win?.addEventListener("touchend", scheduleEmit, eventOptions);
     const cleanup = () => {
       if (pendingFrame) {
         window.cancelAnimationFrame(pendingFrame);
       }
-      doc.removeEventListener("selectionchange", scheduleEmit);
-      doc.removeEventListener("mouseup", scheduleEmit);
-      doc.removeEventListener("touchend", scheduleEmit);
-      doc.removeEventListener("keyup", scheduleEmit);
+      if (pendingRetry) {
+        window.clearTimeout(pendingRetry);
+      }
+      doc.removeEventListener("selectionchange", scheduleEmit, true);
+      doc.removeEventListener("mouseup", scheduleEmit, true);
+      doc.removeEventListener("pointerup", scheduleEmit, true);
+      doc.removeEventListener("touchend", scheduleEmit, true);
+      doc.removeEventListener("keyup", scheduleEmit, true);
+      doc.removeEventListener("contextmenu", scheduleEmit, true);
+      win?.removeEventListener("mouseup", scheduleEmit, true);
+      win?.removeEventListener("pointerup", scheduleEmit, true);
+      win?.removeEventListener("touchend", scheduleEmit, true);
     };
     this.documentSelectionCleanups.set(doc, cleanup);
   }
   emitFoliateSelection(doc) {
     const selection = doc.defaultView?.getSelection?.();
     if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-      return;
+      return false;
     }
     const range = selection.getRangeAt(0);
     const text = selection.toString().trim();
     if (!text || !this.foliateView?.getCFI) {
-      return;
+      return false;
     }
-    const index = this.loadedSectionDocs.get(doc) ?? this.currentSectionIndex;
-    const cfiRange = normalizeCfi(this.foliateView.getCFI(index, range.cloneRange()));
+    const cfiRange = this.resolveSelectionCfi(doc, range);
     if (!cfiRange) {
-      return;
+      return false;
     }
     this.handleTextSelected(cfiRange, doc);
+    return true;
+  }
+  resolveSelectionCfi(doc, range) {
+    if (!this.foliateView?.getCFI) {
+      return "";
+    }
+    const knownIndex = this.loadedSectionDocs.get(doc);
+    const contentsIndex = this.foliateView.renderer?.getContents?.().find((content) => content.doc === doc)?.index;
+    const index = knownIndex ?? contentsIndex ?? this.currentSectionIndex;
+    try {
+      return normalizeCfi(this.foliateView.getCFI(index, range.cloneRange()));
+    } catch (error) {
+      console.warn("yh-inklight: EPUB selection CFI failed", { index, error });
+      return "";
+    }
   }
   createAnnotationOverlay(rects, color, style2) {
     const svgNS = "http://www.w3.org/2000/svg";
