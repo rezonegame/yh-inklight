@@ -10743,6 +10743,19 @@ var EpubReaderView = class extends import_obsidian9.FileView {
       updateBookmarkIcon();
       this.renderSidebar();
     });
+    const searchBtn = this.toolbarEl.createEl("button", {
+      cls: "yh-epub-toolbar-btn",
+      attr: { type: "button", title: "\u641C\u7D22\u5168\u6587", "aria-label": "\u641C\u7D22\u5168\u6587" }
+    });
+    (0, import_obsidian9.setIcon)(searchBtn, "search");
+    searchBtn.addEventListener("click", () => this.toggleToolbarSearch());
+    if (this.pluginSettings.epubParagraphMode) {
+      const paraBtn = this.toolbarEl.createEl("button", {
+        cls: "yh-epub-toolbar-btn",
+        attr: { type: "button", title: "\u6BB5\u843D\u6A21\u5F0F\uFF1A\u70B9\u51FB\u6BB5\u843D\u5B9E\u7126", "aria-label": "\u6BB5\u843D\u6A21\u5F0F" }
+      });
+      (0, import_obsidian9.setIcon)(paraBtn, "text");
+    }
     const flowBtn = this.toolbarEl.createEl("button", {
       cls: "yh-epub-toolbar-btn",
       attr: { type: "button", title: this.currentFlowMode === "paginated" ? "\u5207\u6362\u4E3A\u6EDA\u52A8" : "\u5207\u6362\u4E3A\u5206\u9875" }
@@ -12175,6 +12188,76 @@ var EpubReaderView = class extends import_obsidian9.FileView {
       return null;
     };
     return visit(this.readerContainerEl);
+  }
+  // ================================================================
+  // 工具栏搜索（从侧栏移到工具栏）
+  // ================================================================
+  toggleToolbarSearch() {
+    const existing = this.containerEl.querySelector(".yh-epub-toolbar-search");
+    if (existing) {
+      existing.remove();
+      return;
+    }
+    const container = this.containerEl.createDiv({ cls: "yh-epub-toolbar-search" });
+    const input = container.createEl("input", {
+      cls: "yh-epub-toolbar-search-input",
+      attr: { type: "text", placeholder: "\u641C\u7D22\u6B63\u6587\u2026" }
+    });
+    const results = container.createDiv({ cls: "yh-epub-toolbar-search-results" });
+    input.addEventListener("keydown", (ev) => {
+      ev.stopPropagation();
+    }, { capture: true });
+    let timer = null;
+    input.addEventListener("input", () => {
+      if (timer !== null) window.clearTimeout(timer);
+      timer = window.setTimeout(() => {
+        timer = null;
+        void this.doToolbarSearch(input.value, results);
+      }, 300);
+    }, { passive: true });
+    input.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") {
+        container.remove();
+      }
+      if (ev.key === "Enter") {
+        void this.doToolbarSearch(input.value, results);
+      }
+    });
+    input.focus();
+  }
+  async doToolbarSearch(query, resultsEl) {
+    resultsEl.empty();
+    if (!query.trim() || query.trim().length < 2 || !this.foliateView) return;
+    const needle = query.trim().toLowerCase();
+    const contents = this.foliateView.renderer?.getContents?.() ?? [];
+    const hits = [];
+    for (const c2 of contents) {
+      if (!c2.doc?.body) continue;
+      const bodyText = c2.doc.body.textContent || "";
+      const lower = bodyText.toLowerCase();
+      let idx = lower.indexOf(needle);
+      while (idx >= 0 && hits.length < 50) {
+        const start = Math.max(0, idx - 40);
+        const end = Math.min(bodyText.length, idx + needle.length + 60);
+        let excerpt = bodyText.slice(start, end).replace(/[\r\n]+/g, " ");
+        if (start > 0) excerpt = "\u2026" + excerpt;
+        if (end < bodyText.length) excerpt += "\u2026";
+        hits.push({ cfi: "", text: excerpt });
+        idx = lower.indexOf(needle, idx + needle.length);
+      }
+      if (hits.length > 0) break;
+    }
+    if (hits.length === 0) {
+      resultsEl.createDiv({ cls: "yh-epub-toolbar-search-empty", text: "\u672A\u627E\u5230" });
+      return;
+    }
+    for (const h3 of hits) {
+      const btn = resultsEl.createEl("button", { cls: "yh-epub-toolbar-search-hit", attr: { type: "button" } });
+      btn.textContent = h3.text.slice(0, 80);
+      if (h3.cfi) btn.addEventListener("click", () => {
+        if (this.foliateView) void this.foliateView.goTo(h3.cfi);
+      });
+    }
   }
 };
 

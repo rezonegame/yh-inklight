@@ -391,6 +391,22 @@ export class EpubReaderView extends FileView {
 			this.renderSidebar();
 		});
 
+			// 搜索按钮（Phase 4-B P4 - 移到工具栏）
+			const searchBtn = this.toolbarEl.createEl("button", {
+				cls: "yh-epub-toolbar-btn",
+				attr: { type: "button", title: "搜索全文", "aria-label": "搜索全文" },
+			});
+			setIcon(searchBtn, "search");
+			searchBtn.addEventListener("click", () => this.toggleToolbarSearch());
+
+			// 段落模式按钮（Phase 4-B P3）
+			if (this.pluginSettings.epubParagraphMode) {
+				const paraBtn = this.toolbarEl.createEl("button", {
+					cls: "yh-epub-toolbar-btn",
+					attr: { type: "button", title: "段落模式：点击段落实焦", "aria-label": "段落模式" },
+				});
+				setIcon(paraBtn, "text");
+			}
 		const flowBtn = this.toolbarEl.createEl("button", {
 			cls: "yh-epub-toolbar-btn",
 			attr: { type: "button", title: this.currentFlowMode === "paginated" ? "切换为滚动" : "切换为分页" },
@@ -2029,5 +2045,61 @@ export class EpubReaderView extends FileView {
 			return null;
 		};
 		return visit(this.readerContainerEl);
+	}
+
+	// ================================================================
+	// 工具栏搜索（从侧栏移到工具栏）
+	// ================================================================
+
+	private toggleToolbarSearch(): void {
+		const existing = this.containerEl.querySelector(".yh-epub-toolbar-search");
+		if (existing) { existing.remove(); return; }
+		const container = this.containerEl.createDiv({ cls: "yh-epub-toolbar-search" });
+		const input = container.createEl("input", {
+			cls: "yh-epub-toolbar-search-input",
+			attr: { type: "text", placeholder: "搜索正文…" },
+		}) as HTMLInputElement;
+		const results = container.createDiv({ cls: "yh-epub-toolbar-search-results" });
+		input.addEventListener("keydown", (ev: KeyboardEvent) => { ev.stopPropagation(); }, { capture: true });
+		let timer: number | null = null;
+		input.addEventListener("input", () => {
+			if (timer !== null) window.clearTimeout(timer);
+			timer = window.setTimeout(() => { timer = null; void this.doToolbarSearch(input.value, results); }, 300);
+		}, { passive: true });
+		input.addEventListener("keydown", (ev) => {
+			if (ev.key === "Escape") { container.remove(); }
+			if (ev.key === "Enter") { void this.doToolbarSearch(input.value, results); }
+		});
+		input.focus();
+	}
+
+	private async doToolbarSearch(query: string, resultsEl: HTMLElement): Promise<void> {
+		resultsEl.empty();
+		if (!query.trim() || query.trim().length < 2 || !this.foliateView) return;
+		const needle = query.trim().toLowerCase();
+		const contents = this.foliateView.renderer?.getContents?.() ?? [];
+		const hits: Array<{ cfi: string; text: string }> = [];
+		for (const c of contents) {
+			if (!c.doc?.body) continue;
+			const bodyText = c.doc.body.textContent || "";
+			const lower = bodyText.toLowerCase();
+			let idx = lower.indexOf(needle);
+			while (idx >= 0 && hits.length < 50) {
+				const start = Math.max(0, idx - 40);
+				const end = Math.min(bodyText.length, idx + needle.length + 60);
+				let excerpt = bodyText.slice(start, end).replace(/[\r\n]+/g, " ");
+				if (start > 0) excerpt = "…" + excerpt;
+				if (end < bodyText.length) excerpt += "…";
+				hits.push({ cfi: "", text: excerpt });
+				idx = lower.indexOf(needle, idx + needle.length);
+			}
+			if (hits.length > 0) break;
+		}
+		if (hits.length === 0) { resultsEl.createDiv({ cls: "yh-epub-toolbar-search-empty", text: "未找到" }); return; }
+		for (const h of hits) {
+			const btn = resultsEl.createEl("button", { cls: "yh-epub-toolbar-search-hit", attr: { type: "button" } });
+			btn.textContent = h.text.slice(0, 80);
+			if (h.cfi) btn.addEventListener("click", () => { if (this.foliateView) void this.foliateView.goTo(h.cfi); });
+		}
 	}
 }
