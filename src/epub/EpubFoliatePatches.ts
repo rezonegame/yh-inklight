@@ -102,6 +102,34 @@ async function readBlobUrlAsText(url: string): Promise<string> {
 }
 
 /**
+ * 把 section HTML 里的 `<link rel="stylesheet" href="blob:">` 内联成 `<style>`。
+ * 必须在 srcdoc 注入前完成——foliate 的 render 紧跟 iframe load，依赖 CSS 算分栏尺寸，
+ * 若 CSS 被 CSP 拦截、又不在 render 前内联，会按 0 尺寸渲染导致空白。
+ */
+async function inlineBlobStylesheetsInHtml(html: string): Promise<string> {
+	const doc = new DOMParser().parseFromString(html, "text/html");
+	const links = Array.from(doc.querySelectorAll('link[rel="stylesheet"]'));
+	await Promise.all(
+		links.map(async (link) => {
+			const href = link.getAttribute("href") || "";
+			if (!href.startsWith("blob:")) {
+				return;
+			}
+			try {
+				const response = await fetch(href);
+				const css = await response.text();
+				const style = doc.createElement("style");
+				style.textContent = css;
+				link.replaceWith(style);
+			} catch (error) {
+				console.warn("yh-inklight: inline blob css failed", href, error);
+			}
+		}),
+	);
+	return doc.documentElement.outerHTML;
+}
+
+/**
  * 拦截 iframe.src setter：blob: URL 改读内容用 srcdoc 注入，绕过 CSP 对 blob stylesheet 的拦截。
  * 非 blob: 的 src 原样设置。
  */
@@ -141,11 +169,12 @@ export function installFoliateBlobIframePatch(onLoadError: (error: unknown) => v
 			const loadToken = (foliateBlobIframeLoadTokens.get(this) || 0) + 1;
 			foliateBlobIframeLoadTokens.set(this, loadToken);
 			void readBlobUrlAsText(normalizedValue)
-				.then((html) => {
+				.then((html) => inlineBlobStylesheetsInHtml(html))
+				.then((inlined) => {
 					if (foliateBlobIframeLoadTokens.get(this) !== loadToken) {
 						return;
 					}
-					this.srcdoc = html;
+					this.srcdoc = inlined;
 				})
 				.catch((error) => {
 					try {

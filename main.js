@@ -39071,6 +39071,28 @@ async function readBlobUrlAsText(url) {
   }
   return response.text();
 }
+async function inlineBlobStylesheetsInHtml(html) {
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const links = Array.from(doc.querySelectorAll('link[rel="stylesheet"]'));
+  await Promise.all(
+    links.map(async (link) => {
+      const href = link.getAttribute("href") || "";
+      if (!href.startsWith("blob:")) {
+        return;
+      }
+      try {
+        const response = await fetch(href);
+        const css = await response.text();
+        const style2 = doc.createElement("style");
+        style2.textContent = css;
+        link.replaceWith(style2);
+      } catch (error) {
+        console.warn("yh-inklight: inline blob css failed", href, error);
+      }
+    })
+  );
+  return doc.documentElement.outerHTML;
+}
 function installFoliateBlobIframePatch(onLoadError) {
   if (foliateBlobIframePatchInstalled || typeof HTMLIFrameElement === "undefined") {
     return;
@@ -39106,11 +39128,11 @@ function installFoliateBlobIframePatch(onLoadError) {
       }
       const loadToken = (foliateBlobIframeLoadTokens.get(this) || 0) + 1;
       foliateBlobIframeLoadTokens.set(this, loadToken);
-      void readBlobUrlAsText(normalizedValue).then((html) => {
+      void readBlobUrlAsText(normalizedValue).then((html) => inlineBlobStylesheetsInHtml(html)).then((inlined) => {
         if (foliateBlobIframeLoadTokens.get(this) !== loadToken) {
           return;
         }
-        this.srcdoc = html;
+        this.srcdoc = inlined;
       }).catch((error) => {
         try {
           setIframeSrc(this, normalizedValue);
