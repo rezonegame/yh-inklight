@@ -174,6 +174,12 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       });
       new Notice(`已为第 ${detail.page} 页添加书签`);
     }) as EventListener);
+    // Phase 5 P4：PDF 浮动工具栏的导出按钮
+    document.addEventListener("yh-pdf-export", ((event: Event) => {
+      const detail = (event as CustomEvent).detail as { file: TFile } | undefined;
+      if (!detail?.file) return;
+      void this.epubExcerptExporter.exportToFile(detail.file);
+    }) as EventListener);
     this.stickyLane.register();
     this.epubExcerptExporter = new EpubExcerptExporter({
       app: this.app,

@@ -332,11 +332,18 @@ export class PdfAnnotationLayer {
     if (this.sessionFilePath !== (file?.path ?? "")) { this.sessionFilePath = file?.path ?? ""; void this.restoreProgress(); }
   }
 
-  /** 在 PDF 页面上方渲染浮动工具栏（只创建一次，不随 MutationObserver 重建）。 */
-  private renderToolbar(host: HTMLElement): void {
-    // 已存在则不重建（避免点击瞬间被 MutationObserver 触发的 render 销毁）
-    if (host.querySelector(".yh-pdf-toolbar")) return;
-    const bar = host.createDiv({ cls: "yh-pdf-toolbar" });
+  /** 在 PDF 页面上方渲染浮动工具栏（挂在 document.body 上，持久不随 leaf 重建）。 */
+  private renderToolbar(_host: HTMLElement): void {
+    // 挂在 body 上（持久），不随 PDF leaf 切换而销毁
+    document.body.querySelector(".yh-pdf-toolbar")?.remove();
+    // 只在有 PDF 时显示
+    if (!this.activePdfFile()) {
+      document.body.querySelector(".yh-pdf-toolbar")?.remove();
+      return;
+    }
+    // 已存在则不重建
+    if (document.body.querySelector(".yh-pdf-toolbar")) return;
+    const bar = document.body.createDiv({ cls: "yh-pdf-toolbar" });
     // 阻止工具栏上的事件冒泡到 PDF viewer，避免被拦截
     bar.addEventListener("click", (e) => { e.stopPropagation(); }, { capture: true });
     bar.addEventListener("mousedown", (e) => { e.stopPropagation(); }, { capture: true });
@@ -370,11 +377,13 @@ export class PdfAnnotationLayer {
       new Notice(`书签（${bookmarks.length}）：\n${lines.join("\n")}`);
     });
 
-    // 导出
-    const exportBtn = bar.createEl("button", { cls: "yh-pdf-toolbar-btn", attr: { type: "button", title: "导出摘录" } });
+    // 导出（直接触发导出，不提示命令）
+    const exportBtn = bar.createEl("button", { cls: "yh-pdf-toolbar-btn", attr: { type: "button", title: "导出 PDF 摘录" } });
     exportBtn.textContent = "↑";
     exportBtn.addEventListener("click", () => {
-      new Notice("使用命令「导出 PDF 摘录」");
+      const file = this.activePdfFile();
+      if (!file) { new Notice("请先打开 PDF"); return; }
+      exportBtn.dispatchEvent(new CustomEvent("yh-pdf-export", { bubbles: true, detail: { file } }));
     });
 
     // 进度开关

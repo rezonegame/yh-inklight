@@ -8867,10 +8867,15 @@ var PdfAnnotationLayer = class {
       void this.restoreProgress();
     }
   }
-  /** 在 PDF 页面上方渲染浮动工具栏（只创建一次，不随 MutationObserver 重建）。 */
-  renderToolbar(host) {
-    if (host.querySelector(".yh-pdf-toolbar")) return;
-    const bar = host.createDiv({ cls: "yh-pdf-toolbar" });
+  /** 在 PDF 页面上方渲染浮动工具栏（挂在 document.body 上，持久不随 leaf 重建）。 */
+  renderToolbar(_host) {
+    document.body.querySelector(".yh-pdf-toolbar")?.remove();
+    if (!this.activePdfFile()) {
+      document.body.querySelector(".yh-pdf-toolbar")?.remove();
+      return;
+    }
+    if (document.body.querySelector(".yh-pdf-toolbar")) return;
+    const bar = document.body.createDiv({ cls: "yh-pdf-toolbar" });
     bar.addEventListener("click", (e3) => {
       e3.stopPropagation();
     }, { capture: true });
@@ -8907,10 +8912,15 @@ var PdfAnnotationLayer = class {
       new import_obsidian3.Notice(`\u4E66\u7B7E\uFF08${bookmarks.length}\uFF09\uFF1A
 ${lines.join("\n")}`);
     });
-    const exportBtn = bar.createEl("button", { cls: "yh-pdf-toolbar-btn", attr: { type: "button", title: "\u5BFC\u51FA\u6458\u5F55" } });
+    const exportBtn = bar.createEl("button", { cls: "yh-pdf-toolbar-btn", attr: { type: "button", title: "\u5BFC\u51FA PDF \u6458\u5F55" } });
     exportBtn.textContent = "\u2191";
     exportBtn.addEventListener("click", () => {
-      new import_obsidian3.Notice("\u4F7F\u7528\u547D\u4EE4\u300C\u5BFC\u51FA PDF \u6458\u5F55\u300D");
+      const file = this.activePdfFile();
+      if (!file) {
+        new import_obsidian3.Notice("\u8BF7\u5148\u6253\u5F00 PDF");
+        return;
+      }
+      exportBtn.dispatchEvent(new CustomEvent("yh-pdf-export", { bubbles: true, detail: { file } }));
     });
     const progressBtn = bar.createEl("button", { cls: "yh-pdf-toolbar-btn", attr: { type: "button", title: "\u6682\u505C/\u6062\u590D\u8FDB\u5EA6\u8FFD\u8E2A" } });
     progressBtn.textContent = "\u23F8";
@@ -14054,6 +14064,11 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
         color: this.settings.defaultHighlightColor
       });
       new import_obsidian16.Notice(`\u5DF2\u4E3A\u7B2C ${detail.page} \u9875\u6DFB\u52A0\u4E66\u7B7E`);
+    }));
+    document.addEventListener("yh-pdf-export", ((event) => {
+      const detail = event.detail;
+      if (!detail?.file) return;
+      void this.epubExcerptExporter.exportToFile(detail.file);
     }));
     this.stickyLane.register();
     this.epubExcerptExporter = new EpubExcerptExporter({
