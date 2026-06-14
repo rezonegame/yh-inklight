@@ -170,7 +170,6 @@ export interface AnnotationPluginSettings {
   epubNoteIconOffsetX: number;
   epubNoteIconOffsetY: number;
   epubHighlightStyle: EpubHighlightStyle;
-  epubFootnotePreview: boolean;
   epubBacklinkRendering: boolean;
   // --- PDF 增强 ---
   pdfEnhancedMode: boolean;
@@ -218,7 +217,6 @@ export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
   epubNoteIconOffsetX: 2,
   epubNoteIconOffsetY: 0,
   epubHighlightStyle: "fill",
-  epubFootnotePreview: true,
   epubBacklinkRendering: true,
   // PDF 增强
   pdfEnhancedMode: true,

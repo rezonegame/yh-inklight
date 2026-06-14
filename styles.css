@@ -1901,26 +1901,6 @@ a.yh-epub-goto-link:hover {
   font-size: 0.85em;
   margin-left: 8px;
 }
-.yh-epub-footnote-popover {
-  position: fixed;
-  z-index: var(--layer-popover, 100000);
-  max-width: 360px;
-  padding: 8px 12px;
-  border: 1px solid var(--yh-border);
-  border-radius: var(--yh-radius);
-  background: var(--background-primary);
-  box-shadow: var(--yh-shadow-lg);
-  font-size: var(--yh-font-sm);
-  line-height: 1.5;
-  color: var(--text-normal);
-  pointer-events: none;
-  opacity: 0;
-  transform: translate(-50%, -100%);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.yh-epub-footnote-popover.is-visible {
-  opacity: 1;
   transform: translate(-50%, -100%) translateY(-4px);
 }
 

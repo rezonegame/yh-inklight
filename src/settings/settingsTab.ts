@@ -182,15 +182,6 @@ export class AnnotationSettingsTab extends PluginSettingTab {
         });
       });
 
-    new Setting(containerEl)
-      .setName("脚注预览")
-      .setDesc("鼠标悬停脚注引用时显示浮动预览。")
-      .addToggle((toggle) => {
-        toggle.setValue(this.plugin.settings.epubFootnotePreview).onChange(async (value) => {
-          this.plugin.settings.epubFootnotePreview = value;
-          await this.plugin.saveSettings();
-        });
-      });
 
     new Setting(containerEl)
       .setName("正文回显标注")

@@ -8437,7 +8437,6 @@ var DEFAULT_SETTINGS = {
   epubNoteIconOffsetX: 2,
   epubNoteIconOffsetY: 0,
   epubHighlightStyle: "fill",
-  epubFootnotePreview: true,
   epubBacklinkRendering: true,
   // PDF 增强
   pdfEnhancedMode: true,
@@ -9007,12 +9006,6 @@ var AnnotationSettingsTab = class extends import_obsidian4.PluginSettingTab {
     new import_obsidian4.Setting(containerEl).setName("\u6458\u5F55\u5BFC\u51FA\u76EE\u5F55").setDesc("EPUB \u6458\u5F55\u5BFC\u51FA\u5230\u7684 Vault \u6587\u4EF6\u5939\u8DEF\u5F84\u3002").addText((text) => {
       text.setValue(this.plugin.settings.epubExcerptFolder).onChange(async (value) => {
         this.plugin.settings.epubExcerptFolder = value.trim() || "epub-excerpts";
-        await this.plugin.saveSettings();
-      });
-    });
-    new import_obsidian4.Setting(containerEl).setName("\u811A\u6CE8\u9884\u89C8").setDesc("\u9F20\u6807\u60AC\u505C\u811A\u6CE8\u5F15\u7528\u65F6\u663E\u793A\u6D6E\u52A8\u9884\u89C8\u3002").addToggle((toggle) => {
-      toggle.setValue(this.plugin.settings.epubFootnotePreview).onChange(async (value) => {
-        this.plugin.settings.epubFootnotePreview = value;
         await this.plugin.saveSettings();
       });
     });
@@ -10588,8 +10581,6 @@ var EpubReaderView = class extends import_obsidian9.FileView {
     this.lastSelectedText = "";
     this.lastPointerClientX = 0;
     this.lastPointerClientY = 0;
-    this.footnotePopoverEl = null;
-    this.footnoteHoverTimer = null;
     this.searchInputEl = null;
     this.searchResultsEl = null;
     this.searchTimer = null;
@@ -10629,9 +10620,6 @@ var EpubReaderView = class extends import_obsidian9.FileView {
       stripScriptsFromDocument(doc);
       void inlineBlockedStylesheets({ document: doc });
       this.attachSelectionListeners(doc);
-      if (this.pluginSettings.epubFootnotePreview) {
-        this.attachFootnoteHandlers(doc);
-      }
       this.handleRendered();
     };
     this.handleFoliateRelocate = (event) => {
@@ -10746,7 +10734,6 @@ var EpubReaderView = class extends import_obsidian9.FileView {
     tocTab.addEventListener("click", () => this.renderSidebar());
     this.sidebarContentEl = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-content" });
     this.readerContainerEl = body.createDiv({ cls: "yh-epub-reader-area" });
-    this.footnotePopoverEl = this.containerEl.createDiv({ cls: "yh-epub-footnote-popover" });
     this.progressEl = this.containerEl.createDiv({ cls: "yh-epub-progress" });
     this.containerEl.addEventListener("keydown", (event) => this.handleKeydown(event));
     this.readerContainerEl.addEventListener("wheel", (event) => this.handleWheel(event), { passive: false });
@@ -11904,56 +11891,6 @@ var EpubReaderView = class extends import_obsidian9.FileView {
   // ================================================================
   // 脚注预览 & 段落模式（Phase 4-B P3）
   // ================================================================
-  attachFootnoteHandlers(doc) {
-    const isFootnoteRef = (el) => {
-      const link = el.tagName.toLowerCase() === "a" ? el : el.querySelector("a") || el.closest("a");
-      if (!link) return false;
-      const href = link.getAttribute("href") || "";
-      if (!href.startsWith("#")) return false;
-      const linkText = link.textContent?.trim() || "";
-      if (/^\d+$/.test(linkText)) return true;
-      if (linkText.length <= 3) return true;
-      if (/^(fn|note|noteref|_ftn|ftn|_note)/i.test(href.slice(1))) return true;
-      return false;
-    };
-    const showPreview = (event) => {
-      if (this.footnoteHoverTimer !== null) {
-        window.clearTimeout(this.footnoteHoverTimer);
-        this.footnoteHoverTimer = null;
-      }
-      const target = event.target instanceof Element ? event.target : null;
-      if (!target) return;
-      const link = target.tagName === "A" ? target : target.querySelector("a") || target.closest("a");
-      if (!link) return;
-      const href = link.getAttribute("href") || "";
-      if (!href.startsWith("#")) return;
-      const fnEl = doc.getElementById(href.slice(1));
-      if (!fnEl) return;
-      const text = fnEl.textContent?.trim() || "";
-      if (!text || !this.footnotePopoverEl) return;
-      const rect = link.getBoundingClientRect();
-      if (!rect) return;
-      this.footnotePopoverEl.textContent = text;
-      this.footnotePopoverEl.style.left = rect.left + rect.width / 2 + "px";
-      this.footnotePopoverEl.style.top = rect.top - 8 + "px";
-      this.footnotePopoverEl.addClass("is-visible");
-    };
-    const hidePreview = () => {
-      if (this.footnoteHoverTimer !== null) window.clearTimeout(this.footnoteHoverTimer);
-      this.footnoteHoverTimer = window.setTimeout(() => {
-        if (this.footnotePopoverEl) this.footnotePopoverEl.removeClass("is-visible");
-        this.footnoteHoverTimer = null;
-      }, 200);
-    };
-    doc.addEventListener("mouseover", (ev) => {
-      const t3 = ev.target instanceof Element ? ev.target : null;
-      if (t3 && isFootnoteRef(t3)) showPreview(ev);
-    });
-    doc.addEventListener("mouseout", (ev) => {
-      const t3 = ev.target instanceof Element ? ev.target : null;
-      if (t3 && isFootnoteRef(t3)) hidePreview();
-    });
-  }
   // ================================================================
   // 资源清理
   // ================================================================

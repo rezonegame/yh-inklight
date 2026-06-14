@@ -168,8 +168,6 @@ export class EpubReaderView extends FileView {
 	private lastSelectedText = "";
 	private lastPointerClientX = 0;
 	private lastPointerClientY = 0;
-	private footnotePopoverEl: HTMLElement | null = null;
-	private footnoteHoverTimer: number | null = null;
 	private searchInputEl: HTMLInputElement | null = null;
 	private searchResultsEl: HTMLElement | null = null;
 	private searchTimer: number | null = null;
@@ -328,7 +326,6 @@ export class EpubReaderView extends FileView {
 
 		this.readerContainerEl = body.createDiv({ cls: "yh-epub-reader-area" });
 		// 脚注预览 popover 元素（Phase 4-B P3）
-		this.footnotePopoverEl = this.containerEl.createDiv({ cls: "yh-epub-footnote-popover" });
 
 		this.progressEl = this.containerEl.createDiv({ cls: "yh-epub-progress" });
 
@@ -1656,40 +1653,6 @@ export class EpubReaderView extends FileView {
 	// 脚注预览 & 段落模式（Phase 4-B P3）
 	// ================================================================
 
-	private attachFootnoteHandlers(doc: Document): void {
-		const isFootnoteRef = (el: Element): boolean => {
-			const link = el.tagName.toLowerCase() === "a" ? el : el.querySelector("a") || el.closest("a");
-			if (!link) return false;
-			const href = link.getAttribute("href") || "";
-			if (!href.startsWith("#")) return false;
-			const linkText = link.textContent?.trim() || "";
-			if (/^\d+$/.test(linkText)) return true;
-			if (linkText.length <= 3) return true;
-			if (/^(fn|note|noteref|_ftn|ftn|_note)/i.test(href.slice(1))) return true;
-			return false;
-		};
-		const showPreview = (event: Event) => {
-			if (this.footnoteHoverTimer !== null) { window.clearTimeout(this.footnoteHoverTimer); this.footnoteHoverTimer = null; }
-			const target = event.target instanceof Element ? event.target : null; if (!target) return;
-			const link = target.tagName === "A" ? target : target.querySelector("a") || target.closest("a");
-			if (!link) return;
-			const href = link.getAttribute("href") || ""; if (!href.startsWith("#")) return;
-			const fnEl = doc.getElementById(href.slice(1)); if (!fnEl) return;
-			const text = fnEl.textContent?.trim() || ""; if (!text || !this.footnotePopoverEl) return;
-			const rect = link.getBoundingClientRect(); if (!rect) return;
-			this.footnotePopoverEl.textContent = text;
-			this.footnotePopoverEl.style.left = (rect.left + rect.width / 2) + "px";
-			this.footnotePopoverEl.style.top = (rect.top - 8) + "px";
-			this.footnotePopoverEl.addClass("is-visible");
-		};
-		const hidePreview = () => {
-			if (this.footnoteHoverTimer !== null) window.clearTimeout(this.footnoteHoverTimer);
-			this.footnoteHoverTimer = window.setTimeout(() => { if (this.footnotePopoverEl) this.footnotePopoverEl.removeClass("is-visible"); this.footnoteHoverTimer = null; }, 200);
-		};
-		doc.addEventListener("mouseover", (ev) => { const t = ev.target instanceof Element ? ev.target : null; if (t && isFootnoteRef(t)) showPreview(ev); });
-		doc.addEventListener("mouseout", (ev) => { const t = ev.target instanceof Element ? ev.target : null; if (t && isFootnoteRef(t)) hidePreview(); });
-	}
-
 	// ================================================================
 	// 资源清理
 	// ================================================================
@@ -1768,9 +1731,6 @@ export class EpubReaderView extends FileView {
 		stripScriptsFromDocument(doc);
 		void inlineBlockedStylesheets({ document: doc });
 		this.attachSelectionListeners(doc);
-			if (this.pluginSettings.epubFootnotePreview) {
-				this.attachFootnoteHandlers(doc);
-			}
 		this.handleRendered();
 	};
 
