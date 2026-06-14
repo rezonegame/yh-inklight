@@ -126,6 +126,16 @@ export class PdfAnnotationLayer {
     return this.activePdfFile() !== null;
   }
 
+  /** 当前正在阅读的页码（供主命令调用）。 */
+  getCurrentPageNumber(): number {
+    return this.currentPage;
+  }
+
+  /** 当前打开的 PDF 文件（供主命令调用）。 */
+  getActiveFile(): TFile | null {
+    return this.activePdfFile();
+  }
+
   // ===== PDF 阅读进度（Phase 5 P1） =====
 
   /** 从 sidecar 恢复上次阅读位置并跳转到对应页面。 */

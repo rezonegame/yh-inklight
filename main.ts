@@ -270,6 +270,34 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       callback: () => this.activateBookshelf(),
     });
 
+    // Phase 5 P2：PDF 书签
+    this.addCommand({
+      id: "add-pdf-bookmark",
+      name: "为当前 PDF 页面添加书签",
+      callback: () => {
+        if (!this.pdfLayer.isPdfActive()) {
+          new Notice("请先打开一个 PDF 文件");
+          return;
+        }
+        const file = this.pdfLayer.getActiveFile();
+        const page = this.pdfLayer.getCurrentPageNumber();
+        if (!file || page < 1) {
+          new Notice("无法获取当前页码");
+          return;
+        }
+        void this.store.addBookmark(file, {
+          id: crypto.randomUUID(),
+          type: "pdf-bookmark",
+          label: `第 ${page} 页`,
+          position: `page=${page}`,
+          chapter: `第 ${page} 页`,
+          createdAt: new Date().toISOString(),
+          color: this.settings.defaultHighlightColor,
+        });
+        new Notice(`已为第 ${page} 页添加书签`);
+      },
+    });
+
     this.addCommand({
       id: "export-epub-excerpts",
       name: "导出 EPUB 摘录",

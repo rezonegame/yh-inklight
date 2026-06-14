@@ -8687,6 +8687,14 @@ var PdfAnnotationLayer = class {
   isPdfActive() {
     return this.activePdfFile() !== null;
   }
+  /** 当前正在阅读的页码（供主命令调用）。 */
+  getCurrentPageNumber() {
+    return this.currentPage;
+  }
+  /** 当前打开的 PDF 文件（供主命令调用）。 */
+  getActiveFile() {
+    return this.activePdfFile();
+  }
   // ===== PDF 阅读进度（Phase 5 P1） =====
   /** 从 sidecar 恢复上次阅读位置并跳转到对应页面。 */
   async restoreProgress() {
@@ -13986,6 +13994,32 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
       id: "open-epub-bookshelf",
       name: "\u6253\u5F00 EPUB \u4E66\u67B6",
       callback: () => this.activateBookshelf()
+    });
+    this.addCommand({
+      id: "add-pdf-bookmark",
+      name: "\u4E3A\u5F53\u524D PDF \u9875\u9762\u6DFB\u52A0\u4E66\u7B7E",
+      callback: () => {
+        if (!this.pdfLayer.isPdfActive()) {
+          new import_obsidian16.Notice("\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A PDF \u6587\u4EF6");
+          return;
+        }
+        const file = this.pdfLayer.getActiveFile();
+        const page = this.pdfLayer.getCurrentPageNumber();
+        if (!file || page < 1) {
+          new import_obsidian16.Notice("\u65E0\u6CD5\u83B7\u53D6\u5F53\u524D\u9875\u7801");
+          return;
+        }
+        void this.store.addBookmark(file, {
+          id: crypto.randomUUID(),
+          type: "pdf-bookmark",
+          label: `\u7B2C ${page} \u9875`,
+          position: `page=${page}`,
+          chapter: `\u7B2C ${page} \u9875`,
+          createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+          color: this.settings.defaultHighlightColor
+        });
+        new import_obsidian16.Notice(`\u5DF2\u4E3A\u7B2C ${page} \u9875\u6DFB\u52A0\u4E66\u7B7E`);
+      }
     });
     this.addCommand({
       id: "export-epub-excerpts",
