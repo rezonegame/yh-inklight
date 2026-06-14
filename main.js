@@ -14129,6 +14129,28 @@ ${lines.slice(0, 8).join("\n")}`);
       }
     });
     this.addCommand({
+      id: "send-to-canvas",
+      name: "\u53D1\u9001\u5F53\u524D\u9009\u4E2D\u7684\u5185\u5BB9\u5230 Canvas",
+      callback: async () => {
+        const file = this.app.workspace.getActiveFile();
+        if (!file) {
+          new import_obsidian16.Notice("\u8BF7\u5148\u9009\u4E2D\u6587\u672C");
+          return;
+        }
+        const doc = await this.store.getDocument(file);
+        if (!doc?.canvasBinding) {
+          new import_obsidian16.Notice("\u672A\u7ED1\u5B9A Canvas\uFF0C\u8BF7\u5728\u8BBE\u7F6E\u4E2D\u914D\u7F6E");
+          return;
+        }
+        await this.store.addCanvasNode(file, {
+          annotationId: crypto.randomUUID(),
+          nodeId: crypto.randomUUID(),
+          position: { x: 0, y: 0 }
+        });
+        new import_obsidian16.Notice("\u5DF2\u53D1\u9001\u5230 Canvas");
+      }
+    });
+    this.addCommand({
       id: "test-annotation-storage",
       name: "\u6D4B\u8BD5\u58A8\u5149\u6279\u6CE8\u5B58\u50A8",
       callback: async () => {

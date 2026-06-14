@@ -351,6 +351,30 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       },
     });
 
+    // Phase 5 P6：发送到 Canvas（复用已有 addCanvasNode）
+    this.addCommand({
+      id: "send-to-canvas",
+      name: "发送当前选中的内容到 Canvas",
+      callback: async () => {
+        const file = this.app.workspace.getActiveFile();
+        if (!file) {
+          new Notice("请先选中文本");
+          return;
+        }
+        const doc = await this.store.getDocument(file);
+        if (!doc?.canvasBinding) {
+          new Notice("未绑定 Canvas，请在设置中配置");
+          return;
+        }
+        await this.store.addCanvasNode(file, {
+          annotationId: crypto.randomUUID(),
+          nodeId: crypto.randomUUID(),
+          position: { x: 0, y: 0 },
+        });
+        new Notice("已发送到 Canvas");
+      },
+    });
+
     this.addCommand({
       id: "test-annotation-storage",
       name: "测试墨光批注存储",
