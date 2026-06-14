@@ -8860,7 +8860,6 @@ var PdfAnnotationLayer = class {
       this.root = host.createDiv({ cls: "yh-pdf-layer" });
     }
     this.renderHighlights(host, document2);
-    this.renderToolbar(host);
     this.totalPages = this.pages().length;
     if (this.sessionFilePath !== (file?.path ?? "")) {
       this.sessionFilePath = file?.path ?? "";
@@ -12813,6 +12812,42 @@ var AnnotationSidebarView = class extends import_obsidian10.ItemView {
     const header = container.createDiv({ cls: "yh-ov-head" });
     header.createSpan({ cls: "yh-ov-title", text: "\u58A8\u5149\u6279\u6CE8" });
     const actions = header.createDiv({ cls: "yh-ov-head-actions" });
+    const file = this.app.workspace.getActiveFile();
+    if (file instanceof import_obsidian10.TFile && file.extension.toLowerCase() === "pdf") {
+      const bookmarkBtn = actions.createEl("button", {
+        cls: "yh-icon-btn yh-pdf-side-btn",
+        attr: { type: "button", title: "\u4E3A\u5F53\u524D PDF \u9875\u9762\u6DFB\u52A0\u4E66\u7B7E" }
+      });
+      (0, import_obsidian10.setIcon)(bookmarkBtn, "bookmark");
+      bookmarkBtn.addEventListener("click", () => {
+        document.dispatchEvent(new CustomEvent("yh-pdf-bookmark-toolbar"));
+      });
+      const listBtn = actions.createEl("button", {
+        cls: "yh-icon-btn yh-pdf-side-btn",
+        attr: { type: "button", title: "\u663E\u793A\u4E66\u7B7E\u5217\u8868" }
+      });
+      (0, import_obsidian10.setIcon)(listBtn, "list");
+      listBtn.addEventListener("click", async () => {
+        if (!(file instanceof import_obsidian10.TFile)) return;
+        const doc = await this.plugin.store.getDocument(file);
+        const bookmarks = doc.bookmarks.filter((b3) => b3.type === "pdf-bookmark");
+        if (bookmarks.length === 0) {
+          new import_obsidian10.Notice("\u6682\u65E0\u4E66\u7B7E\uFF08\u70B9\u4E66\u7B7E\u56FE\u6807\u6DFB\u52A0\u5F53\u524D\u9875\uFF09");
+          return;
+        }
+        const lines = bookmarks.sort((a3, b3) => (a3.position || "").localeCompare(b3.position || "", void 0, { numeric: true })).map((b3) => `\u7B2C ${b3.position?.replace("page=", "") ?? "?"} \u9875`);
+        new import_obsidian10.Notice(`\u4E66\u7B7E\uFF08${bookmarks.length}\uFF09\uFF1A
+${lines.join("\n")}`);
+      });
+      const exportBtn = actions.createEl("button", {
+        cls: "yh-icon-btn yh-pdf-side-btn",
+        attr: { type: "button", title: "\u5BFC\u51FA PDF \u6458\u5F55" }
+      });
+      (0, import_obsidian10.setIcon)(exportBtn, "file-down");
+      exportBtn.addEventListener("click", () => {
+        document.dispatchEvent(new CustomEvent("yh-pdf-export-toolbar"));
+      });
+    }
     const refresh = actions.createEl("button", {
       cls: "yh-icon-btn yh-ov-refresh",
       attr: { type: "button", title: "\u5237\u65B0\u6279\u6CE8", "aria-label": "\u5237\u65B0\u6279\u6CE8" }
@@ -14069,6 +14104,30 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
       const detail = event.detail;
       if (!detail?.file) return;
       void this.epubExcerptExporter.exportToFile(detail.file);
+    }));
+    document.addEventListener("yh-pdf-bookmark-toolbar", (() => {
+      const file = this.app.workspace.getActiveFile();
+      if (!file || file.extension.toLowerCase() !== "pdf") return;
+      const page = this.pdfLayer.getCurrentPageNumber();
+      if (page < 1) {
+        new import_obsidian16.Notice("\u65E0\u6CD5\u83B7\u53D6\u5F53\u524D\u9875\u7801");
+        return;
+      }
+      void this.store.addBookmark(file, {
+        id: crypto.randomUUID(),
+        type: "pdf-bookmark",
+        label: `\u7B2C ${page} \u9875`,
+        position: `page=${page}`,
+        chapter: `\u7B2C ${page} \u9875`,
+        createdAt: (/* @__PURE__ */ new Date()).toISOString(),
+        color: this.settings.defaultHighlightColor
+      });
+      new import_obsidian16.Notice(`\u5DF2\u4E3A\u7B2C ${page} \u9875\u6DFB\u52A0\u4E66\u7B7E`);
+    }));
+    document.addEventListener("yh-pdf-export-toolbar", (() => {
+      const file = this.app.workspace.getActiveFile();
+      if (!file || file.extension.toLowerCase() !== "pdf") return;
+      void this.epubExcerptExporter.exportToFile(file);
     }));
     this.stickyLane.register();
     this.epubExcerptExporter = new EpubExcerptExporter({

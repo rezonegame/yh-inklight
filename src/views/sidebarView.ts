@@ -380,6 +380,48 @@ export class AnnotationSidebarView extends ItemView {
     const header = container.createDiv({ cls: "yh-ov-head" });
     header.createSpan({ cls: "yh-ov-title", text: "墨光批注" });
     const actions = header.createDiv({ cls: "yh-ov-head-actions" });
+
+    // PDF 工具按钮（仅当前文件是 PDF 时显示）
+    const file = this.app.workspace.getActiveFile();
+    if (file instanceof TFile && file.extension.toLowerCase() === "pdf") {
+      const bookmarkBtn = actions.createEl("button", {
+        cls: "yh-icon-btn yh-pdf-side-btn",
+        attr: { type: "button", title: "为当前 PDF 页面添加书签" },
+      });
+      setIcon(bookmarkBtn, "bookmark");
+      bookmarkBtn.addEventListener("click", () => {
+        document.dispatchEvent(new CustomEvent("yh-pdf-bookmark-toolbar"));
+      });
+
+      const listBtn = actions.createEl("button", {
+        cls: "yh-icon-btn yh-pdf-side-btn",
+        attr: { type: "button", title: "显示书签列表" },
+      });
+      setIcon(listBtn, "list");
+      listBtn.addEventListener("click", async () => {
+        if (!(file instanceof TFile)) return;
+        const doc = await this.plugin.store.getDocument(file);
+        const bookmarks = doc.bookmarks.filter((b) => b.type === "pdf-bookmark");
+        if (bookmarks.length === 0) {
+          new Notice("暂无书签（点书签图标添加当前页）");
+          return;
+        }
+        const lines = bookmarks
+          .sort((a, b) => (a.position || "").localeCompare(b.position || "", undefined, { numeric: true }))
+          .map((b) => `第 ${b.position?.replace("page=", "") ?? "?"} 页`);
+        new Notice(`书签（${bookmarks.length}）：\n${lines.join("\n")}`);
+      });
+
+      const exportBtn = actions.createEl("button", {
+        cls: "yh-icon-btn yh-pdf-side-btn",
+        attr: { type: "button", title: "导出 PDF 摘录" },
+      });
+      setIcon(exportBtn, "file-down");
+      exportBtn.addEventListener("click", () => {
+        document.dispatchEvent(new CustomEvent("yh-pdf-export-toolbar"));
+      });
+    }
+
     const refresh = actions.createEl("button", {
       cls: "yh-icon-btn yh-ov-refresh",
       attr: { type: "button", title: "刷新批注", "aria-label": "刷新批注" },

@@ -180,6 +180,28 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       if (!detail?.file) return;
       void this.epubExcerptExporter.exportToFile(detail.file);
     }) as EventListener);
+    // Phase 5：侧栏标题栏的 PDF 按钮（书签/导出）
+    document.addEventListener("yh-pdf-bookmark-toolbar", (() => {
+      const file = this.app.workspace.getActiveFile();
+      if (!file || file.extension.toLowerCase() !== "pdf") return;
+      const page = this.pdfLayer.getCurrentPageNumber();
+      if (page < 1) { new Notice("无法获取当前页码"); return; }
+      void this.store.addBookmark(file, {
+        id: crypto.randomUUID(),
+        type: "pdf-bookmark",
+        label: `第 ${page} 页`,
+        position: `page=${page}`,
+        chapter: `第 ${page} 页`,
+        createdAt: new Date().toISOString(),
+        color: this.settings.defaultHighlightColor,
+      });
+      new Notice(`已为第 ${page} 页添加书签`);
+    }) as EventListener);
+    document.addEventListener("yh-pdf-export-toolbar", (() => {
+      const file = this.app.workspace.getActiveFile();
+      if (!file || file.extension.toLowerCase() !== "pdf") return;
+      void this.epubExcerptExporter.exportToFile(file);
+    }) as EventListener);
     this.stickyLane.register();
     this.epubExcerptExporter = new EpubExcerptExporter({
       app: this.app,

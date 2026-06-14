@@ -325,8 +325,6 @@ export class PdfAnnotationLayer {
     }
 
     this.renderHighlights(host, document);
-    // Phase 5：PDF 浮动工具栏（书签/目录/导出/进度开关）
-    this.renderToolbar(host);
     // Phase 5 P1：渲染后恢复上次阅读位置；同时更新页数并注册滚动检测
     this.totalPages = this.pages().length;
     if (this.sessionFilePath !== (file?.path ?? "")) { this.sessionFilePath = file?.path ?? ""; void this.restoreProgress(); }
