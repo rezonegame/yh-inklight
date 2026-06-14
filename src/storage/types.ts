@@ -130,6 +130,7 @@ export interface FileAnnotationDocument {
   epubHighlights: EpubHighlightAnnotation[];
   epubComments: EpubCommentAnnotation[];
   epubProgress?: EpubReadingProgress;
+  pdfProgress?: PdfReadingProgress;
   bookmarks: ReadingBookmark[];
   canvasBinding?: CanvasBinding;
   canvasNodes: CanvasExcerptNode[];
@@ -283,6 +284,15 @@ export interface EpubReadingProgress {
   lastRead: string;
   readingTimeSeconds: number;
   estimatedRemainingMinutes?: number;
+}
+
+// ===== PDF 进度 =====
+
+export interface PdfReadingProgress {
+  pageNumber: number;
+  totalPages: number;
+  percent: number;
+  lastRead: string;
 }
 
 // ===== 书签（EPUB/PDF 通用）=====

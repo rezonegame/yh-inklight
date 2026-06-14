@@ -128,6 +128,10 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         await this.store.removeAnnotation(file, annotationId);
         await this.refreshAnnotations();
       },
+      saveProgress: async (file, progress) => {
+        await this.store.savePdfProgress(file, progress);
+      },
+      getProgress: (file) => this.store.getPdfProgress(file),
     });
 
     this.stickyLane = new StickyNoteLane({

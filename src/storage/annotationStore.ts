@@ -18,6 +18,7 @@ import {
   HighlightAnnotation,
   PdfCommentAnnotation,
   PdfHighlightAnnotation,
+  PdfReadingProgress,
   EpubHighlightAnnotation,
   EpubCommentAnnotation,
   EpubReadingProgress,
@@ -352,6 +353,21 @@ export class AnnotationStore {
       lastModified: new Date().toISOString(),
     });
   }
+  // ===== PDF 进度 =====
+
+  async getPdfProgress(file: TFile): Promise<PdfReadingProgress | null> {
+    const document = await this.getDocument(file);
+    return document.pdfProgress ?? null;
+  }
+
+  async savePdfProgress(file: TFile, progress: PdfReadingProgress): Promise<void> {
+    const document = await this.getDocument(file);
+    await this.saveDocument({
+      ...document,
+      pdfProgress: progress,
+      lastModified: new Date().toISOString(),
+    });
+  }
 
   // ===== 书签（EPUB/PDF 通用）=====
 
@@ -539,6 +555,7 @@ export class AnnotationStore {
       epubHighlights: document.epubHighlights ?? [],
       epubComments: document.epubComments ?? [],
       epubProgress: document.epubProgress,
+      pdfProgress: document.pdfProgress,
       bookmarks: document.bookmarks ?? [],
       canvasBinding: document.canvasBinding,
       canvasNodes: document.canvasNodes ?? [],

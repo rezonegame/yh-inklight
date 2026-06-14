@@ -8607,6 +8607,9 @@ var PdfAnnotationLayer = class {
     this.observer = null;
     this.frame = null;
     this.lastSelection = null;
+    this.currentPage = 0;
+    this.totalPages = 0;
+    this.progressSaveTimer = null;
     this.scheduleRender = () => {
       if (this.frame !== null) {
         return;
@@ -8626,11 +8629,15 @@ var PdfAnnotationLayer = class {
       void this.handleClick(event);
     });
     this.options.component.registerEvent(
-      this.options.app.workspace.on("active-leaf-change", () => this.scheduleRender())
+      this.options.app.workspace.on("active-leaf-change", () => {
+        void this.restoreProgress();
+        this.scheduleRender();
+      })
     );
     this.options.component.registerEvent(
       this.options.app.workspace.on("layout-change", () => this.scheduleRender())
     );
+    this.options.component.registerDomEvent(document, "scroll", () => this.updateCurrentPage(), { passive: true, capture: true });
     this.observer = new MutationObserver(() => this.scheduleRender());
     this.observer.observe(document.body, { childList: true, subtree: true });
     this.options.component.register(() => this.destroy());
@@ -8680,9 +8687,68 @@ var PdfAnnotationLayer = class {
   isPdfActive() {
     return this.activePdfFile() !== null;
   }
+  // ===== PDF 阅读进度（Phase 5 P1） =====
+  /** 从 sidecar 恢复上次阅读位置并跳转到对应页面。 */
+  async restoreProgress() {
+    const file = this.activePdfFile();
+    if (!file) return;
+    const progress = await this.options.getProgress(file);
+    if (!progress || progress.pageNumber < 1) return;
+    const page = this.pageElement(progress.pageNumber);
+    if (page) {
+      page.scrollIntoView({ block: "center" });
+      page.addClass("yh-flash-target");
+      window.setTimeout(() => page.removeClass("yh-flash-target"), 850);
+    }
+    this.currentPage = progress.pageNumber;
+  }
+  /** 保存当前阅读进度到 sidecar（防抖 2 秒）。 */
+  debouncedSaveProgress() {
+    if (this.progressSaveTimer !== null) {
+      window.clearTimeout(this.progressSaveTimer);
+    }
+    this.progressSaveTimer = window.setTimeout(async () => {
+      this.progressSaveTimer = null;
+      const file = this.activePdfFile();
+      if (!file || this.currentPage < 1) return;
+      const allPages = this.pages();
+      await this.options.saveProgress(file, {
+        pageNumber: this.currentPage,
+        totalPages: allPages.length,
+        percent: allPages.length > 0 ? this.currentPage / allPages.length : 0,
+        lastRead: (/* @__PURE__ */ new Date()).toISOString()
+      });
+    }, 2e3);
+  }
+  /** 在 active-leaf-change 或 scroll 时更新 currentPage 并触发保存。 */
+  updateCurrentPage() {
+    const viewer = this.activeViewer();
+    if (!viewer) return;
+    const pages = this.pages();
+    if (pages.length === 0) return;
+    this.totalPages = pages.length;
+    const viewportCenter = window.innerHeight / 2;
+    let closestPage = 1;
+    let closestDist = Infinity;
+    for (const page of pages) {
+      const rect = page.getBoundingClientRect();
+      const dist = Math.abs(rect.top + rect.height / 2 - viewportCenter);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestPage = this.pageNumber(page);
+      }
+    }
+    if (closestPage !== this.currentPage && closestPage >= 1) {
+      this.currentPage = closestPage;
+      this.debouncedSaveProgress();
+    }
+  }
   destroy() {
     if (this.frame !== null) {
       cancelAnimationFrame(this.frame);
+    }
+    if (this.progressSaveTimer !== null) {
+      window.clearTimeout(this.progressSaveTimer);
     }
     this.observer?.disconnect();
     this.root?.remove();
@@ -8706,6 +8772,8 @@ var PdfAnnotationLayer = class {
       this.root = host.createDiv({ cls: "yh-pdf-layer" });
     }
     this.renderHighlights(host, document2);
+    this.totalPages = this.pages().length;
+    void this.restoreProgress();
   }
   renderHighlights(host, document2) {
     if (!this.root) {
@@ -9288,6 +9356,19 @@ var AnnotationStore = class {
       lastModified: (/* @__PURE__ */ new Date()).toISOString()
     });
   }
+  // ===== PDF 进度 =====
+  async getPdfProgress(file) {
+    const document2 = await this.getDocument(file);
+    return document2.pdfProgress ?? null;
+  }
+  async savePdfProgress(file, progress) {
+    const document2 = await this.getDocument(file);
+    await this.saveDocument({
+      ...document2,
+      pdfProgress: progress,
+      lastModified: (/* @__PURE__ */ new Date()).toISOString()
+    });
+  }
   // ===== 书签（EPUB/PDF 通用）=====
   async addBookmark(file, bookmark) {
     const document2 = await this.getDocument(file);
@@ -9445,6 +9526,7 @@ var AnnotationStore = class {
       epubHighlights: document2.epubHighlights ?? [],
       epubComments: document2.epubComments ?? [],
       epubProgress: document2.epubProgress,
+      pdfProgress: document2.pdfProgress,
       bookmarks: document2.bookmarks ?? [],
       canvasBinding: document2.canvasBinding,
       canvasNodes: document2.canvasNodes ?? []
@@ -13777,7 +13859,11 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
       deleteAnnotation: async (file, annotationId) => {
         await this.store.removeAnnotation(file, annotationId);
         await this.refreshAnnotations();
-      }
+      },
+      saveProgress: async (file, progress) => {
+        await this.store.savePdfProgress(file, progress);
+      },
+      getProgress: (file) => this.store.getPdfProgress(file)
     });
     this.stickyLane = new StickyNoteLane({
       app: this.app,

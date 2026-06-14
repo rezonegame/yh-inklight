@@ -14,6 +14,7 @@ import {
   PdfAnchor,
   PdfCommentAnnotation,
   PdfHighlightAnnotation,
+  PdfReadingProgress,
 } from "../storage/types";
 
 interface PdfAnnotationLayerOptions {
@@ -26,6 +27,8 @@ interface PdfAnnotationLayerOptions {
   addComment: (file: TFile, comment: PdfCommentAnnotation) => Promise<void>;
   updateComment: (file: TFile, comment: PdfCommentAnnotation) => Promise<void>;
   deleteAnnotation: (file: TFile, annotationId: string) => Promise<void>;
+  saveProgress: (file: TFile, progress: PdfReadingProgress) => Promise<void>;
+  getProgress: (file: TFile) => Promise<PdfReadingProgress | null>;
 }
 
 interface PdfSelectionSnapshot {
@@ -42,6 +45,9 @@ export class PdfAnnotationLayer {
   private observer: MutationObserver | null = null;
   private frame: number | null = null;
   private lastSelection: PdfSelectionSnapshot | null = null;
+  private currentPage = 0;
+  private totalPages = 0;
+  private progressSaveTimer: number | null = null;
 
   constructor(private readonly options: PdfAnnotationLayerOptions) {}
 
@@ -54,11 +60,16 @@ export class PdfAnnotationLayer {
       void this.handleClick(event);
     });
     this.options.component.registerEvent(
-      this.options.app.workspace.on("active-leaf-change", () => this.scheduleRender()),
+      this.options.app.workspace.on("active-leaf-change", () => {
+        void this.restoreProgress();
+        this.scheduleRender();
+      }),
     );
     this.options.component.registerEvent(
       this.options.app.workspace.on("layout-change", () => this.scheduleRender()),
     );
+    // 全局滚动：检测 PDF 页面切换 → 更新进度
+    this.options.component.registerDomEvent(document, "scroll", () => this.updateCurrentPage(), { passive: true, capture: true });
 
     this.observer = new MutationObserver(() => this.scheduleRender());
     this.observer.observe(document.body, { childList: true, subtree: true });
@@ -115,9 +126,73 @@ export class PdfAnnotationLayer {
     return this.activePdfFile() !== null;
   }
 
+  // ===== PDF 阅读进度（Phase 5 P1） =====
+
+  /** 从 sidecar 恢复上次阅读位置并跳转到对应页面。 */
+  async restoreProgress(): Promise<void> {
+    const file = this.activePdfFile();
+    if (!file) return;
+    const progress = await this.options.getProgress(file);
+    if (!progress || progress.pageNumber < 1) return;
+    const page = this.pageElement(progress.pageNumber);
+    if (page) {
+      page.scrollIntoView({ block: "center" });
+      page.addClass("yh-flash-target");
+      window.setTimeout(() => page.removeClass("yh-flash-target"), 850);
+    }
+    this.currentPage = progress.pageNumber;
+  }
+
+  /** 保存当前阅读进度到 sidecar（防抖 2 秒）。 */
+  private debouncedSaveProgress(): void {
+    if (this.progressSaveTimer !== null) {
+      window.clearTimeout(this.progressSaveTimer);
+    }
+    this.progressSaveTimer = window.setTimeout(async () => {
+      this.progressSaveTimer = null;
+      const file = this.activePdfFile();
+      if (!file || this.currentPage < 1) return;
+      const allPages = this.pages();
+      await this.options.saveProgress(file, {
+        pageNumber: this.currentPage,
+        totalPages: allPages.length,
+        percent: allPages.length > 0 ? this.currentPage / allPages.length : 0,
+        lastRead: new Date().toISOString(),
+      });
+    }, 2000);
+  }
+
+  /** 在 active-leaf-change 或 scroll 时更新 currentPage 并触发保存。 */
+  private updateCurrentPage(): void {
+    const viewer = this.activeViewer();
+    if (!viewer) return;
+    const pages = this.pages();
+    if (pages.length === 0) return;
+    this.totalPages = pages.length;
+    // 找视口中心最靠近的页面
+    const viewportCenter = window.innerHeight / 2;
+    let closestPage = 1;
+    let closestDist = Infinity;
+    for (const page of pages) {
+      const rect = page.getBoundingClientRect();
+      const dist = Math.abs(rect.top + rect.height / 2 - viewportCenter);
+      if (dist < closestDist) {
+        closestDist = dist;
+        closestPage = this.pageNumber(page);
+      }
+    }
+    if (closestPage !== this.currentPage && closestPage >= 1) {
+      this.currentPage = closestPage;
+      this.debouncedSaveProgress();
+    }
+  }
+
   destroy(): void {
     if (this.frame !== null) {
       cancelAnimationFrame(this.frame);
+    }
+    if (this.progressSaveTimer !== null) {
+      window.clearTimeout(this.progressSaveTimer);
     }
     this.observer?.disconnect();
     this.root?.remove();
@@ -155,6 +230,9 @@ export class PdfAnnotationLayer {
     }
 
     this.renderHighlights(host, document);
+    // Phase 5 P1：渲染后恢复上次阅读位置；同时更新页数并注册滚动检测
+    this.totalPages = this.pages().length;
+    void this.restoreProgress();
   }
 
   private renderHighlights(host: HTMLElement, document: FileAnnotationDocument): void {
