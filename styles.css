@@ -2128,8 +2128,8 @@ a.yh-epub-goto-link:hover {
 /* PDF 浮动工具栏 */
 .yh-pdf-toolbar {
   position: fixed;
-  top: 48px;
-  right: 16px;
+  top: 70px;
+  right: 20px;
   z-index: 100000;
   display: flex;
   gap: 4px;
@@ -2137,9 +2137,10 @@ a.yh-epub-goto-link:hover {
   border: 1px solid var(--yh-border);
   border-radius: 8px;
   background: var(--background-primary);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-  opacity: 0.75;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.2);
+  opacity: 1;
   transition: opacity 0.2s;
+  pointer-events: auto;
 }
 .yh-pdf-toolbar:hover { opacity: 1; }
 .yh-pdf-toolbar-btn {

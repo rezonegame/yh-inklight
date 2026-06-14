@@ -309,11 +309,14 @@ export class PdfAnnotationLayer {
     if (this.sessionFilePath !== (file?.path ?? "")) { this.sessionFilePath = file?.path ?? ""; void this.restoreProgress(); }
   }
 
-  /** 在 PDF 页面上方渲染浮动工具栏。 */
+  /** 在 PDF 页面上方渲染浮动工具栏（只创建一次，不随 MutationObserver 重建）。 */
   private renderToolbar(host: HTMLElement): void {
-    // 移除旧工具栏
-    host.querySelector(".yh-pdf-toolbar")?.remove();
+    // 已存在则不重建（避免点击瞬间被 MutationObserver 触发的 render 销毁）
+    if (host.querySelector(".yh-pdf-toolbar")) return;
     const bar = host.createDiv({ cls: "yh-pdf-toolbar" });
+    // 阻止工具栏上的事件冒泡到 PDF viewer，避免被拦截
+    bar.addEventListener("click", (e) => { e.stopPropagation(); }, { capture: true });
+    bar.addEventListener("mousedown", (e) => { e.stopPropagation(); }, { capture: true });
 
     // 书签
     const bookmarkBtn = bar.createEl("button", { cls: "yh-pdf-toolbar-btn", attr: { type: "button", title: "添加书签" } });

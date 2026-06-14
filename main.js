@@ -8846,10 +8846,16 @@ var PdfAnnotationLayer = class {
       void this.restoreProgress();
     }
   }
-  /** 在 PDF 页面上方渲染浮动工具栏。 */
+  /** 在 PDF 页面上方渲染浮动工具栏（只创建一次，不随 MutationObserver 重建）。 */
   renderToolbar(host) {
-    host.querySelector(".yh-pdf-toolbar")?.remove();
+    if (host.querySelector(".yh-pdf-toolbar")) return;
     const bar = host.createDiv({ cls: "yh-pdf-toolbar" });
+    bar.addEventListener("click", (e3) => {
+      e3.stopPropagation();
+    }, { capture: true });
+    bar.addEventListener("mousedown", (e3) => {
+      e3.stopPropagation();
+    }, { capture: true });
     const bookmarkBtn = bar.createEl("button", { cls: "yh-pdf-toolbar-btn", attr: { type: "button", title: "\u6DFB\u52A0\u4E66\u7B7E" } });
     bookmarkBtn.textContent = "\u2605";
     bookmarkBtn.addEventListener("click", () => {
