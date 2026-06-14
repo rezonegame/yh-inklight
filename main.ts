@@ -298,6 +298,32 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       },
     });
 
+    // Phase 5 P3：PDF 目录
+    this.addCommand({
+      id: "show-pdf-outline",
+      name: "显示 PDF 目录",
+      callback: async () => {
+        if (!this.pdfLayer.isPdfActive()) {
+          new Notice("请先打开一个 PDF 文件");
+          return;
+        }
+        const outline = await this.pdfLayer.getOutline();
+        if (outline.length === 0) {
+          new Notice("该 PDF 没有目录");
+          return;
+        }
+        const lines = outline.map((item) => {
+          const pageInfo = item.pageNumber > 0 ? ` → p.${item.pageNumber}` : "";
+          const children = item.children
+            .filter((c) => c.pageNumber > 0)
+            .map((c) => `  └ ${c.title} → p.${c.pageNumber}`)
+            .join("\n");
+          return `${item.title}${pageInfo}${children ? "\n" + children : ""}`;
+        });
+        new Notice(`PDF 目录（${outline.length} 项）：\n${lines.slice(0, 8).join("\n")}`);
+      },
+    });
+
     this.addCommand({
       id: "export-epub-excerpts",
       name: "导出 EPUB 摘录",

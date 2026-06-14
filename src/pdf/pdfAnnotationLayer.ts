@@ -136,6 +136,68 @@ export class PdfAnnotationLayer {
     return this.activePdfFile();
   }
 
+  // ===== PDF 目录（Phase 5 P3） =====
+
+  /** 获取 PDF 大纲/目录（来自 pdf.js）。 */
+  async getOutline(): Promise<Array<{ title: string; pageNumber: number; children: Array<{ title: string; pageNumber: number }> }>> {
+    const result: Array<{ title: string; pageNumber: number; children: Array<{ title: string; pageNumber: number }> }> = [];
+    try {
+      const pdfViewerApp = (window as Record<string, unknown>).PDFViewerApp as Record<string, unknown> | undefined;
+      const pdfViewer = pdfViewerApp?.pdfViewer as Record<string, unknown> | undefined;
+      const pdfDocument = pdfViewer?.pdfDocument as { getOutline?: () => Promise<Array<Record<string, unknown>>> } | undefined;
+      if (!pdfDocument?.getOutline) return result;
+      const outline = await pdfDocument.getOutline();
+      if (!Array.isArray(outline)) return result;
+      for (const item of outline) {
+        const title = String(item.title ?? "");
+        if (!title) continue;
+        const pageNum = await this.outlineDestToPage(item);
+        const children: Array<{ title: string; pageNumber: number }> = [];
+        if (Array.isArray(item.items)) {
+          for (const child of item.items) {
+            const childTitle = String(child.title ?? "");
+            if (!childTitle) continue;
+            children.push({ title: childTitle, pageNumber: await this.outlineDestToPage(child) });
+          }
+        }
+        result.push({ title, pageNumber: pageNum, children });
+      }
+    } catch (e) {
+      console.warn("yh-inklight: PDF getOutline failed", e);
+    }
+    return result;
+  }
+
+  /** 解析 pdf.js outline item 的目标页码。 */
+  private async outlineDestToPage(item: Record<string, unknown>): Promise<number> {
+    try {
+      const dest = item.dest;
+      if (typeof dest === "string") {
+        const pdfViewerApp = (window as Record<string, unknown>).PDFViewerApp as Record<string, unknown> | undefined;
+        const pdfViewer = pdfViewerApp?.pdfViewer as Record<string, unknown> | undefined;
+        const pdfDocument = pdfViewer?.pdfDocument as { getPageIndex?: (dest: string) => Promise<number> } | undefined;
+        if (pdfDocument?.getPageIndex) {
+          const idx = await pdfDocument.getPageIndex(dest);
+          return idx >= 0 ? idx + 1 : 0;
+        }
+      }
+      if (Array.isArray(dest) && dest.length > 0) {
+        const ref = dest[0] as { num?: number } | undefined;
+        if (ref?.num !== undefined) {
+          const pdfViewerApp = (window as Record<string, unknown>).PDFViewerApp as Record<string, unknown> | undefined;
+          const pdfViewer = pdfViewerApp?.pdfViewer as Record<string, unknown> | undefined;
+          const pdfDocument = pdfViewer?.pdfDocument as { getPageIndex?: (ref: { num: number }) => Promise<number> } | undefined;
+          if (pdfDocument?.getPageIndex) {
+            const idx = await pdfDocument.getPageIndex(ref);
+            return idx >= 0 ? idx + 1 : 0;
+          }
+        }
+      }
+    } catch { /* ignore */ }
+    return 0;
+  }
+
+
   // ===== PDF 阅读进度（Phase 5 P1） =====
 
   /** 从 sidecar 恢复上次阅读位置并跳转到对应页面。 */

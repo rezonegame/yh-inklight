@@ -1,7 +1,7 @@
 {
   "id": "yh-inklight",
   "name": "墨光批注",
-  "version": "0.14.1",
+  "version": "0.14.2",
   "minAppVersion": "1.0.0",
   "description": "非侵入式阅读批注插件，支持 Markdown、PDF 和 EPUB。高亮与便签存储在独立 sidecar 文件中，永不修改原文。",
   "author": "yhwang",

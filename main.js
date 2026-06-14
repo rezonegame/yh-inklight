@@ -8695,6 +8695,65 @@ var PdfAnnotationLayer = class {
   getActiveFile() {
     return this.activePdfFile();
   }
+  // ===== PDF 目录（Phase 5 P3） =====
+  /** 获取 PDF 大纲/目录（来自 pdf.js）。 */
+  async getOutline() {
+    const result = [];
+    try {
+      const pdfViewerApp = window.PDFViewerApp;
+      const pdfViewer = pdfViewerApp?.pdfViewer;
+      const pdfDocument = pdfViewer?.pdfDocument;
+      if (!pdfDocument?.getOutline) return result;
+      const outline = await pdfDocument.getOutline();
+      if (!Array.isArray(outline)) return result;
+      for (const item of outline) {
+        const title = String(item.title ?? "");
+        if (!title) continue;
+        const pageNum = await this.outlineDestToPage(item);
+        const children = [];
+        if (Array.isArray(item.items)) {
+          for (const child of item.items) {
+            const childTitle = String(child.title ?? "");
+            if (!childTitle) continue;
+            children.push({ title: childTitle, pageNumber: await this.outlineDestToPage(child) });
+          }
+        }
+        result.push({ title, pageNumber: pageNum, children });
+      }
+    } catch (e3) {
+      console.warn("yh-inklight: PDF getOutline failed", e3);
+    }
+    return result;
+  }
+  /** 解析 pdf.js outline item 的目标页码。 */
+  async outlineDestToPage(item) {
+    try {
+      const dest = item.dest;
+      if (typeof dest === "string") {
+        const pdfViewerApp = window.PDFViewerApp;
+        const pdfViewer = pdfViewerApp?.pdfViewer;
+        const pdfDocument = pdfViewer?.pdfDocument;
+        if (pdfDocument?.getPageIndex) {
+          const idx = await pdfDocument.getPageIndex(dest);
+          return idx >= 0 ? idx + 1 : 0;
+        }
+      }
+      if (Array.isArray(dest) && dest.length > 0) {
+        const ref = dest[0];
+        if (ref?.num !== void 0) {
+          const pdfViewerApp = window.PDFViewerApp;
+          const pdfViewer = pdfViewerApp?.pdfViewer;
+          const pdfDocument = pdfViewer?.pdfDocument;
+          if (pdfDocument?.getPageIndex) {
+            const idx = await pdfDocument.getPageIndex(ref);
+            return idx >= 0 ? idx + 1 : 0;
+          }
+        }
+      }
+    } catch {
+    }
+    return 0;
+  }
   // ===== PDF 阅读进度（Phase 5 P1） =====
   /** 从 sidecar 恢复上次阅读位置并跳转到对应页面。 */
   async restoreProgress() {
@@ -14019,6 +14078,28 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
           color: this.settings.defaultHighlightColor
         });
         new import_obsidian16.Notice(`\u5DF2\u4E3A\u7B2C ${page} \u9875\u6DFB\u52A0\u4E66\u7B7E`);
+      }
+    });
+    this.addCommand({
+      id: "show-pdf-outline",
+      name: "\u663E\u793A PDF \u76EE\u5F55",
+      callback: async () => {
+        if (!this.pdfLayer.isPdfActive()) {
+          new import_obsidian16.Notice("\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A PDF \u6587\u4EF6");
+          return;
+        }
+        const outline = await this.pdfLayer.getOutline();
+        if (outline.length === 0) {
+          new import_obsidian16.Notice("\u8BE5 PDF \u6CA1\u6709\u76EE\u5F55");
+          return;
+        }
+        const lines = outline.map((item) => {
+          const pageInfo = item.pageNumber > 0 ? ` \u2192 p.${item.pageNumber}` : "";
+          const children = item.children.filter((c2) => c2.pageNumber > 0).map((c2) => `  \u2514 ${c2.title} \u2192 p.${c2.pageNumber}`).join("\n");
+          return `${item.title}${pageInfo}${children ? "\n" + children : ""}`;
+        });
+        new import_obsidian16.Notice(`PDF \u76EE\u5F55\uFF08${outline.length} \u9879\uFF09\uFF1A
+${lines.slice(0, 8).join("\n")}`);
       }
     });
     this.addCommand({
