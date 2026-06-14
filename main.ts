@@ -324,7 +324,14 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
     this.registerEvent(
       this.app.vault.on("rename", async (file, oldPath) => {
-        if (!this.settings.migrateOnRename || !(file instanceof TFile) || file.extension !== "md") {
+        if (!this.settings.migrateOnRename || !(file instanceof TFile)) {
+          return;
+        }
+
+        const ext = file.extension.toLowerCase();
+        const isMarkdown = ext === "md";
+        const isBook = (SUPPORTED_BOOK_EXTENSIONS as readonly string[]).includes(ext);
+        if (!isMarkdown && !isBook) {
           return;
         }
 
@@ -334,6 +341,10 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
         this.renameMigrationTimer = window.setTimeout(async () => {
           await this.store.migrateFilePath(oldPath, file);
+          // 书籍改名：额外迁移摘录导出文件的 source 路径 + 重命名摘录文件
+          if (isBook) {
+            await this.epubExcerptExporter.migrateExcerptSource(oldPath, file.path);
+          }
           await this.refreshAnnotations();
           this.renameMigrationTimer = null;
         }, 100);

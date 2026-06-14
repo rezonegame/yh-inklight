@@ -90,6 +90,49 @@ export class EpubExcerptExporter {
 		return created;
 	}
 
+	/**
+	 * 书籍改名时迁移摘录文件的关联（Phase 7 改名支持）。
+	 * ① 更新摘录 frontmatter 的 source 路径；② 重命名摘录文件（《旧名》摘录.md → 《新名》摘录.md）。
+	 *
+	 * @param oldPath - 旧文件路径
+	 * @param newPath - 新文件路径
+	 */
+	async migrateExcerptSource(oldPath: string, newPath: string): Promise<void> {
+		const folder = this.options.excerptFolder.trim() || "epub-excerpts";
+		const folderFile = this.options.app.vault.getAbstractFileByPath(folder);
+		if (!(folderFile instanceof TFolder)) {
+			return;
+		}
+
+		const oldBasename = (oldPath.split("/").pop() ?? "").replace(/\.[^.]+$/, "");
+		const newBasename = (newPath.split("/").pop() ?? "").replace(/\.[^.]+$/, "");
+		const oldSourceLine = `source: ${oldPath}`;
+		const newSourceLine = `source: ${newPath}`;
+		const oldExcerptName = `《${oldBasename}》摘录.md`;
+		const newExcerptName = `《${newBasename}》摘录.md`;
+
+		for (const file of folderFile.children) {
+			if (!(file instanceof TFile) || file.extension !== "md") {
+				continue;
+			}
+			const content = await this.options.app.vault.read(file);
+			if (!content.includes(oldSourceLine)) {
+				continue;
+			}
+			// 更新 frontmatter source
+			const updated = content.replace(oldSourceLine, newSourceLine);
+			await this.options.app.vault.modify(file, updated);
+
+			// 重命名摘录文件（如果文件名遵循 《书名》摘录.md 模式）
+			if (file.name === oldExcerptName && oldExcerptName !== newExcerptName) {
+				const newPath2 = `${folder}/${newExcerptName}`;
+				await this.options.app.vault.rename(file, newPath2).catch(() => {
+					/* 目标可能已存在或并发改名 */
+				});
+			}
+		}
+	}
+
 	/** 构建完整的 Markdown 摘录文本。 */
 	private buildMarkdown(file: TFile, document: FileAnnotationDocument): string {
 		const title = file.basename;

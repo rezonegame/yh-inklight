@@ -13623,6 +13623,42 @@ var EpubExcerptExporter = class {
     new import_obsidian15.Notice(`\u6458\u5F55\u5DF2\u5BFC\u51FA\uFF1A${targetPath}`);
     return created;
   }
+  /**
+   * 书籍改名时迁移摘录文件的关联（Phase 7 改名支持）。
+   * ① 更新摘录 frontmatter 的 source 路径；② 重命名摘录文件（《旧名》摘录.md → 《新名》摘录.md）。
+   *
+   * @param oldPath - 旧文件路径
+   * @param newPath - 新文件路径
+   */
+  async migrateExcerptSource(oldPath, newPath) {
+    const folder = this.options.excerptFolder.trim() || "epub-excerpts";
+    const folderFile = this.options.app.vault.getAbstractFileByPath(folder);
+    if (!(folderFile instanceof import_obsidian15.TFolder)) {
+      return;
+    }
+    const oldBasename = (oldPath.split("/").pop() ?? "").replace(/\.[^.]+$/, "");
+    const newBasename = (newPath.split("/").pop() ?? "").replace(/\.[^.]+$/, "");
+    const oldSourceLine = `source: ${oldPath}`;
+    const newSourceLine = `source: ${newPath}`;
+    const oldExcerptName = `\u300A${oldBasename}\u300B\u6458\u5F55.md`;
+    const newExcerptName = `\u300A${newBasename}\u300B\u6458\u5F55.md`;
+    for (const file of folderFile.children) {
+      if (!(file instanceof import_obsidian15.TFile) || file.extension !== "md") {
+        continue;
+      }
+      const content = await this.options.app.vault.read(file);
+      if (!content.includes(oldSourceLine)) {
+        continue;
+      }
+      const updated = content.replace(oldSourceLine, newSourceLine);
+      await this.options.app.vault.modify(file, updated);
+      if (file.name === oldExcerptName && oldExcerptName !== newExcerptName) {
+        const newPath2 = `${folder}/${newExcerptName}`;
+        await this.options.app.vault.rename(file, newPath2).catch(() => {
+        });
+      }
+    }
+  }
   /** 构建完整的 Markdown 摘录文本。 */
   buildMarkdown(file, document2) {
     const title = file.basename;
@@ -13980,7 +14016,13 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
     );
     this.registerEvent(
       this.app.vault.on("rename", async (file, oldPath) => {
-        if (!this.settings.migrateOnRename || !(file instanceof import_obsidian16.TFile) || file.extension !== "md") {
+        if (!this.settings.migrateOnRename || !(file instanceof import_obsidian16.TFile)) {
+          return;
+        }
+        const ext = file.extension.toLowerCase();
+        const isMarkdown = ext === "md";
+        const isBook = SUPPORTED_BOOK_EXTENSIONS.includes(ext);
+        if (!isMarkdown && !isBook) {
           return;
         }
         if (this.renameMigrationTimer !== null) {
@@ -13988,6 +14030,9 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
         }
         this.renameMigrationTimer = window.setTimeout(async () => {
           await this.store.migrateFilePath(oldPath, file);
+          if (isBook) {
+            await this.epubExcerptExporter.migrateExcerptSource(oldPath, file.path);
+          }
           await this.refreshAnnotations();
           this.renameMigrationTimer = null;
         }, 100);
