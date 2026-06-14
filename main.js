@@ -10629,6 +10629,9 @@ var EpubReaderView = class extends import_obsidian9.FileView {
       stripScriptsFromDocument(doc);
       void inlineBlockedStylesheets({ document: doc });
       this.attachSelectionListeners(doc);
+      if (this.pluginSettings.epubFootnotePreview) {
+        this.attachFootnoteHandlers(doc);
+      }
       this.handleRendered();
     };
     this.handleFoliateRelocate = (event) => {
@@ -10743,6 +10746,7 @@ var EpubReaderView = class extends import_obsidian9.FileView {
     tocTab.addEventListener("click", () => this.renderSidebar());
     this.sidebarContentEl = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-content" });
     this.readerContainerEl = body.createDiv({ cls: "yh-epub-reader-area" });
+    this.footnotePopoverEl = this.containerEl.createDiv({ cls: "yh-epub-footnote-popover" });
     this.progressEl = this.containerEl.createDiv({ cls: "yh-epub-progress" });
     this.containerEl.addEventListener("keydown", (event) => this.handleKeydown(event));
     this.readerContainerEl.addEventListener("wheel", (event) => this.handleWheel(event), { passive: false });

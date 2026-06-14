@@ -327,6 +327,8 @@ export class EpubReaderView extends FileView {
 		this.sidebarContentEl = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-content" });
 
 		this.readerContainerEl = body.createDiv({ cls: "yh-epub-reader-area" });
+		// 脚注预览 popover 元素（Phase 4-B P3）
+		this.footnotePopoverEl = this.containerEl.createDiv({ cls: "yh-epub-footnote-popover" });
 
 		this.progressEl = this.containerEl.createDiv({ cls: "yh-epub-progress" });
 
@@ -1766,6 +1768,9 @@ export class EpubReaderView extends FileView {
 		stripScriptsFromDocument(doc);
 		void inlineBlockedStylesheets({ document: doc });
 		this.attachSelectionListeners(doc);
+			if (this.pluginSettings.epubFootnotePreview) {
+				this.attachFootnoteHandlers(doc);
+			}
 		this.handleRendered();
 	};
 
