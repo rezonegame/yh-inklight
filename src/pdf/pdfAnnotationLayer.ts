@@ -412,7 +412,6 @@ export class PdfAnnotationLayer {
       pageNumber: rects[0].pageNumber,
       selectedText,
       rects,
-      createdScale: this.currentScale(),
     };
   }
 
@@ -504,11 +503,6 @@ export class PdfAnnotationLayer {
     return this.viewerAdapter.pageNumber(page);
   }
 
-  private currentScale(): number {
-    const page = this.pages()[0];
-    return page ? page.getBoundingClientRect().width / Math.max(1, page.offsetWidth) : 1;
-  }
-
   private activeViewer(): HTMLElement | null {
     return this.viewerAdapter.getContext()?.viewerEl ?? null;
   }
@@ -516,10 +510,6 @@ export class PdfAnnotationLayer {
   private activePdfFile(): TFile | null {
     return this.viewerAdapter.getActiveFile();
   }
-}
-
-function formatTime(value: string): string {
-  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 function selectionContainer(selection: Selection): Element | null {

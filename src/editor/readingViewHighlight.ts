@@ -9,6 +9,7 @@ import { MarkdownPostProcessorContext, MarkdownRenderChild, Platform } from "obs
 
 import { findBestFuzzyMatch } from "../anchor/fuzzyMatch";
 import { AnnotationColor, CommentAnnotation, HighlightAnnotation, TextAnchor } from "../storage/types";
+import { highlightBackground } from "./highlightColors";
 
 export type ReadingMark = Pick<HighlightAnnotation | CommentAnnotation, "id" | "color" | "anchor" | "orphaned">;
 
@@ -400,19 +401,6 @@ function splitTextRange(node: Text, start: number, end: number): Text {
   }
 
   return selected;
-}
-
-function highlightBackground(color: string): string {
-  const colors: Record<string, string> = {
-    yellow: "rgba(245, 197, 24, 0.42)",
-    orange: "rgba(255, 140, 0, 0.36)",
-    pink: "rgba(255, 105, 180, 0.32)",
-    green: "rgba(82, 196, 26, 0.30)",
-    blue: "rgba(22, 119, 255, 0.28)",
-    purple: "rgba(114, 46, 209, 0.30)",
-  };
-
-  return colors[color] ?? colors.yellow;
 }
 
 function isOwnHighlightMutation(mutation: MutationRecord): boolean {

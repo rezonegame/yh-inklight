@@ -162,11 +162,14 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     this.registerEvents();
     this.pdfLayer.register();
     // Phase 5：保留批注卡片跳页桥接；侧栏 PDF 工具按钮直接调用插件公开方法。
-    document.addEventListener("yh-pdf-goto-page", ((event: Event) => {
+    // 用 register 注册解绑，避免热重载/启用循环时监听器累积泄漏。
+    const gotoPageHandler = (event: Event): void => {
       const detail = (event as CustomEvent).detail as { page: number } | undefined;
       if (!detail?.page || detail.page < 1) return;
-      void this.gotoPdfPageFromSidebar(detail.page);
-    }) as EventListener);
+      void this.gotoPdfPage(detail.page);
+    };
+    document.addEventListener("yh-pdf-goto-page", gotoPageHandler);
+    this.register(() => document.removeEventListener("yh-pdf-goto-page", gotoPageHandler));
     this.stickyLane.register();
     // Phase 4-B P1: EPUB 双向溯源 + 摘录导出
     registerEpubGotoHandler(this, (file, cfi) => this.openEpubAtCfi(file, cfi));
@@ -223,68 +226,17 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         view.refreshExternalAnnotations();
       }
     }
+    // 刷新 Markdown 阅读视图高亮：从侧栏删除/编辑 MD 批注后，阅读区高亮 DOM 也需同步移除。
+    // 只刷新当前活动 markdown 文件以控制开销（其余文件在切到时由 active-leaf-change 兜底）。
+    const activeFile = this.app.workspace.getActiveFile();
+    if (activeFile && activeFile.extension === "md") {
+      await this.refreshActiveReadingViewHighlights(activeFile.path);
+    }
     await this.stickyLane.render();
   }
 
-  getCurrentPdfPageNumber(): number {
-    return this.pdfViewerAdapter.getCurrentPageNumber();
-  }
-
-  async addPdfBookmarkFromActivePage(): Promise<void> {
-    const file = this.pdfViewerAdapter.getActiveFile();
-    const page = this.pdfViewerAdapter.getCurrentPageNumber();
-    if (!file || file.extension.toLowerCase() !== "pdf" || page < 1) {
-      new Notice("无法获取当前 PDF 页码");
-      return;
-    }
-    await this.addPdfBookmark(file, page);
-  }
-
-  async removePdfBookmark(file: TFile, bookmarkId: string): Promise<void> {
-    await this.store.removeBookmark(file, bookmarkId);
-    await this.refreshAnnotations();
-    new Notice("已删除 PDF 书签");
-  }
-
-  async gotoPdfPageFromSidebar(pageNumber: number): Promise<void> {
-    await this.gotoPdfPage(pageNumber);
-  }
-
-  async addPdfBookmark(file: TFile, page: number): Promise<void> {
-    if (file.extension.toLowerCase() !== "pdf" || page < 1) {
-      new Notice("无法获取当前 PDF 页码");
-      return;
-    }
-
-    const document = await this.store.getDocument(file);
-    const position = `page=${page}`;
-    const existing = document.bookmarks.find((bookmark) => bookmark.type === "pdf-bookmark" && bookmark.position === position);
-    if (existing) {
-      new Notice(`第 ${page} 页已有书签`);
-      return;
-    }
-
-    const bookmarkId = crypto.randomUUID();
-    await this.store.addBookmark(file, {
-      id: bookmarkId,
-      type: "pdf-bookmark",
-      label: `第 ${page} 页`,
-      position,
-      chapter: `第 ${page} 页`,
-      createdAt: new Date().toISOString(),
-      color: this.settings.defaultHighlightColor,
-    });
-    const verified = await this.store.getDocument(file);
-    const persisted = verified.bookmarks.some((bookmark) => bookmark.id === bookmarkId);
-    if (!persisted) {
-      new Notice("书签写入后校验失败，请检查 .obsidian-annotations 存储状态");
-      return;
-    }
-    await this.refreshAnnotations();
-    new Notice(`已为第 ${page} 页添加书签`);
-  }
-
-  private async gotoPdfPage(pageNumber: number): Promise<void> {
+  /** 跳转到 PDF 指定页（侧栏批注卡片跳转、书签等共用）。 */
+  async gotoPdfPage(pageNumber: number): Promise<void> {
     const ok = await this.pdfViewerAdapter.goToPage(pageNumber, { flash: true, block: "center" });
     if (!ok) {
       new Notice(`未找到第 ${pageNumber} 页`);
@@ -359,30 +311,6 @@ export default class OverlayAnnotationsPlugin extends Plugin {
           return `${item.title}${pageInfo}${children ? "\n" + children : ""}`;
         });
         new Notice(`PDF 目录（${outline.length} 项）：\n${lines.slice(0, 8).join("\n")}`);
-      },
-    });
-
-    // Phase 5 P6：发送到 Canvas（复用已有 addCanvasNode）
-    this.addCommand({
-      id: "send-to-canvas",
-      name: "发送当前选中的内容到 Canvas",
-      callback: async () => {
-        const file = this.app.workspace.getActiveFile();
-        if (!file) {
-          new Notice("请先选中文本");
-          return;
-        }
-        const doc = await this.store.getDocument(file);
-        if (!doc?.canvasBinding) {
-          new Notice("未绑定 Canvas，请在设置中配置");
-          return;
-        }
-        await this.store.addCanvasNode(file, {
-          annotationId: crypto.randomUUID(),
-          nodeId: crypto.randomUUID(),
-          position: { x: 0, y: 0 },
-        });
-        new Notice("已发送到 Canvas");
       },
     });
 
@@ -690,8 +618,16 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     const leaf = this.app.workspace.getLeaf("tab");
     await leaf.openFile(file);
     this.app.workspace.revealLeaf(leaf);
+    this.navigateEpubToCfi(file, cfi);
+  }
 
-    // 等视图加载完成后导航到 CFI
+  /**
+   * 在已打开的 EPUB 视图中导航到指定 CFI。
+   * 统一的跳转入口：openEpubAtCfi（摘录回跳/协议跳转）与侧栏 jumpTo 的 epub 分支都走这里，
+   * 避免重复的「查 leaf → 调 navigateToCfi → 重试」逻辑散落多处。
+   * 含轮询重试：视图刚 openFile 后 navigateToCfi 可能尚未就绪，每 200ms 重试直至成功。
+   */
+  navigateEpubToCfi(file: TFile, cfi: string): void {
     const tryNavigate = (): void => {
       const epubLeaf = this.app.workspace.getLeavesOfType(EPUB_READER_VIEW_TYPE).find(
         (l) => (l.view as { file?: TFile }).file?.path === file.path,
@@ -703,7 +639,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         window.setTimeout(tryNavigate, 200);
       }
     };
-    window.setTimeout(tryNavigate, 300);
+    window.setTimeout(tryNavigate, 200);
   }
 
   private copySelection(): void {
