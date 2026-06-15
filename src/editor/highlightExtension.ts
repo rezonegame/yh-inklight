@@ -10,6 +10,7 @@ import { Decoration, type DecorationSet, EditorView, ViewPlugin, type ViewUpdate
 import { editorInfoField } from "obsidian";
 
 import { FileAnnotationDocument } from "../storage/types";
+import { highlightBackground } from "./highlightColors";
 
 interface HighlightExtensionOptions {
   getDocument: (filePath: string) => FileAnnotationDocument | null;
@@ -124,17 +125,4 @@ export function createHighlightExtension(options: HighlightExtensionOptions) {
       decorations: (plugin) => plugin.decorations,
     },
   );
-}
-
-function highlightBackground(color: string): string {
-  const colors: Record<string, string> = {
-    yellow: "rgba(245, 197, 24, 0.42)",
-    orange: "rgba(255, 140, 0, 0.36)",
-    pink: "rgba(255, 105, 180, 0.32)",
-    green: "rgba(82, 196, 26, 0.30)",
-    blue: "rgba(22, 119, 255, 0.28)",
-    purple: "rgba(114, 46, 209, 0.30)",
-  };
-
-  return colors[color] ?? colors.yellow;
 }

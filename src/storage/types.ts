@@ -63,7 +63,6 @@ export interface PdfAnchor {
   pageNumber: number;
   selectedText: string;
   rects: PdfRectAnchor[];
-  createdScale: number;
 }
 
 export interface PdfHighlightAnnotation {
@@ -166,24 +165,9 @@ export interface AnnotationPluginSettings {
   epubDefaultFlow: EpubFlowMode;
   epubFontSize: number;
   epubReadingTheme: EpubReadingTheme;
-  epubNoteIconSize: number;
-  epubNoteIconOffsetX: number;
-  epubNoteIconOffsetY: number;
   epubHighlightStyle: EpubHighlightStyle;
   // --- PDF 增强 ---
-  pdfEnhancedMode: boolean;
-  pdfBookmarkVisible: boolean;
-  pdfOutlineVisible: boolean;
   pdfProgressTracking: boolean;
-  // --- Canvas 集成 ---
-  canvasAutoCreate: boolean;
-  canvasLayoutDirection: "horizontal" | "vertical";
-  // --- AI 预留 ---
-  epubAiEnabled: boolean;
-  epubAiApiUrl: string;
-  epubAiApiKey: string;
-  epubAiModel: string;
-  epubAiPromptTemplate: string;
 }
 
 export interface SelectionSnapshot {
@@ -191,11 +175,6 @@ export interface SelectionSnapshot {
   startOffset: number;
   endOffset: number;
   selectedText: string;
-}
-
-export interface AnnotationStoreSnapshot {
-  version: number;
-  documents: Map<string, FileAnnotationDocument>;
 }
 
 export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
@@ -211,24 +190,9 @@ export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
   epubDefaultFlow: "scrolled",
   epubFontSize: 16,
   epubReadingTheme: "obsidian",
-  epubNoteIconSize: 20,
-  epubNoteIconOffsetX: 2,
-  epubNoteIconOffsetY: 0,
   epubHighlightStyle: "fill",
   // PDF 增强
-  pdfEnhancedMode: true,
-  pdfBookmarkVisible: true,
-  pdfOutlineVisible: true,
   pdfProgressTracking: true,
-  // Canvas
-  canvasAutoCreate: false,
-  canvasLayoutDirection: "horizontal",
-  // AI 预留
-  epubAiEnabled: false,
-  epubAiApiUrl: "",
-  epubAiApiKey: "",
-  epubAiModel: "",
-  epubAiPromptTemplate: "",
 };
 
 export const EMPTY_INDEX: AnnotationIndex = {

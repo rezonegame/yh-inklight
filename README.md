@@ -119,6 +119,16 @@
 
 ## 📋 版本历史
 
+### v0.17.0
+- 修复：EPUB 想法标注的 noteType 分类（洞见/疑问/提醒）此前被丢弃，现已持久化并在侧栏卡片显示分类标签
+- 修复：从侧栏删除 Markdown 批注后，阅读视图高亮现在即时同步移除（此前需手动 rerender）
+- 修复：重命名/移动源文件时，对应的摘录导出文件（`*-notes.md`）现在跟随迁移并更新内部 source 引用
+- 修复：`yh-pdf-goto-page` 事件监听器此前未解绑，热重载时会累积泄漏，现已通过 register 正确解绑
+- 清理：移除从未被调用的 Canvas 集成死代码（bindCanvas/sendToCanvas 等）；types 字段保留为 optional 兼容旧 sidecar
+- 清理：移除 EPUB AI 占位符（AI 按钮 + 「即将上线」提示 + 5 个未使用的 AI 设置字段）
+- 清理：移除 PDF 书签 4 个死方法、PdfAnchor.createdScale、formatTime 等多处死代码
+- 重构：抽取共享 Markdown 高亮颜色表、formatTime 工具函数；合并 EPUB CFI 跳转逻辑到统一入口
+
 ### v0.16.3
 - 迁移：旧摘录导出的 callout、EPUB CFI hidden anchor、Back to source 回跳能力并入统一「导出批注」
 - 增强：统一导出为 Markdown/PDF/EPUB 批注生成可定位 callout；PDF 使用 page link，EPUB 使用 CFI 回跳

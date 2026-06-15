@@ -8,7 +8,7 @@
 import { ItemView, MarkdownRenderer, MarkdownView, Notice, setIcon, TFile, WorkspaceLeaf } from "obsidian";
 
 import type OverlayAnnotationsPlugin from "../../main";
-import { EPUB_READER_VIEW_TYPE } from "../epub/EpubReaderView";
+import { formatTime } from "../utils/format";
 import {
   ANNOTATION_COLORS,
   AnnotationColor,
@@ -495,6 +495,13 @@ export class AnnotationSidebarView extends ItemView {
     if (title) {
       type.dataset.title = title;
     }
+    // EPUB 想法分类标签（insight/question/reminder），仅 EpubCommentAnnotation 有 noteType
+    const note = cardData.note;
+    const epubNoteType = note && "noteType" in note ? note.noteType : undefined;
+    if (epubNoteType) {
+      const labelMap: Record<string, string> = { insight: "💡洞见", question: "❓疑问", reminder: "🔔提醒" };
+      head.createSpan({ cls: "yh-ov-note-type", text: labelMap[epubNoteType] ?? epubNoteType });
+    }
     head.createSpan({ cls: "yh-ov-time", text: formatTime(cardData.createdAt) });
 
     const quote = card.createDiv({ cls: "yh-ov-quote" });
@@ -837,15 +844,8 @@ export class AnnotationSidebarView extends ItemView {
     await leaf.openFile(file);
 
     if (mode === "epub" && cfiRange) {
-      window.setTimeout(() => {
-        const epubLeaf = this.app.workspace.getLeavesOfType(EPUB_READER_VIEW_TYPE).find(
-          (l) => (l.view as { file?: TFile }).file?.path === file.path,
-        );
-        const epubView = epubLeaf?.view as { navigateToCfi?: (cfi: string) => void } | undefined;
-        if (typeof epubView?.navigateToCfi === "function") {
-          epubView.navigateToCfi(cfiRange);
-        }
-      }, 200);
+      // 统一走 plugin 的跳转入口（含轮询重试），不再自行 setTimeout 查 leaf
+      this.plugin.navigateEpubToCfi(file, cfiRange);
       return;
     }
 
@@ -867,10 +867,6 @@ export class AnnotationSidebarView extends ItemView {
     view.containerEl.addClass("yh-flash-target");
     window.setTimeout(() => view.containerEl.removeClass("yh-flash-target"), 850);
   }
-}
-
-function formatTime(value: string): string {
-  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
 function getTitleLabel(title: string): string {

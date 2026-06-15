@@ -698,18 +698,6 @@ export class EpubReaderView extends FileView {
 			this.dismissContextMenu();
 		});
 
-		if (this.pluginSettings.epubAiEnabled) {
-			const aiBtn = menu.createEl("button", {
-				cls: "yh-epub-context-ai-btn",
-				attr: { type: "button", title: "AI 分析" },
-				text: "AI",
-			});
-			aiBtn.addEventListener("click", () => {
-				this.handleAiAction(text);
-				this.dismissContextMenu();
-			});
-		}
-
 		const clampedLeft = Math.max(8, Math.min(left, window.innerWidth - 260));
 		const clampedTop = Math.max(8, Math.min(top + 8, window.innerHeight - 48));
 		menu.style.left = `${clampedLeft}px`;
@@ -831,6 +819,8 @@ export class EpubReaderView extends FileView {
 					style: result.style,
 					anchor: { cfiRange, chapter, selectedText: text },
 					note: result.note.trim(),
+					// 保留用户在 modal 选择的分类（insight/question/reminder），否则字段丢失
+					noteType: result.noteType,
 					createdAt: now,
 					collapsed: false,
 					author: this.pluginSettings.defaultAuthor,
@@ -1561,21 +1551,6 @@ export class EpubReaderView extends FileView {
 	}
 
 	// ================================================================
-	// AI 预留
-	// ================================================================
-
-	/**
-	 * AI 分析动作（预留）。
-	 * 当 epubAiEnabled 设置为 true 时，上下文菜单会显示 AI 按钮。
-	 * 实际 AI 调用逻辑待后续版本实现。
-	 *
-	 * @param _text - 选中的文本
-	 */
-	private handleAiAction(_text: string): void {
-		new Notice("AI 分析功能即将上线");
-	}
-
-	// ================================================================
 	// 书内搜索（Phase 4-B P4）
 	// ================================================================
 
@@ -1635,22 +1610,7 @@ export class EpubReaderView extends FileView {
 	}
 
 	// ================================================================
-	// Canvas 集成（Phase 4-B P4）
-	// ================================================================
-
-	private async sendToCanvas(): Promise<void> {
-		if (!this.file || !this.lastSelectedCfiRange || !this.lastSelectedText) { new Notice("请先选中文本"); return; }
-		try {
-			const doc = this.store.getCachedDocument(this.file.path);
-			const binding = doc?.canvasBinding;
-			if (!binding || !binding.canvasPath) { new Notice("未绑定 Canvas"); return; }
-			await this.store.addCanvasNode(this.file, { annotationId: crypto.randomUUID(), nodeId: crypto.randomUUID(), position: { x: 0, y: 0 } });
-			new Notice("已发送到 Canvas");
-		} catch (error) { console.error("yh-inklight: Canvas send failed", error); new Notice("Canvas 发送失败"); }
-	}
-
-	// ================================================================
-	// 脚注预览 & 段落模式（Phase 4-B P3）
+	// 脚注预览 & 段落模式（Phase 4-B P3，均未实现）
 	// ================================================================
 
 	// ================================================================

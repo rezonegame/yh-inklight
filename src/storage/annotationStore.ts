@@ -23,8 +23,6 @@ import {
   EpubCommentAnnotation,
   EpubReadingProgress,
   ReadingBookmark,
-  CanvasBinding,
-  CanvasExcerptNode,
 } from "./types";
 
 const STORE_DIR = ".obsidian-annotations";
@@ -304,6 +302,51 @@ export class AnnotationStore {
     delete this.index.files[normalizedOldPath];
     await this.writeIndex();
     this.documents.delete(this.toCacheKey(normalizedOldPath));
+
+    // 同步迁移摘录导出文件（*-notes.md / 《名》摘录.md）：更新内部 source 路径引用 + 重命名文件。
+    await this.migrateExcerptFile(normalizedOldPath, this.normalizeVaultPath(file.path));
+  }
+
+  /**
+   * 重命名/移动源文件后，把对应的摘录导出文件一并迁移：
+   * 1. 文件名从旧 basename 派生改为新 basename 派生（兼容 {-notes.md} 与 《名》摘录.md 两种历史格式）；
+   * 2. 文件内容里所有指向旧路径的 source 引用（标题、[[wikilink]]、data-yh-source-path）替换为新路径。
+   * 摘录文件不存在时静默跳过。
+   */
+  private async migrateExcerptFile(oldPath: string, newPath: string): Promise<void> {
+    if (oldPath === newPath) {
+      return;
+    }
+    const oldBase = oldPath.replace(/\.[^.]+$/, "");
+    const newBase = newPath.replace(/\.[^.]+$/, "");
+    const parent = newPath.split(/[\\/]/).slice(0, -1).join("/") || "/";
+    // 候选文件名：v0.16.3 起统一 {basename}-notes.md；早期为 《basename》摘录.md
+    const candidates = [
+      `${oldBase.split(/[\\/]/).pop()}-notes.md`,
+      `《${oldBase.split(/[\\/]/).pop()}》摘录.md`,
+    ];
+    for (const candidate of candidates) {
+      const candidatePath = normalizePath(`${parent}/${candidate}`);
+      const excerptFile = this.app.vault.getAbstractFileByPath(candidatePath);
+      if (!(excerptFile instanceof TFile)) {
+        continue;
+      }
+      try {
+        const content = await this.app.vault.read(excerptFile);
+        // 替换内容中所有旧路径引用（标题、wikilink、hidden anchor）
+        const updated = content.split(oldPath).join(newPath);
+        const newName = candidate.replace(oldBase.split(/[\\/]/).pop()!, newBase.split(/[\\/]/).pop()!);
+        const targetPath = normalizePath(`${parent}/${newName}`);
+        if (updated !== content) {
+          await this.app.vault.modify(excerptFile, updated);
+        }
+        if (targetPath !== candidatePath && !this.app.vault.getAbstractFileByPath(targetPath)) {
+          await this.app.vault.rename(excerptFile, targetPath);
+        }
+      } catch (error) {
+        console.warn("yh-inklight: migrate excerpt file failed", candidatePath, error);
+      }
+    }
   }
 
   // ===== EPUB 标注 CRUD =====
@@ -396,43 +439,6 @@ export class AnnotationStore {
     return nextDocument;
   }
 
-  // ===== Canvas 集成 =====
-
-  async bindCanvas(file: TFile, binding: CanvasBinding): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    await this.saveDocument({
-      ...document,
-      canvasBinding: binding,
-      lastModified: new Date().toISOString(),
-    });
-    return this.getDocument(file);
-  }
-
-  async addCanvasNode(file: TFile, node: CanvasExcerptNode): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    const nextDocument: FileAnnotationDocument = {
-      ...document,
-      canvasNodes: [...document.canvasNodes, node],
-      lastModified: new Date().toISOString(),
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
-  }
-
-  // ===== 全量查询（书架视图用）=====
-
-  async getAllEpubProgress(): Promise<Record<string, EpubReadingProgress>> {
-    const result: Record<string, EpubReadingProgress> = {};
-    const filePaths = Object.keys(this.index.files);
-    for (const filePath of filePaths) {
-      const document = this.getCachedDocument(filePath);
-      if (document?.epubProgress) {
-        result[filePath] = document.epubProgress;
-      }
-    }
-    return result;
-  }
-
   async exportNotes(file: TFile, format: AnnotationExportFormat = "summary"): Promise<TFile> {
     const document = await this.getDocument(file);
     const baseName = file.basename || file.name.replace(/\.md$/i, "");
@@ -463,15 +469,6 @@ export class AnnotationStore {
     }
 
     return this.app.vault.create(targetPath, lines.join("\n"));
-  }
-
-  async touchFileHash(file: TFile): Promise<void> {
-    const document = await this.getDocument(file);
-    await this.saveDocument({
-      ...document,
-      fileHash: await this.hashFile(file),
-      lastModified: new Date().toISOString(),
-    });
   }
 
   async testWriteAccess(): Promise<string> {
@@ -838,10 +835,6 @@ function renderReadingNotes(entries: ExportEntry[]): string[] {
       return [`### ${entrySource(entry)}`, "", ...renderAnnotationBlock(entry)];
     }),
   ];
-}
-
-function renderNoteBlock(entry: ExportEntry): string[] {
-  return renderAnnotationBlock(entry);
 }
 
 function renderAnnotationBlock(entry: ExportEntry): string[] {

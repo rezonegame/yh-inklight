@@ -8,6 +8,7 @@
 import { App, Component, MarkdownRenderer, setIcon } from "obsidian";
 
 import { COLOR_LABELS, CommentAnnotation } from "../storage/types";
+import { formatTime } from "../utils/format";
 
 interface StickyNoteCardOptions {
   app: App;
@@ -123,6 +124,3 @@ function renderEditMode(container: HTMLElement, options: StickyNoteCardOptions):
   });
 }
 
-function formatTime(value: string): string {
-  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
