@@ -1837,6 +1837,53 @@ span.yh-ov-expand-btn:hover {
   cursor: pointer;
 }
 
+/* ============================================================
+   图标按钮统一基础样式
+   覆盖：侧栏头部 refresh/close、PDF popover close、EPUB 工具栏等。
+   setIcon 注入的 svg 默认无显式尺寸，必须由按钮约束 width/height
+   并让 svg 填满，否则在 flex/inline 布局中可能被压成 0 尺寸。
+   ============================================================ */
+.yh-icon-btn,
+.yh-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-s, 4px);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.yh-icon-btn:hover,
+.yh-icon-button:hover {
+  background: var(--background-modifier-hover);
+  color: var(--text-normal);
+}
+
+.yh-icon-btn > svg,
+.yh-icon-button > svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* 侧栏头部布局：标题 + 右侧操作按钮组 */
+.yh-ov-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.yh-ov-head-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .yh-epub-goto-callout:hover {
   filter: brightness(0.95);
 }

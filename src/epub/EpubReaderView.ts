@@ -104,13 +104,7 @@ interface FoliateDrawAnnotationDetail {
 	) => void;
 }
 
-interface FoliateShowAnnotationDetail {
-	value?: string;
-	index?: number;
-	range?: Range;
-}
-
-interface EpubSelectionSnapshot {
+	interface EpubSelectionSnapshot {
 	doc: Document;
 	range: Range;
 	text: string;
@@ -163,12 +157,10 @@ export class EpubReaderView extends FileView {
 	private currentFontSize: number;
 	private currentTheme: EpubReadingTheme;
 	private sidebarOpen = false;
-	private contextMenuEl: HTMLElement | null = null;
-	private lastSelectedCfiRange = "";
-	private lastSelectedText = "";
-	private lastPointerClientX = 0;
-	private lastPointerClientY = 0;
-	private searchInputEl: HTMLInputElement | null = null;
+private contextMenuEl: HTMLElement | null = null;
+		private lastSelectedCfiRange = "";
+		private lastSelectedText = "";
+		private searchInputEl: HTMLInputElement | null = null;
 	private searchResultsEl: HTMLElement | null = null;
 	private searchTimer: number | null = null;
 	private readonly searchDebounce = (): void => {
@@ -331,11 +323,6 @@ export class EpubReaderView extends FileView {
 
 		this.containerEl.addEventListener("keydown", (event) => this.handleKeydown(event));
 		this.readerContainerEl.addEventListener("wheel", (event) => this.handleWheel(event), { passive: false });
-		// 追踪点击位置，供标注编辑菜单定位（foliate show-annotation 触发时使用）
-		this.readerContainerEl.addEventListener("pointerdown", (event: PointerEvent) => {
-			this.lastPointerClientX = event.clientX;
-			this.lastPointerClientY = event.clientY;
-		}, { passive: true });
 	}
 
 	// ================================================================
@@ -620,7 +607,6 @@ export class EpubReaderView extends FileView {
 		view.addEventListener("load", this.handleFoliateLoad as EventListener);
 		view.addEventListener("relocate", this.handleFoliateRelocate as EventListener);
 		view.addEventListener("draw-annotation", this.handleFoliateDrawAnnotation as EventListener);
-		view.addEventListener("show-annotation", this.handleFoliateShowAnnotation as EventListener);
 	}
 
 	// ================================================================
@@ -886,113 +872,6 @@ export class EpubReaderView extends FileView {
 		for (const comment of document.epubComments) {
 			this.renderAnnotationOnRendition(comment);
 		}
-	}
-
-	/**
-	 * 处理 foliate 标注点击事件。
-	 * 显示编辑菜单（编辑/删除）。
-	 *
-	 * @param value - foliate 标注 value（CFI 范围）
-	 * @param data - 标注数据，包含 CFI 范围
-	 */
-	private handleMarkClicked(value: string, range?: Range): void {
-		if (!this.file) {
-			return;
-		}
-
-		const cfiRange = value;
-		if (!cfiRange) {
-			return;
-		}
-
-		const document = this.store.getCachedDocument(this.file.path);
-		if (!document) {
-			return;
-		}
-
-		const highlight = document.epubHighlights.find((item) => item.anchor.cfiRange === cfiRange);
-		const comment = document.epubComments.find((item) => item.anchor.cfiRange === cfiRange);
-		const annotation = comment ?? highlight;
-
-		if (!annotation) {
-			return;
-		}
-
-		this.showAnnotationEditMenu(annotation.id, cfiRange, range);
-	}
-
-	/**
-	 * 在标注位置显示编辑/删除菜单。
-	 *
-	 * @param annotationId - 标注 ID
-	 * @param _cfiRange - CFI 范围（预留用于定位）
-	 */
-	private showAnnotationEditMenu(annotationId: string, _cfiRange: string, range?: Range): void {
-		if (!this.file) {
-			return;
-		}
-
-		const menu = document.body.createDiv({ cls: "yh-epub-edit-menu" });
-
-		const deleteBtn = menu.createEl("button", {
-			cls: "yh-epub-edit-menu-btn",
-			attr: { type: "button", title: "删除标注" },
-			text: "删除",
-		});
-
-		let editOutsideHandler: ((ev: PointerEvent) => void) | null = null;
-		const close = () => {
-			if (editOutsideHandler) {
-				document.removeEventListener("pointerdown", editOutsideHandler, true);
-				editOutsideHandler = null;
-			}
-			menu.remove();
-		};
-		editOutsideHandler = (ev: PointerEvent) => {
-			if (ev.target instanceof Node && !menu.contains(ev.target)) {
-				close();
-			}
-		};
-
-		deleteBtn.addEventListener("click", async () => {
-			await this.deleteAnnotation(annotationId);
-			close();
-		});
-
-		menu.addEventListener("mouseleave", () => {
-			close();
-		});
-		// 点击菜单外部关闭（用 editOutsideHandler）
-		window.setTimeout(() => {
-			if (editOutsideHandler) document.addEventListener("pointerdown", editOutsideHandler, true);
-		}, 0);
-
-		// 定位：优先用高亮 range 映射到视口坐标（range 在 iframe 内，需加 iframe 偏移），回退到最近点击坐标
-		let left = this.lastPointerClientX || window.innerWidth / 2;
-		let top = this.lastPointerClientY || window.innerHeight / 2;
-		if (range) {
-			const doc = range.startContainer?.ownerDocument ?? null;
-			if (doc) {
-				const mapped = this.createSelectionViewportRect(doc, range);
-				if (mapped && mapped.width >= 0) {
-					left = mapped.left + mapped.width / 2;
-					top = mapped.top;
-				}
-			}
-		}
-		const clampedLeft = Math.max(8, Math.min(left, window.innerWidth - 120));
-		const clampedTop = Math.max(8, Math.min(top + 8, window.innerHeight - 48));
-		menu.style.left = `${clampedLeft}px`;
-		menu.style.top = `${clampedTop}px`;
-
-		document.body.appendChild(menu);
-		window.setTimeout(() => {
-			menu.addEventListener("click", (event) => {
-				if (event.target === menu) {
-					close();
-				}
-			});
-		}, 50);
 	}
 
 	/**
@@ -1636,7 +1515,6 @@ export class EpubReaderView extends FileView {
 				this.foliateView.removeEventListener("load", this.handleFoliateLoad as EventListener);
 				this.foliateView.removeEventListener("relocate", this.handleFoliateRelocate as EventListener);
 				this.foliateView.removeEventListener("draw-annotation", this.handleFoliateDrawAnnotation as EventListener);
-				this.foliateView.removeEventListener("show-annotation", this.handleFoliateShowAnnotation as EventListener);
 				this.foliateView.close?.();
 			} catch {
 				/* foliate-view 可能已经销毁 */
@@ -1706,14 +1584,6 @@ export class EpubReaderView extends FileView {
 		const color = detail.annotation.color ?? this.pluginSettings.defaultHighlightColor;
 		const style = detail.annotation.style ?? this.pluginSettings.epubHighlightStyle;
 		detail.draw((rects) => this.createAnnotationOverlay(rects, color, style));
-	};
-
-	private handleFoliateShowAnnotation = (event: Event): void => {
-		const detail = (event as CustomEvent<FoliateShowAnnotationDetail>).detail;
-		if (!detail?.value) {
-			return;
-		}
-		this.handleMarkClicked(detail.value, detail.range);
 	};
 
 	private attachSelectionListeners(doc: Document): void {

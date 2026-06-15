@@ -11978,8 +11978,6 @@ var EpubReaderView = class extends import_obsidian13.FileView {
     this.contextMenuEl = null;
     this.lastSelectedCfiRange = "";
     this.lastSelectedText = "";
-    this.lastPointerClientX = 0;
-    this.lastPointerClientY = 0;
     this.searchInputEl = null;
     this.searchResultsEl = null;
     this.searchTimer = null;
@@ -12032,13 +12030,6 @@ var EpubReaderView = class extends import_obsidian13.FileView {
       const color = detail.annotation.color ?? this.pluginSettings.defaultHighlightColor;
       const style2 = detail.annotation.style ?? this.pluginSettings.epubHighlightStyle;
       detail.draw((rects) => this.createAnnotationOverlay(rects, color, style2));
-    };
-    this.handleFoliateShowAnnotation = (event) => {
-      const detail = event.detail;
-      if (!detail?.value) {
-        return;
-      }
-      this.handleMarkClicked(detail.value, detail.range);
     };
     this.store = store;
     this.pluginSettings = settings;
@@ -12136,10 +12127,6 @@ var EpubReaderView = class extends import_obsidian13.FileView {
     this.progressEl = this.containerEl.createDiv({ cls: "yh-epub-progress" });
     this.containerEl.addEventListener("keydown", (event) => this.handleKeydown(event));
     this.readerContainerEl.addEventListener("wheel", (event) => this.handleWheel(event), { passive: false });
-    this.readerContainerEl.addEventListener("pointerdown", (event) => {
-      this.lastPointerClientX = event.clientX;
-      this.lastPointerClientY = event.clientY;
-    }, { passive: true });
   }
   // ================================================================
   // 工具栏
@@ -12391,7 +12378,6 @@ var EpubReaderView = class extends import_obsidian13.FileView {
     view.addEventListener("load", this.handleFoliateLoad);
     view.addEventListener("relocate", this.handleFoliateRelocate);
     view.addEventListener("draw-annotation", this.handleFoliateDrawAnnotation);
-    view.addEventListener("show-annotation", this.handleFoliateShowAnnotation);
   }
   // ================================================================
   // 安全处理
@@ -12619,97 +12605,6 @@ var EpubReaderView = class extends import_obsidian13.FileView {
     for (const comment of document2.epubComments) {
       this.renderAnnotationOnRendition(comment);
     }
-  }
-  /**
-   * 处理 foliate 标注点击事件。
-   * 显示编辑菜单（编辑/删除）。
-   *
-   * @param value - foliate 标注 value（CFI 范围）
-   * @param data - 标注数据，包含 CFI 范围
-   */
-  handleMarkClicked(value, range) {
-    if (!this.file) {
-      return;
-    }
-    const cfiRange = value;
-    if (!cfiRange) {
-      return;
-    }
-    const document2 = this.store.getCachedDocument(this.file.path);
-    if (!document2) {
-      return;
-    }
-    const highlight = document2.epubHighlights.find((item) => item.anchor.cfiRange === cfiRange);
-    const comment = document2.epubComments.find((item) => item.anchor.cfiRange === cfiRange);
-    const annotation = comment ?? highlight;
-    if (!annotation) {
-      return;
-    }
-    this.showAnnotationEditMenu(annotation.id, cfiRange, range);
-  }
-  /**
-   * 在标注位置显示编辑/删除菜单。
-   *
-   * @param annotationId - 标注 ID
-   * @param _cfiRange - CFI 范围（预留用于定位）
-   */
-  showAnnotationEditMenu(annotationId, _cfiRange, range) {
-    if (!this.file) {
-      return;
-    }
-    const menu = document.body.createDiv({ cls: "yh-epub-edit-menu" });
-    const deleteBtn = menu.createEl("button", {
-      cls: "yh-epub-edit-menu-btn",
-      attr: { type: "button", title: "\u5220\u9664\u6807\u6CE8" },
-      text: "\u5220\u9664"
-    });
-    let editOutsideHandler = null;
-    const close = () => {
-      if (editOutsideHandler) {
-        document.removeEventListener("pointerdown", editOutsideHandler, true);
-        editOutsideHandler = null;
-      }
-      menu.remove();
-    };
-    editOutsideHandler = (ev) => {
-      if (ev.target instanceof Node && !menu.contains(ev.target)) {
-        close();
-      }
-    };
-    deleteBtn.addEventListener("click", async () => {
-      await this.deleteAnnotation(annotationId);
-      close();
-    });
-    menu.addEventListener("mouseleave", () => {
-      close();
-    });
-    window.setTimeout(() => {
-      if (editOutsideHandler) document.addEventListener("pointerdown", editOutsideHandler, true);
-    }, 0);
-    let left = this.lastPointerClientX || window.innerWidth / 2;
-    let top = this.lastPointerClientY || window.innerHeight / 2;
-    if (range) {
-      const doc = range.startContainer?.ownerDocument ?? null;
-      if (doc) {
-        const mapped = this.createSelectionViewportRect(doc, range);
-        if (mapped && mapped.width >= 0) {
-          left = mapped.left + mapped.width / 2;
-          top = mapped.top;
-        }
-      }
-    }
-    const clampedLeft = Math.max(8, Math.min(left, window.innerWidth - 120));
-    const clampedTop = Math.max(8, Math.min(top + 8, window.innerHeight - 48));
-    menu.style.left = `${clampedLeft}px`;
-    menu.style.top = `${clampedTop}px`;
-    document.body.appendChild(menu);
-    window.setTimeout(() => {
-      menu.addEventListener("click", (event) => {
-        if (event.target === menu) {
-          close();
-        }
-      });
-    }, 50);
   }
   /**
    * 删除指定标注并从 foliate 高亮层移除。
@@ -13266,7 +13161,6 @@ var EpubReaderView = class extends import_obsidian13.FileView {
         this.foliateView.removeEventListener("load", this.handleFoliateLoad);
         this.foliateView.removeEventListener("relocate", this.handleFoliateRelocate);
         this.foliateView.removeEventListener("draw-annotation", this.handleFoliateDrawAnnotation);
-        this.foliateView.removeEventListener("show-annotation", this.handleFoliateShowAnnotation);
         this.foliateView.close?.();
       } catch {
       }
