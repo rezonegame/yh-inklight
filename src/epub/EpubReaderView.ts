@@ -368,24 +368,7 @@ private contextMenuEl: HTMLElement | null = null;
 
 		this.renderThemeSwatches();
 
-		// 书签按钮（Phase 4-B P2）
-		const bookmarkBtn = this.toolbarEl.createEl("button", {
-			cls: "yh-epub-toolbar-btn yh-epub-bookmark-btn",
-			attr: { type: "button", title: "添加书签", "aria-label": "添加书签" },
-		});
-		setIcon(bookmarkBtn, "bookmark");
-		const updateBookmarkIcon = () => {
-			const hasBookmark = this.hasCurrentCfiBookmark();
-			bookmarkBtn.title = hasBookmark ? "移除书签" : "添加书签";
-			bookmarkBtn.toggleClass("is-active", hasBookmark);
-		};
-		bookmarkBtn.addEventListener("click", async () => {
-			await this.toggleBookmark();
-			updateBookmarkIcon();
-			this.renderSidebar();
-		});
-
-			// 搜索按钮（Phase 4-B P4 - 移到工具栏）
+			// 搜索按钮（Phase 4-B P4 - 移到工具栏)
 			const searchBtn = this.toolbarEl.createEl("button", {
 				cls: "yh-epub-toolbar-btn",
 				attr: { type: "button", title: "搜索全文", "aria-label": "搜索全文" },
@@ -460,7 +443,6 @@ private contextMenuEl: HTMLElement | null = null;
 	private renderSidebar(): void {
 		this.sidebarContentEl.empty();
 		this.renderTocList();
-		this.renderBookmarkList();
 	}
 
 	/**
@@ -481,111 +463,6 @@ private contextMenuEl: HTMLElement | null = null;
 				attr: { type: "button" },
 			});
 			item.addEventListener("click", () => this.navigateToSpineIndex(entry.spineIndex));
-		}
-	}
-
-	// ================================================================
-	// 书签（Phase 4-B P2）
-	// ================================================================
-
-	/**
-	 * 检查当前 CFI 是否已有书签。
-	 */
-	private hasCurrentCfiBookmark(): boolean {
-		if (!this.file || !this.currentCfi) {
-			return false;
-		}
-		const document = this.store.getCachedDocument(this.file.path);
-		if (!document) {
-			return false;
-		}
-		return document.bookmarks.some((bm) => bm.type === "epub-bookmark" && bm.position === this.currentCfi);
-	}
-
-	/**
-	 * 切换书签：若当前 CFI 已有则移除，否则添加。
-	 */
-	async toggleBookmark(): Promise<void> {
-		if (!this.file || !this.currentCfi) {
-			return;
-		}
-		const document = this.store.getCachedDocument(this.file.path);
-		if (!document) {
-			return;
-		}
-		const existing = document.bookmarks.find(
-			(bm) => bm.type === "epub-bookmark" && bm.position === this.currentCfi,
-		);
-		if (existing) {
-			await this.store.removeBookmark(this.file, existing.id);
-			new Notice("已移除书签");
-		} else {
-			const bookmark: import("../storage/types").ReadingBookmark = {
-				id: crypto.randomUUID(),
-				type: "epub-bookmark",
-				label: this.currentChapter || "当前位置",
-				position: this.currentCfi,
-				chapter: this.currentChapter || undefined,
-				color: this.pluginSettings.defaultHighlightColor,
-				createdAt: new Date().toISOString(),
-			};
-			await this.store.addBookmark(this.file, bookmark);
-			new Notice("已添加书签");
-		}
-		this.refreshAnnotations();
-	}
-
-	/**
-	 * 在侧边栏底部渲染书签列表，点击跳转到对应 CFI。
-	 */
-	private renderBookmarkList(): void {
-		if (!this.file) {
-			return;
-		}
-		const document = this.store.getCachedDocument(this.file.path);
-		const bookmarks = document?.bookmarks.filter((bm) => bm.type === "epub-bookmark") ?? [];
-		if (bookmarks.length === 0) {
-			return;
-		}
-
-		const section = this.sidebarContentEl.createDiv({ cls: "yh-epub-bookmark-section" });
-		section.createDiv({ cls: "yh-epub-bookmark-title", text: "📑 书签" });
-
-		const list = section.createDiv({ cls: "yh-epub-bookmark-list" });
-		for (const bm of bookmarks) {
-			const item = list.createEl("button", {
-				cls: "yh-epub-bookmark-item",
-				attr: { type: "button", title: bm.chapter ?? "" },
-			});
-			item.createSpan({ cls: "yh-epub-bookmark-label", text: bm.label.trim() || "书签" });
-			const delBtn = item.createEl("button", {
-				cls: "yh-epub-bookmark-del",
-				attr: { type: "button", title: "删除书签" },
-				text: "✕",
-			});
-			delBtn.addEventListener("click", (ev) => {
-				ev.stopPropagation();
-				void this.store.removeBookmark(this.file!, bm.id).then(() => {
-					this.renderSidebar();
-					this.refreshAnnotations();
-				});
-			});
-			item.createSpan({ cls: "yh-epub-bookmark-time", text: this.formatBookmarkDate(bm.createdAt) });
-			item.addEventListener("click", () => {
-				if (this.foliateView) {
-					void this.foliateView.goTo(bm.position);
-				}
-			});
-		}
-	}
-
-	private formatBookmarkDate(iso: string): string {
-		try {
-			const d = new Date(iso);
-			const pad = (n: number) => String(n).padStart(2, "0");
-			return `${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-		} catch {
-			return "";
 		}
 	}
 

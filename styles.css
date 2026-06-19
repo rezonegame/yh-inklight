@@ -22,7 +22,6 @@
 .yh-icon-btn:focus-visible,
 .yh-icon-button:focus-visible,
 .yh-ov-card:focus-within,
-.yh-ov-bookmark-row:focus-within,
 .yh-pdf-outline-item:focus-visible {
   outline: none;
   box-shadow: var(--yh-focus-ring);
@@ -1934,69 +1933,6 @@ g.yh-epub-highlight.yh-hover-sync {
   gap: 2px;
 }
 
-/* 侧栏书签区（三格式统一，阶段 6 再打磨视觉） */
-.yh-ov-bookmarks {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--background-modifier-border);
-}
-
-.yh-ov-bookmarks-title {
-  font-size: var(--yh-font-xs);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-
-.yh-ov-bookmark-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 6px;
-  border-radius: var(--yh-radius-sm);
-  cursor: pointer;
-  transition: background var(--yh-transition-fast);
-}
-
-.yh-ov-bookmark-row:hover {
-  background: var(--background-modifier-hover);
-}
-
-.yh-ov-bookmark-row:active {
-  background: var(--background-modifier-active-hover, var(--background-modifier-hover));
-}
-
-.yh-ov-bookmark-icon {
-  flex-shrink: 0;
-  font-size: var(--yh-font-sm);
-}
-
-.yh-ov-bookmark-label {
-  flex: 1;
-  font-size: var(--yh-font-sm);
-  color: var(--text-normal);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.yh-ov-bookmark-time {
-  flex-shrink: 0;
-  font-size: var(--yh-font-xs);
-  color: var(--text-faint);
-}
-
-.yh-ov-bookmark-del {
-  flex-shrink: 0;
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-
-.yh-ov-bookmark-row:hover .yh-ov-bookmark-del {
-  opacity: 1;
-}
-
 .yh-epub-goto-callout:hover {
   filter: brightness(0.95);
 }
@@ -2106,63 +2042,6 @@ a.yh-epub-goto-link {
 a.yh-epub-goto-link:hover {
   text-decoration: underline;
 }
-.yh-epub-bookmark-btn.is-active {
-  color: var(--interactive-accent);
-}
-
-.yh-epub-bookmark-section {
-  margin-top: 16px;
-  border-top: 1px solid var(--yh-border);
-  padding-top: 8px;
-}
-
-.yh-epub-bookmark-title {
-  font-size: var(--yh-font-sm);
-  color: var(--text-muted);
-  margin-bottom: 4px;
-  padding: 0 8px;
-}
-
-.yh-epub-bookmark-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.yh-epub-bookmark-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 4px 8px;
-  border: none;
-  border-radius: var(--yh-radius-sm);
-  background: transparent;
-  color: var(--text-normal);
-  font-size: var(--yh-font-sm);
-  cursor: pointer;
-  text-align: left;
-  width: 100%;
-}
-
-.yh-epub-bookmark-item:hover {
-  background: var(--background-modifier-hover);
-}
-
-.yh-epub-bookmark-label {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.yh-epub-bookmark-time {
-  flex-shrink: 0;
-  color: var(--text-muted);
-  font-size: 0.85em;
-  margin-left: 8px;
-}
-  transform: translate(-50%, -100%) translateY(-4px);
-}
 
 /* 段落模式 */
 .yh-paragraph-focused {
@@ -2235,59 +2114,6 @@ a.yh-epub-goto-link:hover {
   color: var(--text-muted);
   font-size: var(--yh-font-sm);
   padding: 4px 6px;
-}
-
-.yh-epub-bookmark-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 8px;
-  border: none;
-  border-radius: var(--yh-radius-sm);
-  background: transparent;
-  color: var(--text-normal);
-  font-size: var(--yh-font-sm);
-  cursor: pointer;
-  text-align: left;
-  width: 100%;
-}
-
-.yh-epub-bookmark-item:hover {
-  background: var(--background-modifier-hover);
-}
-
-.yh-epub-bookmark-label {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.yh-epub-bookmark-del {
-  width: 18px;
-  height: 18px;
-  padding: 0;
-  border: none;
-  border-radius: 50%;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: 10px;
-  line-height: 18px;
-  text-align: center;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-
-.yh-epub-bookmark-del:hover {
-  background: var(--background-modifier-error);
-  color: var(--text-on-accent, #fff);
-}
-
-.yh-epub-bookmark-time {
-  flex-shrink: 0;
-  color: var(--text-muted);
-  font-size: 0.85em;
-  margin-left: auto;
 }
 
 .yh-epub-paragraph-hint {

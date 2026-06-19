@@ -10475,9 +10475,6 @@ var AnnotationSidebarView = class extends import_obsidian8.ItemView {
         this.renderCard(list, card);
       }
     }
-    if (this.annotationScope === "current" && file) {
-      this.renderBookmarks(container, file);
-    }
     this.renderExportFooter(container, this.annotationScope === "current" ? file : null);
   }
   /**
@@ -11100,42 +11097,6 @@ var AnnotationSidebarView = class extends import_obsidian8.ItemView {
       "reading-notes": "\u5BFC\u51FA\u4E3A\u9605\u8BFB\u7B14\u8BB0\u683C\u5F0F"
     };
     return labels[this.exportFormat];
-  }
-  /**
-   * 渲染三格式统一书签区（仅当前文件）。
-   * MD/PDF/EPUB 书签统一展示，点击跳转、✕ 删除，操作逻辑完全一致。
-   */
-  renderBookmarks(container, file) {
-    const doc = this.plugin.store.getCachedDocument(file.path);
-    const bookmarks = doc?.bookmarks ?? [];
-    if (!bookmarks.length) {
-      return;
-    }
-    const section = container.createDiv({ cls: "yh-ov-bookmarks" });
-    section.createDiv({ cls: "yh-ov-bookmarks-title", text: `\u4E66\u7B7E \xB7 ${bookmarks.length}` });
-    for (const bm of bookmarks) {
-      const row = section.createDiv({ cls: "yh-ov-bookmark-row" });
-      const icon = row.createSpan({ cls: "yh-ov-bookmark-icon" });
-      icon.textContent = bm.type === "pdf-bookmark" ? "\u{1F4C4}" : bm.type === "epub-bookmark" ? "\u{1F4D6}" : "\u{1F4DD}";
-      const label = row.createSpan({ cls: "yh-ov-bookmark-label", text: bm.label });
-      if (bm.preview) {
-        label.setAttribute("title", bm.preview);
-      }
-      row.createSpan({ cls: "yh-ov-bookmark-time", text: formatTime(bm.createdAt) });
-      row.addEventListener("click", () => {
-        void this.plugin.jumpToBookmark(file, bm);
-      });
-      const del = row.createEl("button", {
-        cls: "yh-icon-btn yh-ov-bookmark-del",
-        attr: { type: "button", title: "\u5220\u9664\u4E66\u7B7E", "aria-label": "\u5220\u9664\u4E66\u7B7E" }
-      });
-      (0, import_obsidian8.setIcon)(del, "trash");
-      del.addEventListener("click", async (e3) => {
-        e3.stopPropagation();
-        await this.plugin.store.removeBookmark(file, bm.id);
-        await this.plugin.refreshAnnotations();
-      });
-    }
   }
   /**
    * 采集活动文件的当前位置上下文（PDF 页码 / EPUB 章节）。
@@ -12516,21 +12477,6 @@ var EpubReaderView = class extends import_obsidian13.FileView {
     });
     fontSizeInc.addEventListener("click", () => this.changeFontSize(1));
     this.renderThemeSwatches();
-    const bookmarkBtn = this.toolbarEl.createEl("button", {
-      cls: "yh-epub-toolbar-btn yh-epub-bookmark-btn",
-      attr: { type: "button", title: "\u6DFB\u52A0\u4E66\u7B7E", "aria-label": "\u6DFB\u52A0\u4E66\u7B7E" }
-    });
-    (0, import_obsidian13.setIcon)(bookmarkBtn, "bookmark");
-    const updateBookmarkIcon = () => {
-      const hasBookmark = this.hasCurrentCfiBookmark();
-      bookmarkBtn.title = hasBookmark ? "\u79FB\u9664\u4E66\u7B7E" : "\u6DFB\u52A0\u4E66\u7B7E";
-      bookmarkBtn.toggleClass("is-active", hasBookmark);
-    };
-    bookmarkBtn.addEventListener("click", async () => {
-      await this.toggleBookmark();
-      updateBookmarkIcon();
-      this.renderSidebar();
-    });
     const searchBtn = this.toolbarEl.createEl("button", {
       cls: "yh-epub-toolbar-btn",
       attr: { type: "button", title: "\u641C\u7D22\u5168\u6587", "aria-label": "\u641C\u7D22\u5168\u6587" }
@@ -12596,7 +12542,6 @@ var EpubReaderView = class extends import_obsidian13.FileView {
   renderSidebar() {
     this.sidebarContentEl.empty();
     this.renderTocList();
-    this.renderBookmarkList();
   }
   /**
    * 渲染目录列表，点击条目跳转到对应章节。
@@ -12614,104 +12559,6 @@ var EpubReaderView = class extends import_obsidian13.FileView {
         attr: { type: "button" }
       });
       item.addEventListener("click", () => this.navigateToSpineIndex(entry.spineIndex));
-    }
-  }
-  // ================================================================
-  // 书签（Phase 4-B P2）
-  // ================================================================
-  /**
-   * 检查当前 CFI 是否已有书签。
-   */
-  hasCurrentCfiBookmark() {
-    if (!this.file || !this.currentCfi) {
-      return false;
-    }
-    const document2 = this.store.getCachedDocument(this.file.path);
-    if (!document2) {
-      return false;
-    }
-    return document2.bookmarks.some((bm) => bm.type === "epub-bookmark" && bm.position === this.currentCfi);
-  }
-  /**
-   * 切换书签：若当前 CFI 已有则移除，否则添加。
-   */
-  async toggleBookmark() {
-    if (!this.file || !this.currentCfi) {
-      return;
-    }
-    const document2 = this.store.getCachedDocument(this.file.path);
-    if (!document2) {
-      return;
-    }
-    const existing = document2.bookmarks.find(
-      (bm) => bm.type === "epub-bookmark" && bm.position === this.currentCfi
-    );
-    if (existing) {
-      await this.store.removeBookmark(this.file, existing.id);
-      new import_obsidian13.Notice("\u5DF2\u79FB\u9664\u4E66\u7B7E");
-    } else {
-      const bookmark = {
-        id: crypto.randomUUID(),
-        type: "epub-bookmark",
-        label: this.currentChapter || "\u5F53\u524D\u4F4D\u7F6E",
-        position: this.currentCfi,
-        chapter: this.currentChapter || void 0,
-        color: this.pluginSettings.defaultHighlightColor,
-        createdAt: (/* @__PURE__ */ new Date()).toISOString()
-      };
-      await this.store.addBookmark(this.file, bookmark);
-      new import_obsidian13.Notice("\u5DF2\u6DFB\u52A0\u4E66\u7B7E");
-    }
-    this.refreshAnnotations();
-  }
-  /**
-   * 在侧边栏底部渲染书签列表，点击跳转到对应 CFI。
-   */
-  renderBookmarkList() {
-    if (!this.file) {
-      return;
-    }
-    const document2 = this.store.getCachedDocument(this.file.path);
-    const bookmarks = document2?.bookmarks.filter((bm) => bm.type === "epub-bookmark") ?? [];
-    if (bookmarks.length === 0) {
-      return;
-    }
-    const section = this.sidebarContentEl.createDiv({ cls: "yh-epub-bookmark-section" });
-    section.createDiv({ cls: "yh-epub-bookmark-title", text: "\u{1F4D1} \u4E66\u7B7E" });
-    const list = section.createDiv({ cls: "yh-epub-bookmark-list" });
-    for (const bm of bookmarks) {
-      const item = list.createEl("button", {
-        cls: "yh-epub-bookmark-item",
-        attr: { type: "button", title: bm.chapter ?? "" }
-      });
-      item.createSpan({ cls: "yh-epub-bookmark-label", text: bm.label.trim() || "\u4E66\u7B7E" });
-      const delBtn = item.createEl("button", {
-        cls: "yh-epub-bookmark-del",
-        attr: { type: "button", title: "\u5220\u9664\u4E66\u7B7E" },
-        text: "\u2715"
-      });
-      delBtn.addEventListener("click", (ev) => {
-        ev.stopPropagation();
-        void this.store.removeBookmark(this.file, bm.id).then(() => {
-          this.renderSidebar();
-          this.refreshAnnotations();
-        });
-      });
-      item.createSpan({ cls: "yh-epub-bookmark-time", text: this.formatBookmarkDate(bm.createdAt) });
-      item.addEventListener("click", () => {
-        if (this.foliateView) {
-          void this.foliateView.goTo(bm.position);
-        }
-      });
-    }
-  }
-  formatBookmarkDate(iso) {
-    try {
-      const d2 = new Date(iso);
-      const pad = (n3) => String(n3).padStart(2, "0");
-      return `${pad(d2.getMonth() + 1)}-${pad(d2.getDate())} ${pad(d2.getHours())}:${pad(d2.getMinutes())}`;
-    } catch {
-      return "";
     }
   }
   // ================================================================
@@ -14465,140 +14312,6 @@ var OverlayAnnotationsPlugin = class extends import_obsidian17.Plugin {
       new import_obsidian17.Notice(`\u672A\u627E\u5230\u7B2C ${pageNumber} \u9875`);
     }
   }
-  // ===== 三格式统一书签 =====
-  /**
-   * 为当前位置切换书签（已存在则删除）。按活动文件类型自动路由：
-   * - PDF：当前页码
-   * - EPUB：当前 CFI（委托 EpubReaderView）
-   * - MD：光标字符偏移（仅编辑模式）
-   */
-  async toggleBookmarkAtCurrentPosition() {
-    const activeFile = this.app.workspace.getActiveFile();
-    if (!(activeFile instanceof import_obsidian17.TFile)) {
-      new import_obsidian17.Notice("\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A\u6587\u4EF6");
-      return;
-    }
-    const ext = activeFile.extension.toLowerCase();
-    if (ext === "epub" || this.isBookExtension(ext)) {
-      const leaf = this.app.workspace.getLeavesOfType(EPUB_READER_VIEW_TYPE).find(
-        (l3) => l3.view.file?.path === activeFile.path
-      );
-      const view = leaf?.view;
-      if (typeof view?.toggleBookmark === "function") {
-        await view.toggleBookmark();
-        return;
-      }
-      new import_obsidian17.Notice("\u8BF7\u5728 EPUB \u9605\u8BFB\u5668\u4E2D\u6253\u5F00\u6B64\u6587\u4EF6");
-      return;
-    }
-    if (ext === "pdf") {
-      await this.togglePdfBookmark(activeFile);
-      return;
-    }
-    if (ext === "md") {
-      await this.toggleMdBookmark(activeFile);
-      return;
-    }
-    new import_obsidian17.Notice("\u8BE5\u6587\u4EF6\u7C7B\u578B\u4E0D\u652F\u6301\u4E66\u7B7E");
-  }
-  async togglePdfBookmark(file) {
-    const page = this.pdfViewerAdapter.getCurrentPageNumber();
-    if (page < 1) {
-      new import_obsidian17.Notice("\u65E0\u6CD5\u83B7\u53D6\u5F53\u524D PDF \u9875\u7801");
-      return;
-    }
-    const position = `pdf-page:${page}`;
-    const document2 = await this.store.getDocument(file);
-    const existing = document2.bookmarks.find((b3) => b3.type === "pdf-bookmark" && b3.position === position);
-    if (existing) {
-      await this.store.removeBookmark(file, existing.id);
-      await this.refreshAnnotations();
-      new import_obsidian17.Notice(`\u5DF2\u79FB\u9664\u7B2C ${page} \u9875\u4E66\u7B7E`);
-      return;
-    }
-    const totalPages = this.pdfViewerAdapter.getTotalPages?.() ?? 0;
-    await this.store.addBookmark(file, {
-      id: crypto.randomUUID(),
-      type: "pdf-bookmark",
-      label: totalPages > 0 ? `\u7B2C ${page} / ${totalPages} \u9875` : `\u7B2C ${page} \u9875`,
-      position,
-      chapter: `\u7B2C ${page} \u9875`,
-      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-      color: this.settings.defaultHighlightColor
-    });
-    await this.refreshAnnotations();
-    new import_obsidian17.Notice(`\u5DF2\u4E3A\u7B2C ${page} \u9875\u6DFB\u52A0\u4E66\u7B7E`);
-  }
-  async toggleMdBookmark(file) {
-    const editor = this.app.workspace.getActiveViewOfType(import_obsidian17.MarkdownView);
-    if (!editor || editor.getMode() !== "source") {
-      new import_obsidian17.Notice("Markdown \u4E66\u7B7E\u8BF7\u5728\u7F16\u8F91\u6A21\u5F0F\u4E0B\u4F7F\u7528\uFF08\u5149\u6807\u5B9A\u4F4D\u540E\u6DFB\u52A0\uFF09");
-      return;
-    }
-    const offset = editor.editor.posToOffset(editor.editor.getCursor("from"));
-    const position = `md-offset:${offset}`;
-    const document2 = await this.store.getDocument(file);
-    const existing = document2.bookmarks.find((b3) => b3.type === "md-bookmark" && b3.position === position);
-    if (existing) {
-      await this.store.removeBookmark(file, existing.id);
-      await this.refreshAnnotations();
-      new import_obsidian17.Notice("\u5DF2\u79FB\u9664\u4E66\u7B7E");
-      return;
-    }
-    const line = editor.editor.getLine(editor.editor.getCursor("from").line);
-    const preview = line.trim().slice(0, 40);
-    await this.store.addBookmark(file, {
-      id: crypto.randomUUID(),
-      type: "md-bookmark",
-      label: preview ? `\u884C ${editor.editor.getCursor("from").line + 1} \xB7 ${preview}` : `\u884C ${editor.editor.getCursor("from").line + 1}`,
-      position,
-      createdAt: (/* @__PURE__ */ new Date()).toISOString(),
-      color: this.settings.defaultHighlightColor,
-      preview
-    });
-    await this.refreshAnnotations();
-    new import_obsidian17.Notice("\u5DF2\u6DFB\u52A0\u4E66\u7B7E");
-  }
-  /** 跳转到书签位置（三格式统一入口，由侧栏调用）。 */
-  async jumpToBookmark(file, bookmark) {
-    const leaf = this.app.workspace.getLeaf(false);
-    await leaf.openFile(file);
-    if (bookmark.type === "epub-bookmark") {
-      this.navigateEpubToCfi(file, bookmark.position);
-      return;
-    }
-    if (bookmark.type === "pdf-bookmark") {
-      const page = Number.parseInt(bookmark.position.replace(/^pdf-page:/, ""), 10);
-      if (page > 0) {
-        const tryGoto = () => {
-          if (this.pdfLayer.isPdfActive()) {
-            void this.gotoPdfPage(page);
-          } else {
-            window.setTimeout(tryGoto, 200);
-          }
-        };
-        window.setTimeout(tryGoto, 120);
-      }
-      return;
-    }
-    if (bookmark.type === "md-bookmark") {
-      const offset = Number.parseInt(bookmark.position.replace(/^md-offset:/, ""), 10);
-      if (Number.isFinite(offset)) {
-        const view = leaf.view instanceof import_obsidian17.MarkdownView ? leaf.view : this.app.workspace.getActiveViewOfType(import_obsidian17.MarkdownView);
-        if (view) {
-          if (view.getMode() !== "source") {
-            new import_obsidian17.Notice("Markdown \u4E66\u7B7E\u8DF3\u8F6C\u8BF7\u5207\u6362\u5230\u7F16\u8F91\u6A21\u5F0F");
-            return;
-          }
-          const pos = view.editor.offsetToPos(offset);
-          view.editor.setCursor(pos);
-          view.editor.scrollIntoView({ from: pos, to: pos }, true);
-          view.containerEl.addClass("yh-flash-target");
-          window.setTimeout(() => view.containerEl.removeClass("yh-flash-target"), 850);
-        }
-      }
-    }
-  }
   /** 当前 PDF 页码（供侧栏位置过滤使用）。 */
   getCurrentPdfPageNumber() {
     return this.pdfViewerAdapter.getCurrentPageNumber();
@@ -14682,12 +14395,6 @@ var OverlayAnnotationsPlugin = class extends import_obsidian17.Plugin {
           new import_obsidian17.Notice("\u58A8\u5149\u6279\u6CE8\u5B58\u50A8\u4E0D\u53EF\u5199\uFF0C\u8BF7\u68C0\u67E5 .obsidian-annotations \u76EE\u5F55\u6743\u9650\u6216\u540C\u6B65\u72B6\u6001\u3002");
         }
       }
-    });
-    this.addCommand({
-      id: "toggle-bookmark",
-      name: "\u5207\u6362\u4E66\u7B7E\uFF08\u5F53\u524D\u4F4D\u7F6E\uFF09",
-      hotkeys: [{ modifiers: ["Mod", "Shift"], key: "b" }],
-      callback: () => this.toggleBookmarkAtCurrentPosition()
     });
   }
   registerEvents() {

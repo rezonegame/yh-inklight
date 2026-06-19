@@ -22,7 +22,6 @@ import {
   CommentAnnotation,
   DEFAULT_SETTINGS,
   HighlightAnnotation,
-  ReadingBookmark,
   SelectionSnapshot,
   SUPPORTED_BOOK_EXTENSIONS,
 } from "./src/storage/types";
@@ -255,156 +254,6 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
   }
 
-  // ===== 三格式统一书签 =====
-
-  /**
-   * 为当前位置切换书签（已存在则删除）。按活动文件类型自动路由：
-   * - PDF：当前页码
-   * - EPUB：当前 CFI（委托 EpubReaderView）
-   * - MD：光标字符偏移（仅编辑模式）
-   */
-  async toggleBookmarkAtCurrentPosition(): Promise<void> {
-    const activeFile = this.app.workspace.getActiveFile();
-    if (!(activeFile instanceof TFile)) {
-      new Notice("请先打开一个文件");
-      return;
-    }
-    const ext = activeFile.extension.toLowerCase();
-
-    // EPUB：委托给阅读器视图（已实现 toggleBookmark + 列表 UI）
-    if (ext === "epub" || this.isBookExtension(ext)) {
-      const leaf = this.app.workspace.getLeavesOfType(EPUB_READER_VIEW_TYPE).find(
-        (l) => (l.view as { file?: TFile }).file?.path === activeFile.path,
-      );
-      const view = leaf?.view as { toggleBookmark?: () => Promise<void> } | undefined;
-      if (typeof view?.toggleBookmark === "function") {
-        await view.toggleBookmark();
-        return;
-      }
-      new Notice("请在 EPUB 阅读器中打开此文件");
-      return;
-    }
-
-    // PDF：当前页
-    if (ext === "pdf") {
-      await this.togglePdfBookmark(activeFile);
-      return;
-    }
-
-    // MD：光标偏移（仅编辑模式）
-    if (ext === "md") {
-      await this.toggleMdBookmark(activeFile);
-      return;
-    }
-
-    new Notice("该文件类型不支持书签");
-  }
-
-  private async togglePdfBookmark(file: TFile): Promise<void> {
-    const page = this.pdfViewerAdapter.getCurrentPageNumber();
-    if (page < 1) {
-      new Notice("无法获取当前 PDF 页码");
-      return;
-    }
-    const position = `pdf-page:${page}`;
-    const document = await this.store.getDocument(file);
-    const existing = document.bookmarks.find((b) => b.type === "pdf-bookmark" && b.position === position);
-    if (existing) {
-      await this.store.removeBookmark(file, existing.id);
-      await this.refreshAnnotations();
-      new Notice(`已移除第 ${page} 页书签`);
-      return;
-    }
-    const totalPages = this.pdfViewerAdapter.getTotalPages?.() ?? 0;
-    await this.store.addBookmark(file, {
-      id: crypto.randomUUID(),
-      type: "pdf-bookmark",
-      label: totalPages > 0 ? `第 ${page} / ${totalPages} 页` : `第 ${page} 页`,
-      position,
-      chapter: `第 ${page} 页`,
-      createdAt: new Date().toISOString(),
-      color: this.settings.defaultHighlightColor,
-    });
-    await this.refreshAnnotations();
-    new Notice(`已为第 ${page} 页添加书签`);
-  }
-
-  private async toggleMdBookmark(file: TFile): Promise<void> {
-    const editor = this.app.workspace.getActiveViewOfType(MarkdownView);
-    if (!editor || editor.getMode() !== "source") {
-      new Notice("Markdown 书签请在编辑模式下使用（光标定位后添加）");
-      return;
-    }
-    const offset = editor.editor.posToOffset(editor.editor.getCursor("from"));
-    const position = `md-offset:${offset}`;
-    const document = await this.store.getDocument(file);
-    const existing = document.bookmarks.find((b) => b.type === "md-bookmark" && b.position === position);
-    if (existing) {
-      await this.store.removeBookmark(file, existing.id);
-      await this.refreshAnnotations();
-      new Notice("已移除书签");
-      return;
-    }
-    // 取光标所在行文本作预览
-    const line = editor.editor.getLine(editor.editor.getCursor("from").line);
-    const preview = line.trim().slice(0, 40);
-    await this.store.addBookmark(file, {
-      id: crypto.randomUUID(),
-      type: "md-bookmark",
-      label: preview ? `行 ${editor.editor.getCursor("from").line + 1} · ${preview}` : `行 ${editor.editor.getCursor("from").line + 1}`,
-      position,
-      createdAt: new Date().toISOString(),
-      color: this.settings.defaultHighlightColor,
-      preview,
-    });
-    await this.refreshAnnotations();
-    new Notice("已添加书签");
-  }
-
-  /** 跳转到书签位置（三格式统一入口，由侧栏调用）。 */
-  async jumpToBookmark(file: TFile, bookmark: ReadingBookmark): Promise<void> {
-    const leaf = this.app.workspace.getLeaf(false);
-    await leaf.openFile(file);
-
-    if (bookmark.type === "epub-bookmark") {
-      // EPUB CFI：复用统一跳转入口（含轮询）
-      this.navigateEpubToCfi(file, bookmark.position);
-      return;
-    }
-    if (bookmark.type === "pdf-bookmark") {
-      const page = Number.parseInt(bookmark.position.replace(/^pdf-page:/, ""), 10);
-      if (page > 0) {
-        // 复用 openPdfAtPage 的轮询模式，避免视图未就绪时跳转失败
-        const tryGoto = (): void => {
-          if (this.pdfLayer.isPdfActive()) {
-            void this.gotoPdfPage(page);
-          } else {
-            window.setTimeout(tryGoto, 200);
-          }
-        };
-        window.setTimeout(tryGoto, 120);
-      }
-      return;
-    }
-    if (bookmark.type === "md-bookmark") {
-      const offset = Number.parseInt(bookmark.position.replace(/^md-offset:/, ""), 10);
-      if (Number.isFinite(offset)) {
-        const view = leaf.view instanceof MarkdownView ? leaf.view : this.app.workspace.getActiveViewOfType(MarkdownView);
-        if (view) {
-          if (view.getMode() !== "source") {
-            new Notice("Markdown 书签跳转请切换到编辑模式");
-            return;
-          }
-          const pos = view.editor.offsetToPos(offset);
-          view.editor.setCursor(pos);
-          view.editor.scrollIntoView({ from: pos, to: pos }, true);
-          view.containerEl.addClass("yh-flash-target");
-          window.setTimeout(() => view.containerEl.removeClass("yh-flash-target"), 850);
-        }
-      }
-    }
-  }
-
   /** 当前 PDF 页码（供侧栏位置过滤使用）。 */
   getCurrentPdfPageNumber(): number {
     return this.pdfViewerAdapter.getCurrentPageNumber();
@@ -499,14 +348,6 @@ export default class OverlayAnnotationsPlugin extends Plugin {
           new Notice("墨光批注存储不可写，请检查 .obsidian-annotations 目录权限或同步状态。");
         }
       },
-    });
-
-    // 三格式统一书签：按当前活动文件类型自动采集位置（MD 行/PDF 页/EPUB CFI）
-    this.addCommand({
-      id: "toggle-bookmark",
-      name: "切换书签（当前位置）",
-      hotkeys: [{ modifiers: ["Mod", "Shift"], key: "b" }],
-      callback: () => this.toggleBookmarkAtCurrentPosition(),
     });
   }
 

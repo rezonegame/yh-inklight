@@ -22,7 +22,6 @@ import {
   HighlightAnnotation,
   PdfCommentAnnotation,
   PdfHighlightAnnotation,
-  ReadingBookmark,
 } from "../storage/types";
 
 export const ANNOTATION_SIDEBAR_VIEW = "yh-inklight-sidebar";
@@ -119,7 +118,7 @@ export class AnnotationSidebarView extends ItemView {
     this.registerDomEvent(container, "mouseover", (event) => {
       const target = event.target as HTMLElement;
       const card = target.closest<HTMLElement>(".yh-ov-card");
-      // 取批注主键（高亮优先，其次便签），书签行不触发源闪烁
+      // 取批注主键（高亮优先，其次便签）
       const id = card?.dataset.highlightId ?? card?.dataset.noteId;
       if (!id) {
         return;
@@ -199,11 +198,6 @@ export class AnnotationSidebarView extends ItemView {
       for (const card of cards) {
         this.renderCard(list, card);
       }
-    }
-
-    // 三格式统一书签区：仅显示当前文件的书签
-    if (this.annotationScope === "current" && file) {
-      this.renderBookmarks(container, file);
     }
 
     this.renderExportFooter(container, this.annotationScope === "current" ? file : null);
@@ -934,52 +928,6 @@ export class AnnotationSidebarView extends ItemView {
       "reading-notes": "导出为阅读笔记格式",
     };
     return labels[this.exportFormat];
-  }
-
-  /**
-   * 渲染三格式统一书签区（仅当前文件）。
-   * MD/PDF/EPUB 书签统一展示，点击跳转、✕ 删除，操作逻辑完全一致。
-   */
-  private renderBookmarks(container: Element, file: TFile): void {
-    const doc = this.plugin.store.getCachedDocument(file.path);
-    const bookmarks = doc?.bookmarks ?? [];
-    if (!bookmarks.length) {
-      return; // 无书签时不渲染整块，避免空区域噪音
-    }
-
-    const section = container.createDiv({ cls: "yh-ov-bookmarks" });
-    section.createDiv({ cls: "yh-ov-bookmarks-title", text: `书签 · ${bookmarks.length}` });
-
-    for (const bm of bookmarks) {
-      const row = section.createDiv({ cls: "yh-ov-bookmark-row" });
-      // 类型图标（md/pdf/epub）
-      const icon = row.createSpan({ cls: "yh-ov-bookmark-icon" });
-      icon.textContent = bm.type === "pdf-bookmark" ? "📄" : bm.type === "epub-bookmark" ? "📖" : "📝";
-
-      const label = row.createSpan({ cls: "yh-ov-bookmark-label", text: bm.label });
-      if (bm.preview) {
-        label.setAttribute("title", bm.preview);
-      }
-
-      row.createSpan({ cls: "yh-ov-bookmark-time", text: formatTime(bm.createdAt) });
-
-      // 点击跳转（三格式统一入口）
-      row.addEventListener("click", () => {
-        void this.plugin.jumpToBookmark(file, bm);
-      });
-
-      // 删除按钮
-      const del = row.createEl("button", {
-        cls: "yh-icon-btn yh-ov-bookmark-del",
-        attr: { type: "button", title: "删除书签", "aria-label": "删除书签" },
-      });
-      setIcon(del, "trash");
-      del.addEventListener("click", async (e) => {
-        e.stopPropagation();
-        await this.plugin.store.removeBookmark(file, bm.id);
-        await this.plugin.refreshAnnotations();
-      });
-    }
   }
 
   /**
