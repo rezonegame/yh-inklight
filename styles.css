@@ -12,6 +12,20 @@
   --yh-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   --yh-shadow-lg: 0 4px 16px rgba(0, 0, 0, 0.12);
   --yh-border: var(--background-modifier-border);
+  /* 交互态 token（taste-skill：完整四态 + GPU 友好过渡） */
+  --yh-transition-fast: 0.12s ease;
+  --yh-transition: 0.18s ease;
+  --yh-focus-ring: 0 0 0 2px var(--background-modifier-border-focus);
+}
+
+/* 全局交互态基线：可点击元素统一 focus-visible 焦点环 */
+.yh-icon-btn:focus-visible,
+.yh-icon-button:focus-visible,
+.yh-ov-card:focus-within,
+.yh-ov-bookmark-row:focus-within,
+.yh-pdf-outline-item:focus-visible {
+  outline: none;
+  box-shadow: var(--yh-focus-ring);
 }
 
 /* ===== Overlay highlights ===== */
@@ -1856,6 +1870,7 @@ span.yh-ov-expand-btn:hover {
   border-radius: var(--radius-s, 4px);
   color: var(--text-muted);
   cursor: pointer;
+  transition: background var(--yh-transition-fast), color var(--yh-transition-fast), transform var(--yh-transition-fast);
 }
 
 .yh-icon-btn:hover,
@@ -1864,10 +1879,45 @@ span.yh-ov-expand-btn:hover {
   color: var(--text-normal);
 }
 
+.yh-icon-btn:active,
+.yh-icon-button:active {
+  transform: scale(0.94);
+}
+
 .yh-icon-btn > svg,
 .yh-icon-button > svg {
   width: 16px;
   height: 16px;
+}
+
+/* 位置过滤 toggle 激活态 */
+.yh-ov-pos-toggle.is-active {
+  background: var(--interactive-accent);
+  color: var(--text-on-accent);
+}
+
+.yh-ov-pos-toggle.is-active:hover {
+  background: var(--interactive-accent-hover);
+}
+
+/* hover 联动闪烁态（三格式通用，GPU 加速 transform/box-shadow） */
+.yh-hover-sync {
+  outline: 2px solid var(--text-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(var(--interactive-accent-rgb, 124, 77, 255), 0.25);
+  transition: outline 0.12s ease, box-shadow 0.12s ease;
+}
+
+/* 源文档高亮被联动时的增强（PDF/MD/EPUB 通用） */
+.yh-pdf-highlight.yh-hover-sync,
+mark.yh-highlight.yh-hover-sync,
+mark.yh-reading-highlight.yh-hover-sync,
+g.yh-epub-highlight.yh-hover-sync {
+  filter: brightness(1.15);
+}
+
+.yh-ov-card.yh-hover-sync {
+  background: var(--background-modifier-hover);
 }
 
 /* 侧栏头部布局：标题 + 右侧操作按钮组 */
@@ -1884,8 +1934,165 @@ span.yh-ov-expand-btn:hover {
   gap: 2px;
 }
 
+/* 侧栏书签区（三格式统一，阶段 6 再打磨视觉） */
+.yh-ov-bookmarks {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.yh-ov-bookmarks-title {
+  font-size: var(--yh-font-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.yh-ov-bookmark-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  border-radius: var(--yh-radius-sm);
+  cursor: pointer;
+  transition: background var(--yh-transition-fast);
+}
+
+.yh-ov-bookmark-row:hover {
+  background: var(--background-modifier-hover);
+}
+
+.yh-ov-bookmark-row:active {
+  background: var(--background-modifier-active-hover, var(--background-modifier-hover));
+}
+
+.yh-ov-bookmark-icon {
+  flex-shrink: 0;
+  font-size: var(--yh-font-sm);
+}
+
+.yh-ov-bookmark-label {
+  flex: 1;
+  font-size: var(--yh-font-sm);
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yh-ov-bookmark-time {
+  flex-shrink: 0;
+  font-size: var(--yh-font-xs);
+  color: var(--text-faint);
+}
+
+.yh-ov-bookmark-del {
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.yh-ov-bookmark-row:hover .yh-ov-bookmark-del {
+  opacity: 1;
+}
+
 .yh-epub-goto-callout:hover {
   filter: brightness(0.95);
+}
+
+/* PDF 摘录回链 callout 可点击 */
+.yh-pdf-goto-callout {
+  cursor: pointer;
+}
+
+.yh-pdf-goto-callout:hover {
+  filter: brightness(0.95);
+}
+
+a.yh-pdf-goto-link {
+  font-size: var(--yh-font-sm);
+  color: var(--text-accent);
+  text-decoration: none;
+}
+
+a.yh-pdf-goto-link:hover {
+  text-decoration: underline;
+}
+
+/* PDF 摘录回链闪烁定位层（临时高亮矩形） */
+.yh-pdf-flash-layer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.yh-pdf-flash-rect {
+  position: absolute;
+  border-radius: 3px;
+  background-color: rgba(245, 197, 24, 0.5);
+  border: 2px solid rgba(245, 197, 24, 0.9);
+  animation: yh-pdf-flash 1.2s ease-out forwards;
+}
+
+@keyframes yh-pdf-flash {
+  0% { opacity: 0; transform: scale(1.1); }
+  20% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1); }
+}
+
+/* PDF 目录 Modal（递归树，缩进表达层级） */
+.yh-pdf-outline-modal .yh-pdf-outline-list {
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.yh-pdf-outline-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 12px;
+  border-radius: var(--yh-radius-sm);
+  cursor: pointer;
+  transition: background var(--yh-transition-fast);
+}
+
+.yh-pdf-outline-item:hover {
+  background: var(--background-modifier-hover);
+}
+
+.yh-pdf-outline-item.is-disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.yh-pdf-outline-item.is-disabled:hover {
+  background: transparent;
+}
+
+.yh-pdf-outline-title {
+  font-size: var(--yh-font-sm);
+  color: var(--text-normal);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.yh-pdf-outline-title.is-dim {
+  color: var(--text-muted);
+}
+
+.yh-pdf-outline-page {
+  flex-shrink: 0;
+  font-size: var(--yh-font-xs);
+  color: var(--text-faint);
+}
+
+.yh-pdf-outline-page-dim {
+  color: var(--text-faint);
 }
 
 /* 回到原文链接 */

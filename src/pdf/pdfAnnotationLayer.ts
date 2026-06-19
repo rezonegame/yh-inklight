@@ -17,6 +17,7 @@ import {
   PdfReadingProgress,
 } from "../storage/types";
 import { PdfViewerAdapter } from "./pdfViewerAdapter";
+import { getTextRangeFromSelection, setTextDivFirstIdx } from "./textLayerAnchor";
 
 interface PdfAnnotationLayerOptions {
   app: App;
@@ -36,6 +37,13 @@ interface PdfAnnotationLayerOptions {
 interface PdfSelectionSnapshot {
   file: TFile;
   anchor: PdfAnchor;
+}
+
+/** PDF 目录树节点（递归）。 */
+export interface PdfOutlineNode {
+  title: string;
+  pageNumber: number;
+  children: PdfOutlineNode[];
 }
 
 const PDF_VIEWER_SELECTOR = ".pdf-container, .pdf-viewer, .pdf-embed, .workspace-leaf-content[data-type='pdf']";
@@ -132,6 +140,33 @@ export class PdfAnnotationLayer {
     return this.viewerAdapter.isPdfActive();
   }
 
+  /**
+   * 在当前 PDF 视图画临时高亮矩形并闪烁（用于摘录回链定位）。
+   * @param rects 百分比坐标数组 [{pageNumber, left, top, width, height}, ...]，坐标系与 PdfRectAnchor 一致
+   */
+  flashRects(rects: Array<{ pageNumber: number; left: number; top: number; width: number; height: number }>): void {
+    const host = this.activeViewer();
+    if (!host) {
+      return;
+    }
+    const hostRect = host.getBoundingClientRect();
+    const flashLayer = host.createDiv({ cls: "yh-pdf-flash-layer" });
+    for (const rect of rects) {
+      const page = this.pageElement(rect.pageNumber);
+      if (!page) {
+        continue;
+      }
+      const pageRect = page.getBoundingClientRect();
+      const box = flashLayer.createDiv({ cls: "yh-pdf-flash-rect" });
+      box.style.left = `${pageRect.left - hostRect.left + rect.left * pageRect.width}px`;
+      box.style.top = `${pageRect.top - hostRect.top + rect.top * pageRect.height}px`;
+      box.style.width = `${rect.width * pageRect.width}px`;
+      box.style.height = `${rect.height * pageRect.height}px`;
+    }
+    // 1.2 秒后移除整个闪烁层
+    window.setTimeout(() => flashLayer.remove(), 1200);
+  }
+
   /** 实时计算当前视口中心的页码（不依赖缓存的 currentPage）。 */
   private computeCurrentPage(): number {
     return this.viewerAdapter.getCurrentPageNumber();
@@ -154,29 +189,20 @@ export class PdfAnnotationLayer {
 
   // ===== PDF 目录（Phase 5 P3） =====
 
-  /** 获取 PDF 大纲/目录（来自 pdf.js）。 */
-  async getOutline(): Promise<Array<{ title: string; pageNumber: number; children: Array<{ title: string; pageNumber: number }> }>> {
-    const result: Array<{ title: string; pageNumber: number; children: Array<{ title: string; pageNumber: number }> }> = [];
+  /** PDF 目录树节点。 */
+  static readonly OUTLINE_NODE = (title: string, pageNumber: number, children: PdfOutlineNode[]): PdfOutlineNode => ({ title, pageNumber, children });
+
+  /** 获取 PDF 大纲/目录（来自 pdf.js），递归返回完整树。 */
+  async getOutline(): Promise<PdfOutlineNode[]> {
+    const result: PdfOutlineNode[] = [];
     try {
-      const pdfViewerApp = (window as unknown as Record<string, unknown>).PDFViewerApp as Record<string, unknown> | undefined;
-      const pdfViewer = pdfViewerApp?.pdfViewer as Record<string, unknown> | undefined;
-      const pdfDocument = pdfViewer?.pdfDocument as { getOutline?: () => Promise<Array<Record<string, unknown>>> } | undefined;
-      if (!pdfDocument?.getOutline) return result;
-      const outline = await pdfDocument.getOutline();
+      const doc = this.pdfJsDocument();
+      if (!doc?.getOutline) return result;
+      const outline = await doc.getOutline();
       if (!Array.isArray(outline)) return result;
       for (const item of outline) {
-        const title = String(item.title ?? "");
-        if (!title) continue;
-        const pageNum = await this.outlineDestToPage(item);
-        const children: Array<{ title: string; pageNumber: number }> = [];
-        if (Array.isArray(item.items)) {
-          for (const child of item.items) {
-            const childTitle = String(child.title ?? "");
-            if (!childTitle) continue;
-            children.push({ title: childTitle, pageNumber: await this.outlineDestToPage(child) });
-          }
-        }
-        result.push({ title, pageNumber: pageNum, children });
+        const node = await this.outlineNodeFromItem(item);
+        if (node) result.push(node);
       }
     } catch (e) {
       console.warn("yh-inklight: PDF getOutline failed", e);
@@ -184,32 +210,53 @@ export class PdfAnnotationLayer {
     return result;
   }
 
-  /** 解析 pdf.js outline item 的目标页码。 */
+  private async outlineNodeFromItem(item: Record<string, unknown>): Promise<PdfOutlineNode | null> {
+    const title = String(item.title ?? "");
+    if (!title) return null;
+    const pageNumber = await this.outlineDestToPage(item);
+    const children: PdfOutlineNode[] = [];
+    if (Array.isArray(item.items)) {
+      for (const child of item.items) {
+        const node = await this.outlineNodeFromItem(child as Record<string, unknown>);
+        if (node) children.push(node);
+      }
+    }
+    return { title, pageNumber, children };
+  }
+
+  /** 抽取 pdf.js 运行时 PDFDocumentProxy（消除重复的 window.PDFViewerApp 访问）。 */
+  private pdfJsDocument(): { getOutline?: () => Promise<Array<Record<string, unknown>>>; getDestination?: (name: string) => Promise<unknown[] | null>; getPageIndex?: (ref: unknown) => Promise<number> } | undefined {
+    const pdfViewerApp = (window as unknown as Record<string, Record<string, unknown>>).PDFViewerApp;
+    const pdfViewer = pdfViewerApp?.pdfViewer as Record<string, unknown> | undefined;
+    return pdfViewer?.pdfDocument as
+      | { getOutline?: () => Promise<Array<Record<string, unknown>>>; getDestination?: (name: string) => Promise<unknown[] | null>; getPageIndex?: (ref: unknown) => Promise<number> }
+      | undefined;
+  }
+
+  /**
+   * 解析 pdf.js outline item 的目标页码。
+   * 修复：字符串 dest（named dest）必须先 getDestination(name) 解析成数组，再 getPageIndex。
+   */
   private async outlineDestToPage(item: Record<string, unknown>): Promise<number> {
+    const doc = this.pdfJsDocument();
+    if (!doc?.getPageIndex) return 0;
+    const dest = item.dest;
     try {
-      const dest = item.dest;
+      // named dest（字符串）：先解析成显式目标数组
       if (typeof dest === "string") {
-        const pdfViewerApp = (window as unknown as Record<string, unknown>).PDFViewerApp as Record<string, unknown> | undefined;
-        const pdfViewer = pdfViewerApp?.pdfViewer as Record<string, unknown> | undefined;
-        const pdfDocument = pdfViewer?.pdfDocument as { getPageIndex?: (dest: string) => Promise<number> } | undefined;
-        if (pdfDocument?.getPageIndex) {
-          const idx = await pdfDocument.getPageIndex(dest);
-          return idx >= 0 ? idx + 1 : 0;
-        }
+        const arr = await doc.getDestination?.(dest);
+        if (!arr || arr.length === 0) return 0;
+        const idx = await doc.getPageIndex(arr[0]);
+        return idx >= 0 ? idx + 1 : 0;
       }
+      // 显式目标数组：首元素是页引用 {num, gen}
       if (Array.isArray(dest) && dest.length > 0) {
-        const ref = dest[0] as { num?: number } | undefined;
-        if (ref?.num !== undefined) {
-          const pdfViewerApp = (window as unknown as Record<string, unknown>).PDFViewerApp as Record<string, unknown> | undefined;
-          const pdfViewer = pdfViewerApp?.pdfViewer as Record<string, unknown> | undefined;
-          const pdfDocument = pdfViewer?.pdfDocument as { getPageIndex?: (ref: { num?: number }) => Promise<number> } | undefined;
-          if (pdfDocument?.getPageIndex) {
-            const idx = await pdfDocument.getPageIndex(ref);
-            return idx >= 0 ? idx + 1 : 0;
-          }
-        }
+        const idx = await doc.getPageIndex(dest[0]);
+        return idx >= 0 ? idx + 1 : 0;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* dest 指向已删页等异常，忽略 */
+    }
     return 0;
   }
 
@@ -350,7 +397,14 @@ export class PdfAnnotationLayer {
     }
 
     const pageEventsAttached = this.viewerAdapter.onPageReady(() => this.scheduleRender());
-    const textEventsAttached = this.viewerAdapter.onTextLayerReady(() => this.scheduleRender());
+    const textEventsAttached = this.viewerAdapter.onTextLayerReady(() => {
+      // 探测 Obsidian 版本差异：首个 textLayer div 的 data-idx 起始值（1.8.0+ 为 1，之前为 0）
+      const firstTextDiv = this.viewerAdapter.getContext()?.viewerEl?.querySelector("[data-idx]") as HTMLElement | null;
+      if (firstTextDiv?.dataset.idx) {
+        setTextDivFirstIdx(Number.parseInt(firstTextDiv.dataset.idx, 10) || 0);
+      }
+      this.scheduleRender();
+    });
     if (pageEventsAttached || textEventsAttached) {
       this.lifecycleHost = host;
     }
@@ -408,10 +462,26 @@ export class PdfAnnotationLayer {
       return null;
     }
 
+    // 采集 textLayer 文本锚点（抗旋转/重排）：取首个 range 所在页的 textRange
+    let textRange: PdfAnchor["textRange"];
+    try {
+      const firstRange = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+      const firstPage = firstRange ? this.pageElementFromRect(firstRange.getBoundingClientRect()) : null;
+      if (firstRange && firstPage) {
+        const tr = getTextRangeFromSelection(firstPage, firstRange);
+        if (tr) {
+          textRange = tr;
+        }
+      }
+    } catch {
+      /* textLayer 锚点采集失败时回落纯 rect */
+    }
+
     return {
       pageNumber: rects[0].pageNumber,
       selectedText,
       rects,
+      ...(textRange ? { textRange } : {}),
     };
   }
 

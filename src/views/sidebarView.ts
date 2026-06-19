@@ -22,6 +22,7 @@ import {
   HighlightAnnotation,
   PdfCommentAnnotation,
   PdfHighlightAnnotation,
+  ReadingBookmark,
 } from "../storage/types";
 
 export const ANNOTATION_SIDEBAR_VIEW = "yh-inklight-sidebar";
@@ -75,6 +76,14 @@ export class AnnotationSidebarView extends ItemView {
   private color: AnnotationColor | "all" = "all";
   private type: TypeFilter = "all";
   private sort: AnnotationSortMode = "document";
+  /** 位置过滤：开启后只显示当前页/章/区域的批注（仅 current 文件作用域有意义）。 */
+  private positionFilter = false;
+  /** 当前位置上下文（由活动文件的阅读器广播）。 */
+  private currentPosition: { mode: AnnotationMode; page?: number; chapter?: string } | null = null;
+  /** 位置轮询定时器（positionFilter 开启时启用，检测 PDF 翻页/EPUB 翻章后刷新）。 */
+  private positionPollTimer: number | null = null;
+  /** 上次轮询到的位置签名，用于检测变化。 */
+  private lastPositionKey = "";
   private exportFormat: AnnotationExportFormat = "summary";
   private renderToken = 0;
   private renderTimer: number | null = null;
@@ -97,7 +106,51 @@ export class AnnotationSidebarView extends ItemView {
 
   async onOpen(): Promise<void> {
     this.containerEl.addClass("yh-sidebar");
+    this.registerHoverSync();
     await this.render();
+  }
+
+  /**
+   * 反向 hover 联动：悬停侧栏卡片 → 源文档对应高亮闪烁。
+   * 用容器级事件委托（非逐卡片绑定），避免卡片重建时监听器泄漏。
+   */
+  private registerHoverSync(): void {
+    const container = this.containerEl;
+    this.registerDomEvent(container, "mouseover", (event) => {
+      const target = event.target as HTMLElement;
+      const card = target.closest<HTMLElement>(".yh-ov-card");
+      // 取批注主键（高亮优先，其次便签），书签行不触发源闪烁
+      const id = card?.dataset.highlightId ?? card?.dataset.noteId;
+      if (!id) {
+        return;
+      }
+      this.highlightInSourceDocument(id);
+    });
+    this.registerDomEvent(container, "mouseout", (event) => {
+      const target = event.target as HTMLElement;
+      const related = event.relatedTarget as HTMLElement | null;
+      // 仅当真正离开卡片时清除
+      if (related && container.contains(related)) {
+        return;
+      }
+      this.clearSourceDocumentHighlight();
+      void target;
+    });
+  }
+
+  /** 在源文档（当前活动 view）查找 [data-yh-id=id] 并加闪烁 class。 */
+  private highlightInSourceDocument(id: string): void {
+    this.clearSourceDocumentHighlight();
+    const els = document.querySelectorAll(`[data-yh-id="${CSS.escape(id)}"]`);
+    els.forEach((el) => el.classList.add("yh-hover-sync"));
+  }
+
+  private clearSourceDocumentHighlight(): void {
+    document.querySelectorAll(".yh-hover-sync").forEach((el) => el.classList.remove("yh-hover-sync"));
+  }
+
+  async onClose(): Promise<void> {
+    this.stopPositionPolling();
   }
 
   requestRender(): void {
@@ -117,6 +170,7 @@ export class AnnotationSidebarView extends ItemView {
     container.addClass("yh-overview");
 
     const file = this.app.workspace.getActiveFile();
+    this.refreshCurrentPosition(file);
     this.renderHeader(container);
     this.renderControls(container);
 
@@ -145,6 +199,11 @@ export class AnnotationSidebarView extends ItemView {
       for (const card of cards) {
         this.renderCard(list, card);
       }
+    }
+
+    // 三格式统一书签区：仅显示当前文件的书签
+    if (this.annotationScope === "current" && file) {
+      this.renderBookmarks(container, file);
     }
 
     this.renderExportFooter(container, this.annotationScope === "current" ? file : null);
@@ -428,6 +487,28 @@ export class AnnotationSidebarView extends ItemView {
 
     const filterButton = searchRow.createEl("button", { cls: "yh-icon-btn", attr: { type: "button", title: "筛选" } });
     setIcon(filterButton, "filter");
+
+    // 位置过滤 toggle：开启后只显示当前页/章的批注
+    const posButton = searchRow.createEl("button", {
+      cls: "yh-icon-btn yh-ov-pos-toggle",
+      attr: { type: "button", title: "仅显示当前位置" },
+    });
+    setIcon(posButton, "target");
+    posButton.toggleClass("is-active", this.positionFilter);
+    posButton.addEventListener("click", async () => {
+      // MD 文件无可靠位置维度，提示用户
+      const activeFile = this.app.workspace.getActiveFile();
+      if (!this.positionFilter && activeFile && activeFile.extension.toLowerCase() === "md") {
+        new Notice("位置过滤仅对 PDF/EPUB 生效（Markdown 无统一位置维度）");
+      }
+      this.positionFilter = !this.positionFilter;
+      if (this.positionFilter) {
+        this.startPositionPolling();
+      } else {
+        this.stopPositionPolling();
+      }
+      await this.render();
+    });
 
     const filterRow = container.createDiv({ cls: "yh-ov-filter-row" });
     const color = filterRow.createEl("select", { cls: "yh-filter-select" });
@@ -791,6 +872,27 @@ export class AnnotationSidebarView extends ItemView {
         const haystack = `${card.sourcePath} ${card.text} ${card.content}`.toLowerCase();
         return haystack.includes(this.query.toLowerCase());
       })
+      .filter((card) => {
+        // 位置过滤：仅当开启且有当前位置上下文时生效
+        if (!this.positionFilter || !this.currentPosition) {
+          return true;
+        }
+        if (this.currentPosition.mode !== card.mode) {
+          return true; // 不同格式不互相过滤（避免 PDF 卡片被 EPUB 位置过滤掉）
+        }
+        if (this.currentPosition.mode === "pdf") {
+          return card.pageNumber != null && this.currentPosition.page != null && card.pageNumber === this.currentPosition.page;
+        }
+        if (this.currentPosition.mode === "epub") {
+          // chapter 为空时不过滤（容错）
+          if (!this.currentPosition.chapter) {
+            return true;
+          }
+          return (card.chapter ?? "") === this.currentPosition.chapter;
+        }
+        // MD：无可靠位置过滤维度，不过滤（粗粒度策略）
+        return true;
+      })
       .sort((a, b) => {
         if (this.sort === "newest") {
           return this.cardUpdatedAt(b).localeCompare(this.cardUpdatedAt(a));
@@ -814,10 +916,11 @@ export class AnnotationSidebarView extends ItemView {
       if (this.annotationScope === "current" && !file) {
         return;
       }
+      const customTemplate = this.plugin.settings.exportAnnotationTemplate;
       const exported =
         this.annotationScope === "all"
-          ? await this.plugin.store.exportAllNotes(this.exportFormat)
-          : await this.plugin.store.exportNotes(file!, this.exportFormat);
+          ? await this.plugin.store.exportAllNotes(this.exportFormat, customTemplate)
+          : await this.plugin.store.exportNotes(file!, this.exportFormat, customTemplate);
       new Notice(`已导出笔记至 ${exported.path}`);
     });
     footer.createDiv({ cls: "yh-ov-export-note", text: this.exportFormatLabel() });
@@ -831,6 +934,96 @@ export class AnnotationSidebarView extends ItemView {
       "reading-notes": "导出为阅读笔记格式",
     };
     return labels[this.exportFormat];
+  }
+
+  /**
+   * 渲染三格式统一书签区（仅当前文件）。
+   * MD/PDF/EPUB 书签统一展示，点击跳转、✕ 删除，操作逻辑完全一致。
+   */
+  private renderBookmarks(container: Element, file: TFile): void {
+    const doc = this.plugin.store.getCachedDocument(file.path);
+    const bookmarks = doc?.bookmarks ?? [];
+    if (!bookmarks.length) {
+      return; // 无书签时不渲染整块，避免空区域噪音
+    }
+
+    const section = container.createDiv({ cls: "yh-ov-bookmarks" });
+    section.createDiv({ cls: "yh-ov-bookmarks-title", text: `书签 · ${bookmarks.length}` });
+
+    for (const bm of bookmarks) {
+      const row = section.createDiv({ cls: "yh-ov-bookmark-row" });
+      // 类型图标（md/pdf/epub）
+      const icon = row.createSpan({ cls: "yh-ov-bookmark-icon" });
+      icon.textContent = bm.type === "pdf-bookmark" ? "📄" : bm.type === "epub-bookmark" ? "📖" : "📝";
+
+      const label = row.createSpan({ cls: "yh-ov-bookmark-label", text: bm.label });
+      if (bm.preview) {
+        label.setAttribute("title", bm.preview);
+      }
+
+      row.createSpan({ cls: "yh-ov-bookmark-time", text: formatTime(bm.createdAt) });
+
+      // 点击跳转（三格式统一入口）
+      row.addEventListener("click", () => {
+        void this.plugin.jumpToBookmark(file, bm);
+      });
+
+      // 删除按钮
+      const del = row.createEl("button", {
+        cls: "yh-icon-btn yh-ov-bookmark-del",
+        attr: { type: "button", title: "删除书签", "aria-label": "删除书签" },
+      });
+      setIcon(del, "trash");
+      del.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        await this.plugin.store.removeBookmark(file, bm.id);
+        await this.plugin.refreshAnnotations();
+      });
+    }
+  }
+
+  /**
+   * 采集活动文件的当前位置上下文（PDF 页码 / EPUB 章节）。
+   * MD 无可靠位置维度，不采集（位置过滤对 MD 不生效）。
+   */
+  private refreshCurrentPosition(file: TFile | null): void {
+    if (!file) {
+      this.currentPosition = null;
+      return;
+    }
+    const ext = file.extension.toLowerCase();
+    if (ext === "pdf") {
+      const page = this.plugin.getCurrentPdfPageNumber();
+      this.currentPosition = page > 0 ? { mode: "pdf", page } : null;
+      return;
+    }
+    if (this.plugin.isBookExtension(ext)) {
+      const chapter = this.plugin.getCurrentEpubChapter(file);
+      this.currentPosition = chapter ? { mode: "epub", chapter } : null;
+      return;
+    }
+    this.currentPosition = null;
+  }
+
+  /** 开启位置轮询：检测 PDF 翻页/EPUB 翻章后自动刷新卡片列表。 */
+  private startPositionPolling(): void {
+    this.stopPositionPolling();
+    this.positionPollTimer = window.setInterval(() => {
+      const file = this.app.workspace.getActiveFile();
+      this.refreshCurrentPosition(file);
+      const key = this.currentPosition ? `${this.currentPosition.mode}:${this.currentPosition.page ?? this.currentPosition.chapter ?? ""}` : "";
+      if (key !== this.lastPositionKey) {
+        this.lastPositionKey = key;
+        void this.refreshList();
+      }
+    }, 800);
+  }
+
+  private stopPositionPolling(): void {
+    if (this.positionPollTimer !== null) {
+      window.clearInterval(this.positionPollTimer);
+      this.positionPollTimer = null;
+    }
   }
 
   private async jumpTo(

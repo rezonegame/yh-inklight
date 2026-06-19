@@ -12,6 +12,7 @@ import {
   AnnotationIndexEntry,
   AnnotationColor,
   AnnotationExportFormat,
+  COLOR_LABELS,
   CommentAnnotation,
   EMPTY_INDEX,
   FileAnnotationDocument,
@@ -24,6 +25,7 @@ import {
   EpubReadingProgress,
   ReadingBookmark,
 } from "./types";
+import { renderTemplate, type ExportVars } from "./exportTemplate";
 
 const STORE_DIR = ".obsidian-annotations";
 const INDEX_PATH = normalizePath(`${STORE_DIR}/index.json`);
@@ -48,6 +50,10 @@ interface ExportEntry {
   chapter?: string;
   cfiRange?: string;
   startOffset: number;
+  /** PDF textLayer 文本锚点序列化（beginIndex,beginOffset,endIndex,endOffset）。 */
+  pdfSelection?: string;
+  /** PDF 高亮矩形百分比 JSON（用于回链闪烁定位）。 */
+  pdfRects?: string;
 }
 
 export class AnnotationStoreReadError extends Error {
@@ -439,12 +445,12 @@ export class AnnotationStore {
     return nextDocument;
   }
 
-  async exportNotes(file: TFile, format: AnnotationExportFormat = "summary"): Promise<TFile> {
+  async exportNotes(file: TFile, format: AnnotationExportFormat = "summary", customTemplate?: string): Promise<TFile> {
     const document = await this.getDocument(file);
     const baseName = file.basename || file.name.replace(/\.md$/i, "");
     const suffix = format === "summary" ? "" : `-${format}`;
     const targetPath = normalizePath(`${file.parent?.path ?? ""}/${baseName}-notes${suffix}.md`);
-    const lines = buildExportLines(`Notes for ${file.path}`, [{ filePath: file.path, document }], format);
+    const lines = buildExportLines(`Notes for ${file.path}`, [{ filePath: file.path, document }], format, customTemplate);
 
     const existing = this.app.vault.getAbstractFileByPath(targetPath);
     if (existing instanceof TFile) {
@@ -455,12 +461,12 @@ export class AnnotationStore {
     return this.app.vault.create(targetPath, lines.join("\n"));
   }
 
-  async exportAllNotes(format: AnnotationExportFormat = "summary"): Promise<TFile> {
+  async exportAllNotes(format: AnnotationExportFormat = "summary", customTemplate?: string): Promise<TFile> {
     const documents = await this.getIndexedDocuments();
     const suffix = format === "summary" ? "" : `-${format}`;
     const targetPath = normalizePath(`inklight-all-notes${suffix}.md`);
     const sources = documents.map((document) => ({ filePath: document.filePath, document }));
-    const lines = buildExportLines("墨光批注全库汇总", sources, format);
+    const lines = buildExportLines("墨光批注全库汇总", sources, format, customTemplate);
 
     const existing = this.app.vault.getAbstractFileByPath(targetPath);
     if (existing instanceof TFile) {
@@ -682,6 +688,7 @@ function buildExportLines(
   title: string,
   sources: ExportDocumentSource[],
   format: AnnotationExportFormat,
+  customTemplate?: string,
 ): string[] {
   const entries = sources.flatMap((source) => collectExportEntries(source));
   const lines = [`# ${title}`, "", `Exported: ${new Date().toISOString()}`, ""];
@@ -691,18 +698,18 @@ function buildExportLines(
   }
 
   if (format === "by-color") {
-    return [...lines, ...renderByColor(entries)];
+    return [...lines, ...renderByColor(entries, customTemplate)];
   }
 
   if (format === "notes-only") {
-    return [...lines, ...renderNotesOnly(entries)];
+    return [...lines, ...renderNotesOnly(entries, customTemplate)];
   }
 
   if (format === "reading-notes") {
-    return [...lines, ...renderReadingNotes(entries)];
+    return [...lines, ...renderReadingNotes(entries, customTemplate)];
   }
 
-  return [...lines, ...renderSummary(entries)];
+  return [...lines, ...renderSummary(entries, customTemplate)];
 }
 
 function collectExportEntries(source: ExportDocumentSource): ExportEntry[] {
@@ -742,6 +749,10 @@ function collectExportEntries(source: ExportDocumentSource): ExportEntry[] {
       createdAt: highlight.createdAt,
       pageNumber: highlight.anchor.pageNumber,
       startOffset: Number.MAX_SAFE_INTEGER,
+      pdfSelection: highlight.anchor.textRange
+        ? `${highlight.anchor.textRange.beginIndex},${highlight.anchor.textRange.beginOffset},${highlight.anchor.textRange.endIndex},${highlight.anchor.textRange.endOffset}`
+        : undefined,
+      pdfRects: JSON.stringify(highlight.anchor.rects),
     })),
     ...source.document.pdfComments.map((comment): ExportEntry => ({
       id: comment.id,
@@ -754,6 +765,10 @@ function collectExportEntries(source: ExportDocumentSource): ExportEntry[] {
       createdAt: comment.updatedAt || comment.createdAt,
       pageNumber: comment.anchor.pageNumber,
       startOffset: Number.MAX_SAFE_INTEGER,
+      pdfSelection: comment.anchor.textRange
+        ? `${comment.anchor.textRange.beginIndex},${comment.anchor.textRange.beginOffset},${comment.anchor.textRange.endIndex},${comment.anchor.textRange.endOffset}`
+        : undefined,
+      pdfRects: JSON.stringify(comment.anchor.rects),
     })),
     ...source.document.epubHighlights.map((highlight): ExportEntry => ({
       id: highlight.id,
@@ -788,21 +803,21 @@ function collectExportEntries(source: ExportDocumentSource): ExportEntry[] {
   });
 }
 
-function renderSummary(entries: ExportEntry[]): string[] {
+function renderSummary(entries: ExportEntry[], customTemplate?: string): string[] {
   const highlights = entries.filter((entry) => entry.kind === "highlight");
   const notes = entries.filter((entry) => entry.kind === "note");
   return [
     "## Highlights",
     "",
-    ...highlights.flatMap((entry) => renderAnnotationBlock(entry)),
+    ...highlights.flatMap((entry) => renderAnnotationBlock(entry, customTemplate)),
     "",
     "## Sticky Notes",
     "",
-    ...notes.flatMap((entry) => renderAnnotationBlock(entry)),
+    ...notes.flatMap((entry) => renderAnnotationBlock(entry, customTemplate)),
   ];
 }
 
-function renderByColor(entries: ExportEntry[]): string[] {
+function renderByColor(entries: ExportEntry[], customTemplate?: string): string[] {
   const colors: AnnotationColor[] = ["yellow", "green", "blue", "pink", "orange", "purple"];
   return colors.flatMap((color) => {
     const colorEntries = entries.filter((entry) => entry.color === color);
@@ -813,31 +828,41 @@ function renderByColor(entries: ExportEntry[]): string[] {
       `## ${color}`,
       "",
       ...colorEntries.flatMap((entry) => {
-        return renderAnnotationBlock(entry);
+        return renderAnnotationBlock(entry, customTemplate);
       }),
     ];
   });
 }
 
-function renderNotesOnly(entries: ExportEntry[]): string[] {
+function renderNotesOnly(entries: ExportEntry[], customTemplate?: string): string[] {
   const notes = entries.filter((entry) => entry.kind === "note" && entry.content.trim());
   if (!notes.length) {
     return ["No sticky notes found.", ""];
   }
-  return ["## Sticky Notes", "", ...notes.flatMap((entry) => renderAnnotationBlock(entry))];
+  return ["## Sticky Notes", "", ...notes.flatMap((entry) => renderAnnotationBlock(entry, customTemplate))];
 }
 
-function renderReadingNotes(entries: ExportEntry[]): string[] {
+function renderReadingNotes(entries: ExportEntry[], customTemplate?: string): string[] {
   return [
     "## Reading Notes",
     "",
     ...entries.flatMap((entry) => {
-      return [`### ${entrySource(entry)}`, "", ...renderAnnotationBlock(entry)];
+      return [`### ${entrySource(entry)}`, "", ...renderAnnotationBlock(entry, customTemplate)];
     }),
   ];
 }
 
-function renderAnnotationBlock(entry: ExportEntry): string[] {
+function renderAnnotationBlock(entry: ExportEntry, customTemplate?: string): string[] {
+  // 无自定义模板时走原始硬编码逻辑，保证与历史版本逐字节兼容。
+  if (!customTemplate || !customTemplate.trim()) {
+    return renderAnnotationBlockDefault(entry);
+  }
+  // 有自定义模板时走模板引擎（受限 token 替换）。
+  return renderAnnotationBlockTemplated(entry, customTemplate);
+}
+
+/** 默认硬编码渲染（与 v0.17 完全一致，向后兼容基准）。 */
+function renderAnnotationBlockDefault(entry: ExportEntry): string[] {
   const blockId = `${entry.mode}-${entry.id}`;
   const calloutType = entry.mode === "epub" ? "inklight-epub" : entry.mode === "pdf" ? "inklight-pdf" : "inklight-md";
   const header = `> [!${calloutType}|${entry.color}] ${entrySource(entry)} - ${entry.createdAt} ^${blockId}`;
@@ -869,6 +894,40 @@ function renderAnnotationBlock(entry: ExportEntry): string[] {
   return lines;
 }
 
+/** 自定义模板渲染（受限 token 替换，见 exportTemplate.ts）。 */
+function renderAnnotationBlockTemplated(entry: ExportEntry, template: string): string[] {
+  const blockId = `${entry.mode}-${entry.id}`;
+  const calloutType = entry.mode === "epub" ? "inklight-epub" : entry.mode === "pdf" ? "inklight-pdf" : "inklight-md";
+  const textLines = entry.text.split(/\r?\n/).map((l) => `> ${l}`).join("\n");
+  const noteLines = entry.content.trim()
+    ? [">", ...entry.content.split(/\r?\n/).map((l) => `> Note: ${l}`)].join("\n")
+    : "";
+  const backLink = entryBackLink(entry, blockId);
+  const anchor = hiddenAnchor(entry);
+  const created = new Date(entry.createdAt);
+  const vars: ExportVars = {
+    source: entry.sourcePath,
+    sourceName: entry.sourcePath.split("/").pop()?.replace(/\.[^.]+$/, "") ?? entry.sourcePath,
+    mode: entry.mode,
+    color: entry.color,
+    colorLabel: COLOR_LABELS[entry.color] ?? entry.color,
+    text: entry.text,
+    note: entry.content,
+    chapter: entry.chapter ?? "",
+    pageNumber: entry.pageNumber != null ? String(entry.pageNumber) : "",
+    cfi: entry.cfiRange ?? "",
+    blockId,
+    createdAt: entry.createdAt,
+    createdAtDate: created.toISOString().slice(0, 10),
+    createdAtTime: created.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    calloutType,
+    backLink,
+    anchor,
+  };
+  const rendered = renderTemplate(template, vars).replace(/\n+$/, "");
+  return [...rendered.split(/\r?\n/), ""];
+}
+
 function entryBackLink(entry: ExportEntry, blockId: string): string {
   if (entry.mode === "pdf" && entry.pageNumber) {
     return `[[${entry.sourcePath}#page=${entry.pageNumber}|Back to source]]`;
@@ -887,7 +946,9 @@ function hiddenAnchor(entry: ExportEntry): string {
     return `> <span style="display:none" data-yh-cfi="${escapeHtmlAttribute(entry.cfiRange)}" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
   }
   if (entry.mode === "pdf" && entry.pageNumber) {
-    return `> <span style="display:none" data-yh-pdf-page="${entry.pageNumber}" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}" data-yh-pdf-id="${escapeHtmlAttribute(entry.id)}"></span>`;
+    const selectionAttr = entry.pdfSelection ? ` data-yh-pdf-selection="${escapeHtmlAttribute(entry.pdfSelection)}"` : "";
+    const rectsAttr = entry.pdfRects ? ` data-yh-pdf-rects="${escapeHtmlAttribute(entry.pdfRects)}"` : "";
+    return `> <span style="display:none" data-yh-pdf-page="${entry.pageNumber}" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}" data-yh-pdf-id="${escapeHtmlAttribute(entry.id)}"${selectionAttr}${rectsAttr}></span>`;
   }
   return "";
 }
