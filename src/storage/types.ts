@@ -59,10 +59,19 @@ export interface PdfRectAnchor {
   height: number;
 }
 
+export interface PdfTextRange {
+  beginIndex: number;
+  beginOffset: number;
+  endIndex: number;
+  endOffset: number;
+}
+
 export interface PdfAnchor {
   pageNumber: number;
   selectedText: string;
   rects: PdfRectAnchor[];
+  /** textLayer 文本锚点（可选，抗旋转/重排；旧数据无此字段时回落 rects）。 */
+  textRange?: PdfTextRange;
 }
 
 export interface PdfHighlightAnnotation {
@@ -168,6 +177,8 @@ export interface AnnotationPluginSettings {
   epubHighlightStyle: EpubHighlightStyle;
   // --- PDF 增强 ---
   pdfProgressTracking: boolean;
+  // --- 摘录导出 ---
+  exportAnnotationTemplate: string;
 }
 
 export interface SelectionSnapshot {
@@ -193,6 +204,8 @@ export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
   epubHighlightStyle: "fill",
   // PDF 增强
   pdfProgressTracking: true,
+  // 摘录导出（空字符串=用内置默认模板）
+  exportAnnotationTemplate: "",
 };
 
 export const EMPTY_INDEX: AnnotationIndex = {
@@ -259,12 +272,14 @@ export interface PdfReadingProgress {
 
 export interface ReadingBookmark {
   id: string;
-  type: "epub-bookmark" | "pdf-bookmark";
+  type: "md-bookmark" | "epub-bookmark" | "pdf-bookmark";
   label: string;
   position: string;
   chapter?: string;
   createdAt: string;
   color?: AnnotationColor;
+  /** 书签位置处的文本预览（便于列表展示与漂移后人工定位）。 */
+  preview?: string;
 }
 
 // ===== Canvas 集成 =====

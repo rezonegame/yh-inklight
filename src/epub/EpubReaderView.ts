@@ -95,6 +95,7 @@ interface FoliateLoadDetail {
 interface FoliateDrawAnnotationDetail {
 	annotation?: {
 		value?: string;
+		id?: string;
 		color?: AnnotationColor;
 		style?: EpubHighlightStyle;
 	};
@@ -152,6 +153,10 @@ export class EpubReaderView extends FileView {
 
 	private tocEntries: TocSpineEntry[] = [];
 	private currentChapter = "";
+	/** 当前章节标题（供侧栏位置过滤使用）。 */
+	get currentChapterLabel(): string {
+		return this.currentChapter;
+	}
 	private currentPercent = 0;
 	private currentFlowMode: EpubFlowMode;
 	private currentFontSize: number;
@@ -500,7 +505,7 @@ private contextMenuEl: HTMLElement | null = null;
 	/**
 	 * 切换书签：若当前 CFI 已有则移除，否则添加。
 	 */
-	private async toggleBookmark(): Promise<void> {
+	async toggleBookmark(): Promise<void> {
 		if (!this.file || !this.currentCfi) {
 			return;
 		}
@@ -1583,7 +1588,8 @@ private contextMenuEl: HTMLElement | null = null;
 		}
 		const color = detail.annotation.color ?? this.pluginSettings.defaultHighlightColor;
 		const style = detail.annotation.style ?? this.pluginSettings.epubHighlightStyle;
-		detail.draw((rects) => this.createAnnotationOverlay(rects, color, style));
+		const id = detail.annotation.id ?? "";
+		detail.draw((rects) => this.createAnnotationOverlay(rects, color, style, id));
 	};
 
 	private attachSelectionListeners(doc: Document): void {
@@ -1718,9 +1724,14 @@ private contextMenuEl: HTMLElement | null = null;
 		rects: Array<DOMRect | { left: number; top: number; width: number; height: number }>,
 		color: AnnotationColor,
 		style: EpubHighlightStyle,
+		id: string,
 	): SVGElement {
 		const svgNS = "http://www.w3.org/2000/svg";
 		const group = activeDocument.createElementNS(svgNS, "g");
+		if (id) {
+			group.setAttribute("data-yh-id", id);
+			group.classList.add("yh-epub-highlight");
+		}
 		const rgba = EPUB_COLOR_MAP[color];
 
 		for (const rect of rects) {

@@ -113,6 +113,29 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       });
 
     this.renderEpubSettings();
+    this.renderExportSettings();
+  }
+
+  /** 摘录导出设置：自定义模板（空=内置默认）。 */
+  private renderExportSettings(): void {
+    const { containerEl } = this;
+    containerEl.createEl("h3", { text: "摘录导出" });
+
+    new Setting(containerEl)
+      .setName("导出模板")
+      .setDesc("自定义单条批注的导出格式（留空使用内置默认）。可用变量：{{source}} {{sourceName}} {{mode}} {{color}} {{colorLabel}} {{text}} {{note}} {{chapter}} {{pageNumber}} {{cfi}} {{blockId}} {{createdAt}} {{createdAtDate}} {{createdAtTime}} {{calloutType}} {{backLink}} {{anchor}}；过滤器 {{var|trim|upper|lower|escape}}")
+      .addTextArea((text) => {
+        text
+          .setPlaceholder("> [!{{calloutType}}|{{color}}] {{sourceName}}\n> {{text}}\n> {{note}}\n> {{backLink}}\n{{anchor}}")
+          .setValue(this.plugin.settings.exportAnnotationTemplate)
+          .onChange(async (value) => {
+            this.plugin.settings.exportAnnotationTemplate = value;
+            await this.plugin.saveSettings();
+          });
+        text.inputEl.rows = 6;
+        text.inputEl.style.width = "100%";
+        text.inputEl.style.fontFamily = "var(--font-monospace)";
+      });
   }
 
   /** EPUB 阅读相关设置：字号 / 主题 / 翻页 / 高亮样式 / 摘录目录 / 段落模式 / 脚注 / 回显 */

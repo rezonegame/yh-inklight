@@ -12,6 +12,7 @@ import { createHighlightExtension } from "./src/editor/highlightExtension";
 import { installReadingViewHighlights, refreshReadingViewHighlights } from "./src/editor/readingViewHighlight";
 import { SelectionToolbar } from "./src/editor/selectionToolbar";
 import { PdfAnnotationLayer } from "./src/pdf/pdfAnnotationLayer";
+import type { PdfOutlineNode } from "./src/pdf/pdfAnnotationLayer";
 import { PdfViewerAdapter } from "./src/pdf/pdfViewerAdapter";
 import { AnnotationSettingsTab } from "./src/settings/settingsTab";
 import { AnnotationStore } from "./src/storage/annotationStore";
@@ -21,6 +22,7 @@ import {
   CommentAnnotation,
   DEFAULT_SETTINGS,
   HighlightAnnotation,
+  ReadingBookmark,
   SelectionSnapshot,
   SUPPORTED_BOOK_EXTENSIONS,
 } from "./src/storage/types";
@@ -30,6 +32,7 @@ import { StickyNoteLane } from "./src/views/stickyNoteLane";
 import { EpubReaderView, EPUB_READER_VIEW_TYPE } from "./src/epub/EpubReaderView";
 import { EpubBookshelfView, EPUB_BOOKSHELF_VIEW_TYPE } from "./src/epub/EpubBookshelfView";
 import { registerEpubGotoHandler } from "./src/epub/EpubGotoHandler";
+import { registerPdfGotoHandler, type PdfGotoTarget } from "./src/pdf/PdfGotoHandler";
 
 interface CommentModalValue {
   title: string;
@@ -180,6 +183,15 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         void this.openEpubAtCfi(filePath, cfi);
       }
     });
+    // PDF 摘录回链：消费导出 callout 里的 data-yh-pdf-page 锚点，点击跳页
+    registerPdfGotoHandler(this, (target) => this.openPdfAtPage(target));
+    this.registerObsidianProtocolHandler("inklight-pdf", (params) => {
+      const filePath = typeof params.file === "string" ? decodeURIComponent(params.file) : "";
+      const page = Number.parseInt(typeof params.page === "string" ? params.page : "0", 10);
+      if (filePath && page > 0) {
+        void this.openPdfAtPage({ file: filePath, page });
+      }
+    });
     this.registerMarkdownPostProcessor((element, context) => this.renderReadingHighlights(element, context));
   }
 
@@ -243,6 +255,174 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
   }
 
+  // ===== 三格式统一书签 =====
+
+  /**
+   * 为当前位置切换书签（已存在则删除）。按活动文件类型自动路由：
+   * - PDF：当前页码
+   * - EPUB：当前 CFI（委托 EpubReaderView）
+   * - MD：光标字符偏移（仅编辑模式）
+   */
+  async toggleBookmarkAtCurrentPosition(): Promise<void> {
+    const activeFile = this.app.workspace.getActiveFile();
+    if (!(activeFile instanceof TFile)) {
+      new Notice("请先打开一个文件");
+      return;
+    }
+    const ext = activeFile.extension.toLowerCase();
+
+    // EPUB：委托给阅读器视图（已实现 toggleBookmark + 列表 UI）
+    if (ext === "epub" || this.isBookExtension(ext)) {
+      const leaf = this.app.workspace.getLeavesOfType(EPUB_READER_VIEW_TYPE).find(
+        (l) => (l.view as { file?: TFile }).file?.path === activeFile.path,
+      );
+      const view = leaf?.view as { toggleBookmark?: () => Promise<void> } | undefined;
+      if (typeof view?.toggleBookmark === "function") {
+        await view.toggleBookmark();
+        return;
+      }
+      new Notice("请在 EPUB 阅读器中打开此文件");
+      return;
+    }
+
+    // PDF：当前页
+    if (ext === "pdf") {
+      await this.togglePdfBookmark(activeFile);
+      return;
+    }
+
+    // MD：光标偏移（仅编辑模式）
+    if (ext === "md") {
+      await this.toggleMdBookmark(activeFile);
+      return;
+    }
+
+    new Notice("该文件类型不支持书签");
+  }
+
+  private async togglePdfBookmark(file: TFile): Promise<void> {
+    const page = this.pdfViewerAdapter.getCurrentPageNumber();
+    if (page < 1) {
+      new Notice("无法获取当前 PDF 页码");
+      return;
+    }
+    const position = `pdf-page:${page}`;
+    const document = await this.store.getDocument(file);
+    const existing = document.bookmarks.find((b) => b.type === "pdf-bookmark" && b.position === position);
+    if (existing) {
+      await this.store.removeBookmark(file, existing.id);
+      await this.refreshAnnotations();
+      new Notice(`已移除第 ${page} 页书签`);
+      return;
+    }
+    const totalPages = this.pdfViewerAdapter.getTotalPages?.() ?? 0;
+    await this.store.addBookmark(file, {
+      id: crypto.randomUUID(),
+      type: "pdf-bookmark",
+      label: totalPages > 0 ? `第 ${page} / ${totalPages} 页` : `第 ${page} 页`,
+      position,
+      chapter: `第 ${page} 页`,
+      createdAt: new Date().toISOString(),
+      color: this.settings.defaultHighlightColor,
+    });
+    await this.refreshAnnotations();
+    new Notice(`已为第 ${page} 页添加书签`);
+  }
+
+  private async toggleMdBookmark(file: TFile): Promise<void> {
+    const editor = this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!editor || editor.getMode() !== "source") {
+      new Notice("Markdown 书签请在编辑模式下使用（光标定位后添加）");
+      return;
+    }
+    const offset = editor.editor.posToOffset(editor.editor.getCursor("from"));
+    const position = `md-offset:${offset}`;
+    const document = await this.store.getDocument(file);
+    const existing = document.bookmarks.find((b) => b.type === "md-bookmark" && b.position === position);
+    if (existing) {
+      await this.store.removeBookmark(file, existing.id);
+      await this.refreshAnnotations();
+      new Notice("已移除书签");
+      return;
+    }
+    // 取光标所在行文本作预览
+    const line = editor.editor.getLine(editor.editor.getCursor("from").line);
+    const preview = line.trim().slice(0, 40);
+    await this.store.addBookmark(file, {
+      id: crypto.randomUUID(),
+      type: "md-bookmark",
+      label: preview ? `行 ${editor.editor.getCursor("from").line + 1} · ${preview}` : `行 ${editor.editor.getCursor("from").line + 1}`,
+      position,
+      createdAt: new Date().toISOString(),
+      color: this.settings.defaultHighlightColor,
+      preview,
+    });
+    await this.refreshAnnotations();
+    new Notice("已添加书签");
+  }
+
+  /** 跳转到书签位置（三格式统一入口，由侧栏调用）。 */
+  async jumpToBookmark(file: TFile, bookmark: ReadingBookmark): Promise<void> {
+    const leaf = this.app.workspace.getLeaf(false);
+    await leaf.openFile(file);
+
+    if (bookmark.type === "epub-bookmark") {
+      // EPUB CFI：复用统一跳转入口（含轮询）
+      this.navigateEpubToCfi(file, bookmark.position);
+      return;
+    }
+    if (bookmark.type === "pdf-bookmark") {
+      const page = Number.parseInt(bookmark.position.replace(/^pdf-page:/, ""), 10);
+      if (page > 0) {
+        // 复用 openPdfAtPage 的轮询模式，避免视图未就绪时跳转失败
+        const tryGoto = (): void => {
+          if (this.pdfLayer.isPdfActive()) {
+            void this.gotoPdfPage(page);
+          } else {
+            window.setTimeout(tryGoto, 200);
+          }
+        };
+        window.setTimeout(tryGoto, 120);
+      }
+      return;
+    }
+    if (bookmark.type === "md-bookmark") {
+      const offset = Number.parseInt(bookmark.position.replace(/^md-offset:/, ""), 10);
+      if (Number.isFinite(offset)) {
+        const view = leaf.view instanceof MarkdownView ? leaf.view : this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (view) {
+          if (view.getMode() !== "source") {
+            new Notice("Markdown 书签跳转请切换到编辑模式");
+            return;
+          }
+          const pos = view.editor.offsetToPos(offset);
+          view.editor.setCursor(pos);
+          view.editor.scrollIntoView({ from: pos, to: pos }, true);
+          view.containerEl.addClass("yh-flash-target");
+          window.setTimeout(() => view.containerEl.removeClass("yh-flash-target"), 850);
+        }
+      }
+    }
+  }
+
+  /** 当前 PDF 页码（供侧栏位置过滤使用）。 */
+  getCurrentPdfPageNumber(): number {
+    return this.pdfViewerAdapter.getCurrentPageNumber();
+  }
+
+  /** 当前 EPUB 章节（供侧栏位置过滤使用）。 */
+  getCurrentEpubChapter(file: TFile): string {
+    const leaf = this.app.workspace.getLeavesOfType(EPUB_READER_VIEW_TYPE).find(
+      (l) => (l.view as { file?: TFile }).file?.path === file.path,
+    );
+    const view = leaf?.view as { currentChapterLabel?: string } | undefined;
+    return view?.currentChapterLabel ?? "";
+  }
+
+  isBookExtension(ext: string): boolean {
+    return (SUPPORTED_BOOK_EXTENSIONS as readonly string[]).includes(ext);
+  }
+
   private registerRibbonIcon(): void {
     const icon = this.addRibbonIcon("highlighter", "打开墨光批注", () => {
       void this.activateSidebar();
@@ -302,15 +482,9 @@ export default class OverlayAnnotationsPlugin extends Plugin {
           new Notice("该 PDF 没有目录");
           return;
         }
-        const lines = outline.map((item) => {
-          const pageInfo = item.pageNumber > 0 ? ` → p.${item.pageNumber}` : "";
-          const children = item.children
-            .filter((c) => c.pageNumber > 0)
-            .map((c) => `  └ ${c.title} → p.${c.pageNumber}`)
-            .join("\n");
-          return `${item.title}${pageInfo}${children ? "\n" + children : ""}`;
-        });
-        new Notice(`PDF 目录（${outline.length} 项）：\n${lines.slice(0, 8).join("\n")}`);
+        new PdfOutlineModal(this.app, outline, (page) => {
+          void this.gotoPdfPage(page);
+        }).open();
       },
     });
 
@@ -326,6 +500,14 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         }
       },
     });
+
+    // 三格式统一书签：按当前活动文件类型自动采集位置（MD 行/PDF 页/EPUB CFI）
+    this.addCommand({
+      id: "toggle-bookmark",
+      name: "切换书签（当前位置）",
+      hotkeys: [{ modifiers: ["Mod", "Shift"], key: "b" }],
+      callback: () => this.toggleBookmarkAtCurrentPosition(),
+    });
   }
 
   private registerEvents(): void {
@@ -337,6 +519,19 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     });
     this.registerDomEvent(document, "click", (event) => {
       void this.handleAnnotationClick(event);
+    });
+    // 正向 hover 联动：悬停源文档高亮 → 侧栏对应卡片高亮
+    this.registerDomEvent(document, "mouseover", (event) => {
+      const target = event.target as Element;
+      const mark = target.closest("[data-yh-id]");
+      const id = mark?.getAttribute("data-yh-id") ?? undefined;
+      if (!id) {
+        if (this.lastHoverSourceId) {
+          this.clearSidebarHover();
+        }
+        return;
+      }
+      this.highlightSidebarCard(id);
     });
 
     this.registerEvent(
@@ -642,12 +837,75 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     window.setTimeout(tryNavigate, 200);
   }
 
+  /**
+   * 打开 PDF 并跳转到指定页（摘录回链点击/协议跳转调用）。
+   * rects（百分比 JSON）可选：若有则在目标页画临时高亮闪烁。
+   */
+  async openPdfAtPage(target: PdfGotoTarget): Promise<void> {
+    const file = this.app.vault.getAbstractFileByPath(target.file);
+    if (!(file instanceof TFile) || file.extension.toLowerCase() !== "pdf") {
+      new Notice("无法找到对应的 PDF 文件");
+      return;
+    }
+    const leaf = this.app.workspace.getLeaf("tab");
+    await leaf.openFile(file);
+    this.app.workspace.revealLeaf(leaf);
+    // 等视图加载后跳页
+    const tryGoto = (): void => {
+      if (this.pdfLayer.isPdfActive()) {
+        void this.gotoPdfPage(target.page).then(() => {
+          if (target.rects) {
+            this.flashPdfRects(target.rects);
+          }
+        });
+      } else {
+        window.setTimeout(tryGoto, 200);
+      }
+    };
+    window.setTimeout(tryGoto, 200);
+  }
+
+  /** 在当前 PDF 视图画一个临时高亮矩形闪烁（用于摘录回链定位）。 */
+  private flashPdfRects(rectsJson: string): void {
+    try {
+      const rects = JSON.parse(rectsJson);
+      if (!Array.isArray(rects) || rects.length === 0) {
+        return;
+      }
+      this.pdfLayer.flashRects(rects);
+    } catch {
+      /* rects 格式异常，忽略 */
+    }
+  }
+
   private copySelection(): void {
     const text = window.getSelection()?.toString() || this.activeEditor()?.editor.getSelection() || "";
     if (text) {
       navigator.clipboard.writeText(text);
       new Notice("Copied selection");
     }
+  }
+
+  /** 悬停源文档高亮时，高亮侧栏对应卡片（正向联动）。 */
+  private lastHoverSourceId = "";
+  private highlightSidebarCard(id: string): void {
+    if (id === this.lastHoverSourceId) {
+      return; // id 未变，避免高频 mouseover 重复 querySelectorAll
+    }
+    this.lastHoverSourceId = id;
+    this.clearSidebarHover();
+    for (const leaf of this.app.workspace.getLeavesOfType(ANNOTATION_SIDEBAR_VIEW)) {
+      const card = (leaf.view as { containerEl?: HTMLElement }).containerEl?.querySelector(
+        `.yh-ov-card[data-highlight-id="${CSS.escape(id)}"], .yh-ov-card[data-note-id="${CSS.escape(id)}"]`,
+      );
+      card?.classList.add("yh-hover-sync");
+      card?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }
+
+  private clearSidebarHover(): void {
+    this.lastHoverSourceId = "";
+    document.querySelectorAll(".yh-ov-card.yh-hover-sync").forEach((el) => el.classList.remove("yh-hover-sync"));
   }
 
   private async handleAnnotationClick(event: MouseEvent): Promise<void> {
@@ -999,4 +1257,48 @@ class CommentModal extends Modal {
 
 function normalizedNoteTitle(value: string): string {
   return NOTE_TITLE_OPTIONS.some((option) => option.value === value) ? value : NOTE_TITLE_OPTIONS[0].value;
+}
+
+/**
+ * PDF 目录 Modal：递归渲染可点击的目录树，点击跳转到对应页。
+ * UI 对齐 EPUB 的 renderTocList（button 列表 + 缩进），只是数据是递归树。
+ */
+class PdfOutlineModal extends Modal {
+  constructor(app: import("obsidian").App, private outline: PdfOutlineNode[], private onSelect: (page: number) => void) {
+    super(app);
+    this.titleEl.setText("PDF 目录");
+  }
+
+  onOpen(): void {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.addClass("yh-pdf-outline-modal");
+    const list = contentEl.createDiv({ cls: "yh-pdf-outline-list" });
+    this.renderNodes(this.outline, list, 0);
+  }
+
+  private renderNodes(nodes: PdfOutlineNode[], container: HTMLElement, depth: number): void {
+    for (const node of nodes) {
+      const row = container.createDiv({ cls: "yh-pdf-outline-item" });
+      row.style.paddingLeft = `${12 + depth * 16}px`;
+      const label = row.createSpan({ cls: "yh-pdf-outline-title", text: node.title });
+      if (node.pageNumber > 0) {
+        row.createSpan({ cls: "yh-pdf-outline-page", text: `p.${node.pageNumber}` });
+      } else {
+        row.createSpan({ cls: "yh-pdf-outline-page yh-pdf-outline-page-dim", text: "—" });
+        label.addClass("is-dim");
+      }
+      if (node.pageNumber > 0) {
+        row.addEventListener("click", () => {
+          this.onSelect(node.pageNumber);
+          this.close();
+        });
+      } else {
+        row.addClass("is-disabled");
+      }
+      if (node.children.length > 0) {
+        this.renderNodes(node.children, container, depth + 1);
+      }
+    }
+  }
 }
