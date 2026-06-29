@@ -26,7 +26,6 @@ import {
 } from "./src/storage/types";
 import { AnnotationPopover } from "./src/views/annotationPopover";
 import { ANNOTATION_SIDEBAR_VIEW, AnnotationSidebarView } from "./src/views/sidebarView";
-import { StickyNoteLane } from "./src/views/stickyNoteLane";
 import { EpubReaderView, EPUB_READER_VIEW_TYPE } from "./src/epub/EpubReaderView";
 import { EpubBookshelfView, EPUB_BOOKSHELF_VIEW_TYPE } from "./src/epub/EpubBookshelfView";
 import { registerEpubGotoHandler } from "./src/epub/EpubGotoHandler";
@@ -63,7 +62,6 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private popover!: AnnotationPopover;
   private pdfLayer!: PdfAnnotationLayer;
   private pdfViewerAdapter!: PdfViewerAdapter;
-  private stickyLane!: StickyNoteLane;
   private lastSelection: SelectionSnapshot | null = null;
   private renameMigrationTimer: number | null = null;
 
@@ -136,26 +134,6 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       viewerAdapter: this.pdfViewerAdapter,
     });
 
-    this.stickyLane = new StickyNoteLane({
-      app: this.app,
-      component: this,
-      getSettings: () => this.settings,
-      getCachedDocument: (filePath) => this.store.getCachedDocument(filePath),
-      onUpdateComment: async (file, comment, content, title) => {
-        await this.store.updateCommentContent(file, comment.id, content, title);
-        await this.refreshAnnotations();
-      },
-      onDeleteAnnotation: async (file, annotationId) => {
-        await this.store.removeAnnotation(file, annotationId);
-        await this.refreshAnnotations();
-      },
-      onToggleCollapse: async (file, comment) => {
-        await this.store.updateComment(file, comment);
-        await this.refreshAnnotations();
-      },
-      refreshAnnotations: () => this.refreshAnnotations(),
-    });
-
     this.addSettingTab(new AnnotationSettingsTab(this));
     this.registerRibbonIcon();
     this.registerCommands();
@@ -170,7 +148,6 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     };
     document.addEventListener("yh-pdf-goto-page", gotoPageHandler);
     this.register(() => document.removeEventListener("yh-pdf-goto-page", gotoPageHandler));
-    this.stickyLane.register();
     // Phase 4-B P1: EPUB 双向溯源 + 摘录导出
     registerEpubGotoHandler(this, (file, cfi) => this.openEpubAtCfi(file, cfi));
     this.registerObsidianProtocolHandler("inklight-epub", (params) => {
@@ -189,7 +166,6 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
     this.toolbar?.destroy();
     this.popover?.destroy();
-    this.stickyLane?.destroy();
     this.app.workspace.detachLeavesOfType(ANNOTATION_SIDEBAR_VIEW);
     this.app.workspace.detachLeavesOfType(EPUB_BOOKSHELF_VIEW_TYPE);
   }
@@ -232,7 +208,6 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     if (activeFile && activeFile.extension === "md") {
       await this.refreshActiveReadingViewHighlights(activeFile.path);
     }
-    await this.stickyLane.render();
   }
 
   /** 跳转到 PDF 指定页（侧栏批注卡片跳转、书签等共用）。 */

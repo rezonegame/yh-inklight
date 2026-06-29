@@ -17,7 +17,6 @@ import {
   EpubFlowMode,
   EpubHighlightStyle,
   EpubReadingTheme,
-  SidebarSide,
 } from "../storage/types";
 
 export class AnnotationSettingsTab extends PluginSettingTab {
@@ -39,58 +38,6 @@ export class AnnotationSettingsTab extends PluginSettingTab {
         dropdown.setValue(this.plugin.settings.defaultHighlightColor).onChange(async (value) => {
           this.plugin.settings.defaultHighlightColor = value as AnnotationColor;
           await this.plugin.saveSettings();
-        });
-      });
-
-    new Setting(containerEl)
-      .setName("便签宽度")
-      .addSlider((slider) => {
-        slider
-          .setLimits(220, 420, 10)
-          .setValue(this.plugin.settings.stickyWidth)
-          .setDynamicTooltip()
-          .onChange(async (value) => {
-            this.plugin.settings.stickyWidth = value;
-            await this.plugin.saveSettings();
-            this.plugin.refreshAnnotations();
-          });
-      });
-
-    new Setting(containerEl)
-      .setName("便签显示位置")
-      .setDesc("右侧为阅读布局首选；左侧为高级偏好。")
-      .addDropdown((dropdown) => {
-        dropdown.addOption("right", "右侧");
-        dropdown.addOption("left", "左侧");
-        dropdown.setValue(this.plugin.settings.stickySide).onChange(async (value) => {
-          this.plugin.settings.stickySide = value as SidebarSide;
-          await this.plugin.saveSettings();
-          this.plugin.refreshAnnotations();
-        });
-      });
-
-    new Setting(containerEl)
-      .setName("窄屏折叠阈值")
-      .setDesc("当编辑面板宽度低于此值时，便签以弹层形式显示。")
-      .addSlider((slider) => {
-        slider
-          .setLimits(640, 1200, 20)
-          .setValue(this.plugin.settings.stickyCollapseWidth)
-          .setDynamicTooltip()
-          .onChange(async (value) => {
-            this.plugin.settings.stickyCollapseWidth = value;
-            await this.plugin.saveSettings();
-            this.plugin.refreshAnnotations();
-          });
-      });
-
-    new Setting(containerEl)
-      .setName("显示连接线")
-      .addToggle((toggle) => {
-        toggle.setValue(this.plugin.settings.showLeaderLines).onChange(async (value) => {
-          this.plugin.settings.showLeaderLines = value;
-          await this.plugin.saveSettings();
-          this.plugin.refreshAnnotations();
         });
       });
 
