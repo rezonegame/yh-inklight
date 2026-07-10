@@ -17,6 +17,7 @@ import {
   PdfReadingProgress,
 } from "../storage/types";
 import { PdfViewerAdapter } from "./pdfViewerAdapter";
+import { textRangeFromSelection } from "./textLayerAnchor";
 
 interface PdfAnnotationLayerOptions {
   app: App;
@@ -295,10 +296,8 @@ export class PdfAnnotationLayer {
     this.attachViewerLifecycle(context.viewerEl);
 
     const document = await this.options.getDocument(file);
-    const settings = this.options.getSettings();
     const host = viewer.closest<HTMLElement>(".workspace-leaf-content") ?? viewer;
     host.addClass("yh-pdf-host");
-    host.style.setProperty("--yh-sticky-width", `${settings.stickyWidth}px`);
 
     if (!this.root || this.root.parentElement !== host) {
       this.root?.remove();
@@ -381,6 +380,7 @@ export class PdfAnnotationLayer {
 
   private anchorFromSelection(selection: Selection, selectedText: string): PdfAnchor | null {
     const rects: PdfAnchor["rects"] = [];
+    let textRange: PdfAnchor["textRange"];
     for (let index = 0; index < selection.rangeCount; index += 1) {
       const range = selection.getRangeAt(index);
       for (const rect of Array.from(range.getClientRects())) {
@@ -394,6 +394,7 @@ export class PdfAnnotationLayer {
         }
 
         const pageRect = page.getBoundingClientRect();
+        textRange ??= textRangeFromSelection(page, range) ?? undefined;
         rects.push({
           pageNumber: this.pageNumber(page),
           left: (rect.left - pageRect.left) / pageRect.width,
@@ -412,6 +413,7 @@ export class PdfAnnotationLayer {
       pageNumber: rects[0].pageNumber,
       selectedText,
       rects,
+      textRange,
     };
   }
 

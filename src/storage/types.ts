@@ -24,7 +24,6 @@ export const COLOR_LABELS: Record<AnnotationColor, string> = {
 };
 
 export type AnnotationColor = (typeof ANNOTATION_COLORS)[number];
-export type SidebarSide = "left" | "right";
 export type AnnotationSortMode = "newest" | "oldest" | "document";
 export type AnnotationExportFormat = "summary" | "by-color" | "notes-only" | "reading-notes";
 
@@ -59,10 +58,19 @@ export interface PdfRectAnchor {
   height: number;
 }
 
+/** PDF textLayer offsets used when geometry alone is no longer reliable. */
+export interface PdfTextRange {
+  beginIndex: number;
+  beginOffset: number;
+  endIndex: number;
+  endOffset: number;
+}
+
 export interface PdfAnchor {
   pageNumber: number;
   selectedText: string;
   rects: PdfRectAnchor[];
+  textRange?: PdfTextRange;
 }
 
 export interface PdfHighlightAnnotation {
@@ -130,8 +138,11 @@ export interface FileAnnotationDocument {
   epubComments: EpubCommentAnnotation[];
   epubProgress?: EpubReadingProgress;
   pdfProgress?: PdfReadingProgress;
+  /** @deprecated Read-only legacy data kept for existing sidecars. */
   bookmarks: ReadingBookmark[];
+  /** @deprecated Read-only legacy data kept for existing sidecars. */
   canvasBinding?: CanvasBinding;
+  /** @deprecated Read-only legacy data kept for existing sidecars. */
   canvasNodes: CanvasExcerptNode[];
 }
 
@@ -154,13 +165,8 @@ export interface AnnotationIndex {
 
 export interface AnnotationPluginSettings {
   defaultHighlightColor: AnnotationColor;
-  stickyWidth: number;
-  stickySide: SidebarSide;
-  stickyCollapseWidth: number;
-  showLeaderLines: boolean;
   defaultAuthor: string;
   migrateOnRename: boolean;
-  stickyNotesVisible: boolean;
   // --- EPUB 阅读 ---
   epubDefaultFlow: EpubFlowMode;
   epubFontSize: number;
@@ -179,13 +185,8 @@ export interface SelectionSnapshot {
 
 export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
   defaultHighlightColor: "yellow",
-  stickyWidth: 280,
-  stickySide: "right",
-  stickyCollapseWidth: 800,
-  showLeaderLines: true,
   defaultAuthor: "读者",
   migrateOnRename: true,
-  stickyNotesVisible: true,
   // EPUB
   epubDefaultFlow: "scrolled",
   epubFontSize: 16,

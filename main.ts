@@ -13,6 +13,8 @@ import { installReadingViewHighlights, refreshReadingViewHighlights } from "./sr
 import { SelectionToolbar } from "./src/editor/selectionToolbar";
 import { PdfAnnotationLayer } from "./src/pdf/pdfAnnotationLayer";
 import { PdfViewerAdapter } from "./src/pdf/pdfViewerAdapter";
+import { AnnotationLinkService } from "./src/links/annotationLinkService";
+import { readProtocolParam } from "./src/links/annotationLink";
 import { AnnotationSettingsTab } from "./src/settings/settingsTab";
 import { AnnotationStore } from "./src/storage/annotationStore";
 import {
@@ -21,8 +23,10 @@ import {
   CommentAnnotation,
   DEFAULT_SETTINGS,
   HighlightAnnotation,
+  PdfAnchor,
   SelectionSnapshot,
   SUPPORTED_BOOK_EXTENSIONS,
+  TextAnchor,
 } from "./src/storage/types";
 import { AnnotationPopover } from "./src/views/annotationPopover";
 import { ANNOTATION_SIDEBAR_VIEW, AnnotationSidebarView } from "./src/views/sidebarView";
@@ -62,6 +66,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private popover!: AnnotationPopover;
   private pdfLayer!: PdfAnnotationLayer;
   private pdfViewerAdapter!: PdfViewerAdapter;
+  private annotationLinks!: AnnotationLinkService;
   private lastSelection: SelectionSnapshot | null = null;
   private renameMigrationTimer: number | null = null;
 
@@ -133,6 +138,11 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       getProgress: (file) => this.store.getPdfProgress(file),
       viewerAdapter: this.pdfViewerAdapter,
     });
+    this.annotationLinks = new AnnotationLinkService(this.app, this.store, {
+      openMarkdown: (file, anchor, id) => this.openMarkdownAtAnchor(file, anchor, id),
+      openPdf: (file, anchor) => this.openPdfAtAnchor(file, anchor),
+      openEpub: (file, anchor, id) => this.openEpubAtAnchor(file, anchor.cfiRange, id),
+    });
 
     this.addSettingTab(new AnnotationSettingsTab(this));
     this.registerRibbonIcon();
@@ -150,11 +160,17 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     this.register(() => document.removeEventListener("yh-pdf-goto-page", gotoPageHandler));
     // Phase 4-B P1: EPUB 双向溯源 + 摘录导出
     registerEpubGotoHandler(this, (file, cfi) => this.openEpubAtCfi(file, cfi));
+    this.registerObsidianProtocolHandler("inklight", (params) => {
+      void this.annotationLinks.open({
+        file: readProtocolParam(params.file),
+        id: readProtocolParam(params.id),
+      });
+    });
     this.registerObsidianProtocolHandler("inklight-epub", (params) => {
-      const filePath = typeof params.file === "string" ? decodeURIComponent(params.file) : "";
-      const cfi = typeof params.cfi === "string" ? decodeURIComponent(params.cfi) : "";
+      const filePath = readProtocolParam(params.file);
+      const cfi = readProtocolParam(params.cfi);
       if (filePath && cfi) {
-        void this.openEpubAtCfi(filePath, cfi);
+        void this.annotationLinks.openLegacyEpub(filePath, cfi);
       }
     });
     this.registerMarkdownPostProcessor((element, context) => this.renderReadingHighlights(element, context));
@@ -238,17 +254,6 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       name: "为选中文本添加便签",
       hotkeys: [{ modifiers: ["Mod", "Alt"], key: "m" }],
       callback: () => this.createComment(),
-    });
-
-    this.addCommand({
-      id: "toggle-sticky-notes",
-      name: "切换批注弹层显示",
-      hotkeys: [{ modifiers: ["Mod", "Shift"], key: "n" }],
-      callback: async () => {
-        this.settings.stickyNotesVisible = !this.settings.stickyNotesVisible;
-        await this.saveSettings();
-        await this.refreshAnnotations();
-      },
     });
 
     this.addCommand({
@@ -341,7 +346,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         const ext = file.extension.toLowerCase();
         const isMarkdown = ext === "md";
         const isBook = (SUPPORTED_BOOK_EXTENSIONS as readonly string[]).includes(ext);
-        if (!isMarkdown && !isBook) {
+        if (!isMarkdown && !isBook && ext !== "pdf") {
           return;
         }
 
@@ -579,21 +584,72 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     this.app.workspace.revealLeaf(leaf);
   }
 
+  async copyAnnotationLink(filePath: string, annotationId: string): Promise<void> {
+    await navigator.clipboard.writeText(this.annotationLinks.createUri(filePath, annotationId));
+    new Notice("已复制批注链接");
+  }
+
+  private async openMarkdownAtAnchor(file: TFile, anchor: TextAnchor, annotationId: string): Promise<boolean> {
+    const leaf = this.app.workspace.getLeaf("tab");
+    await leaf.openFile(file);
+    this.app.workspace.revealLeaf(leaf);
+    const view = leaf.view instanceof MarkdownView ? leaf.view : this.app.workspace.getActiveViewOfType(MarkdownView);
+    if (!view) {
+      return false;
+    }
+    const from = view.editor.offsetToPos(anchor.startOffset);
+    const to = view.editor.offsetToPos(anchor.endOffset);
+    view.editor.setSelection(from, to);
+    view.editor.scrollIntoView({ from, to }, true);
+    window.setTimeout(() => {
+      const target = document.querySelector<HTMLElement>(`[data-yh-id="${CSS.escape(annotationId)}"]`);
+      target?.addClass("yh-flash-target");
+      window.setTimeout(() => target?.removeClass("yh-flash-target"), 850);
+    }, 100);
+    return true;
+  }
+
+  private async openPdfAtAnchor(file: TFile, anchor: PdfAnchor): Promise<boolean> {
+    const leaf = this.app.workspace.getLeaf("tab");
+    await leaf.openFile(file);
+    this.app.workspace.revealLeaf(leaf);
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      if (this.pdfLayer.isPdfActive() && (await this.pdfViewerAdapter.goToPage(anchor.pageNumber, { flash: true, block: "center" }))) {
+        return true;
+      }
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 100));
+    }
+    new Notice("PDF 阅读视图未能及时就绪");
+    return false;
+  }
+
+  private async openEpubAtAnchor(file: TFile, cfi: string, annotationId: string): Promise<boolean> {
+    const leaf = this.app.workspace.getLeaf("tab");
+    await leaf.openFile(file);
+    this.app.workspace.revealLeaf(leaf);
+    const opened = await this.navigateEpubToCfi(file, cfi);
+    if (opened && annotationId) {
+      window.setTimeout(() => {
+        const target = document.querySelector<HTMLElement>(`[data-yh-id="${CSS.escape(annotationId)}"]`);
+        target?.addClass("yh-flash-target");
+        window.setTimeout(() => target?.removeClass("yh-flash-target"), 850);
+      }, 100);
+    }
+    return opened;
+  }
+
   /**
    * 打开 EPUB 文件并导航到指定 CFI 位置。
    * 供 EpubGotoHandler（摘录回跳）和 Obsidian 协议处理器调用。
    */
   async openEpubAtCfi(filePath: string, cfi: string): Promise<void> {
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (!(file instanceof TFile) || file.extension.toLowerCase() !== "epub") {
+    if (!(file instanceof TFile) || !(SUPPORTED_BOOK_EXTENSIONS as readonly string[]).includes(file.extension.toLowerCase())) {
       new Notice("无法找到对应的电子书文件");
       return;
     }
 
-    const leaf = this.app.workspace.getLeaf("tab");
-    await leaf.openFile(file);
-    this.app.workspace.revealLeaf(leaf);
-    this.navigateEpubToCfi(file, cfi);
+    await this.openEpubAtAnchor(file, cfi, "");
   }
 
   /**
@@ -602,19 +658,20 @@ export default class OverlayAnnotationsPlugin extends Plugin {
    * 避免重复的「查 leaf → 调 navigateToCfi → 重试」逻辑散落多处。
    * 含轮询重试：视图刚 openFile 后 navigateToCfi 可能尚未就绪，每 200ms 重试直至成功。
    */
-  navigateEpubToCfi(file: TFile, cfi: string): void {
-    const tryNavigate = (): void => {
+  async navigateEpubToCfi(file: TFile, cfi: string): Promise<boolean> {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
       const epubLeaf = this.app.workspace.getLeavesOfType(EPUB_READER_VIEW_TYPE).find(
         (l) => (l.view as { file?: TFile }).file?.path === file.path,
       );
       const epubView = epubLeaf?.view as { navigateToCfi?: (cfi: string) => void } | undefined;
       if (typeof epubView?.navigateToCfi === "function") {
         epubView.navigateToCfi(cfi);
-      } else {
-        window.setTimeout(tryNavigate, 200);
+        return true;
       }
-    };
-    window.setTimeout(tryNavigate, 200);
+      await new Promise<void>((resolve) => window.setTimeout(resolve, 100));
+    }
+    new Notice("电子书阅读视图未能及时就绪");
+    return false;
   }
 
   private copySelection(): void {

@@ -7,45 +7,21 @@ on:
     branches: [main]
 
 jobs:
-  build-mac:
-    runs-on: macos-latest
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: 20
       - name: Install dependencies
-        run: npm install
+        run: npm ci
+      - name: Verify metadata and types
+        run: npm run verify
       - name: Build
         run: npm run build
       - name: Confirm output exists
-        run: test -f main.js
-
-  build-windows:
-    runs-on: windows-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-      - name: Install dependencies
-        run: npm install
-      - name: Build
-        run: npm run build
-      - name: Confirm output exists
-        run: test -f main.js
-        shell: bash
-
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-      - name: Install dependencies
-        run: npm install
-      - name: Build
-        run: npm run build
-      - name: Confirm output exists
-        run: test -f main.js
+        run: node -e "if (!require('node:fs').existsSync('main.js')) process.exit(1)"

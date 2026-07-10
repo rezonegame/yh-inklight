@@ -7,6 +7,7 @@
 
 import { App, normalizePath, Notice, TFile } from "obsidian";
 
+import { createAnnotationUri } from "../links/annotationLink";
 import {
   AnnotationIndex,
   AnnotationIndexEntry,
@@ -22,7 +23,9 @@ import {
   EpubHighlightAnnotation,
   EpubCommentAnnotation,
   EpubReadingProgress,
-  ReadingBookmark,
+  EpubCfiAnchor,
+  PdfAnchor,
+  TextAnchor,
 } from "./types";
 
 const STORE_DIR = ".obsidian-annotations";
@@ -48,7 +51,15 @@ interface ExportEntry {
   chapter?: string;
   cfiRange?: string;
   startOffset: number;
+  pdfRects?: string;
 }
+
+export type StoredAnnotationTarget = {
+  filePath: string;
+  id: string;
+  mode: "md" | "pdf" | "epub";
+  anchor: TextAnchor | PdfAnchor | EpubCfiAnchor;
+};
 
 export class AnnotationStoreReadError extends Error {
   constructor(readonly path: string, readonly originalError: unknown) {
@@ -66,6 +77,8 @@ export class AnnotationStoreWriteError extends Error {
 
 export class AnnotationStore {
   private readonly documents = new Map<string, FileAnnotationDocument>();
+  private readonly documentWrites = new Map<string, Promise<unknown>>();
+  private indexWriteTail: Promise<unknown> = Promise.resolve();
   private index: AnnotationIndex = EMPTY_INDEX;
   private changeVersion = 0;
 
@@ -116,97 +129,120 @@ export class AnnotationStore {
   }
 
   async saveDocument(document: FileAnnotationDocument): Promise<void> {
+    await this.enqueueDocument(document.filePath, () => this.persistDocument(document));
+  }
+
+  async mutateDocument(
+    file: TFile,
+    updater: (document: FileAnnotationDocument) => FileAnnotationDocument,
+  ): Promise<FileAnnotationDocument> {
+    return this.enqueueDocument(file.path, async () => {
+      const document = await this.getDocument(file);
+      const nextDocument = updater(document);
+      await this.persistDocument(nextDocument);
+      return this.getCachedDocument(file.path) ?? nextDocument;
+    });
+  }
+
+  async findAnnotationTarget(filePath: string, annotationId: string): Promise<StoredAnnotationTarget | null> {
+    const file = this.app.vault.getAbstractFileByPath(this.normalizeVaultPath(filePath));
+    if (!(file instanceof TFile)) {
+      return null;
+    }
+    return this.findTargetInDocument(file.path, await this.getDocument(file), annotationId);
+  }
+
+  async findAnnotationTargets(annotationId: string): Promise<StoredAnnotationTarget[]> {
+    const results: StoredAnnotationTarget[] = [];
+    for (const filePath of Object.keys(this.index.files)) {
+      const file = this.app.vault.getAbstractFileByPath(filePath);
+      if (!(file instanceof TFile)) {
+        continue;
+      }
+      const target = this.findTargetInDocument(file.path, await this.getDocument(file), annotationId);
+      if (target) {
+        results.push(target);
+      }
+    }
+    return results;
+  }
+
+  private async persistDocument(document: FileAnnotationDocument): Promise<void> {
     const filePath = this.normalizeVaultPath(document.filePath);
     const sidecarPath = this.toSidecarPath(filePath);
     const normalized = this.normalizeDocument(document, filePath);
-    const nextIndex: AnnotationIndex = {
-      ...this.index,
-      files: {
-        ...this.index.files,
-        [normalized.filePath]: this.toIndexEntry(normalized, sidecarPath),
-      },
-    };
 
     try {
       await this.ensureStoreDir();
       await this.app.vault.adapter.write(sidecarPath, JSON.stringify(normalized, null, 2));
       const persisted = await this.readExistingJson<FileAnnotationDocument>(sidecarPath);
       this.verifyPersistedDocument(normalized, persisted, sidecarPath);
-      await this.writeIndex(nextIndex);
+      await this.enqueueIndexWrite(async () => {
+        const nextIndex: AnnotationIndex = {
+          ...this.index,
+          files: {
+            ...this.index.files,
+            [normalized.filePath]: this.toIndexEntry(normalized, sidecarPath),
+          },
+        };
+        await this.writeIndex(nextIndex);
+        this.index = nextIndex;
+      });
     } catch (error) {
       new Notice(`墨光批注未保存，请检查写入权限或同步状态：${sidecarPath}`);
       throw new AnnotationStoreWriteError(sidecarPath, error);
     }
 
     this.documents.set(this.toCacheKey(normalized.filePath), normalized);
-    this.index = nextIndex;
     this.changeVersion += 1;
   }
 
   async addHighlight(file: TFile, highlight: HighlightAnnotation): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    const nextDocument: FileAnnotationDocument = {
+    return this.mutateDocument(file, (document) => ({
       ...document,
       highlights: [...document.highlights, highlight].sort((a, b) => a.anchor.startOffset - b.anchor.startOffset),
       lastModified: new Date().toISOString(),
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
+    }));
   }
 
   async addComment(file: TFile, comment: CommentAnnotation): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    const nextDocument: FileAnnotationDocument = {
+    return this.mutateDocument(file, (document) => ({
       ...document,
       comments: [...document.comments, comment].sort((a, b) => a.anchor.startOffset - b.anchor.startOffset),
       lastModified: new Date().toISOString(),
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
+    }));
   }
 
   async addPdfHighlight(file: TFile, highlight: PdfHighlightAnnotation): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    const nextDocument: FileAnnotationDocument = {
+    return this.mutateDocument(file, (document) => ({
       ...document,
       pdfHighlights: [...document.pdfHighlights, highlight].sort((a, b) => a.anchor.pageNumber - b.anchor.pageNumber),
       lastModified: new Date().toISOString(),
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
+    }));
   }
 
   async addPdfComment(file: TFile, comment: PdfCommentAnnotation): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    const nextDocument: FileAnnotationDocument = {
+    return this.mutateDocument(file, (document) => ({
       ...document,
       pdfComments: [...document.pdfComments, comment].sort((a, b) => a.anchor.pageNumber - b.anchor.pageNumber),
       lastModified: new Date().toISOString(),
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
+    }));
   }
 
   async updatePdfComment(file: TFile, comment: PdfCommentAnnotation): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    const nextDocument: FileAnnotationDocument = {
+    return this.mutateDocument(file, (document) => ({
       ...document,
       pdfComments: document.pdfComments.map((item) => (item.id === comment.id ? comment : item)),
       lastModified: new Date().toISOString(),
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
+    }));
   }
 
   async updateComment(file: TFile, comment: CommentAnnotation): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    const nextDocument: FileAnnotationDocument = {
+    return this.mutateDocument(file, (document) => ({
       ...document,
       comments: document.comments.map((item) => (item.id === comment.id ? comment : item)),
       lastModified: new Date().toISOString(),
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
+    }));
   }
 
   async updateCommentContent(
@@ -215,9 +251,8 @@ export class AnnotationStore {
     content: string,
     title?: string,
   ): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
     const now = new Date().toISOString();
-    const nextDocument: FileAnnotationDocument = {
+    return this.mutateDocument(file, (document) => ({
       ...document,
       comments: document.comments.map((item) => {
         if (item.id !== commentId) {
@@ -232,9 +267,7 @@ export class AnnotationStore {
         };
       }),
       lastModified: now,
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
+    }));
   }
 
   async updatePdfCommentContent(
@@ -243,9 +276,8 @@ export class AnnotationStore {
     content: string,
     title?: string,
   ): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
     const now = new Date().toISOString();
-    const nextDocument: FileAnnotationDocument = {
+    return this.mutateDocument(file, (document) => ({
       ...document,
       pdfComments: document.pdfComments.map((item) => {
         if (item.id !== commentId) {
@@ -260,14 +292,11 @@ export class AnnotationStore {
         };
       }),
       lastModified: now,
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
+    }));
   }
 
   async removeAnnotation(file: TFile, annotationId: string): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    const nextDocument: FileAnnotationDocument = {
+    return this.mutateDocument(file, (document) => ({
       ...document,
       highlights: document.highlights.filter((item) => item.id !== annotationId),
       comments: document.comments.filter((item) => item.id !== annotationId),
@@ -275,11 +304,8 @@ export class AnnotationStore {
       pdfComments: document.pdfComments.filter((item) => item.id !== annotationId),
       epubHighlights: document.epubHighlights.filter((item) => item.id !== annotationId),
       epubComments: document.epubComments.filter((item) => item.id !== annotationId),
-      bookmarks: document.bookmarks.filter((item) => item.id !== annotationId),
       lastModified: new Date().toISOString(),
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
+    }));
   }
 
   async migrateFilePath(oldPath: string, file: TFile): Promise<void> {
@@ -299,8 +325,13 @@ export class AnnotationStore {
 
     await this.saveDocument(nextDocument);
     await this.deleteIfExists(oldSidecar);
-    delete this.index.files[normalizedOldPath];
-    await this.writeIndex();
+    await this.enqueueIndexWrite(async () => {
+      const files = { ...this.index.files };
+      delete files[normalizedOldPath];
+      const nextIndex = { ...this.index, files };
+      await this.writeIndex(nextIndex);
+      this.index = nextIndex;
+    });
     this.documents.delete(this.toCacheKey(normalizedOldPath));
 
     // 同步迁移摘录导出文件（*-notes.md / 《名》摘录.md）：更新内部 source 路径引用 + 重命名文件。
@@ -319,14 +350,15 @@ export class AnnotationStore {
     }
     const oldBase = oldPath.replace(/\.[^.]+$/, "");
     const newBase = newPath.replace(/\.[^.]+$/, "");
-    const parent = newPath.split(/[\\/]/).slice(0, -1).join("/") || "/";
+    const oldParent = oldPath.split(/[\\/]/).slice(0, -1).join("/") || "/";
+    const newParent = newPath.split(/[\\/]/).slice(0, -1).join("/") || "/";
     // 候选文件名：v0.16.3 起统一 {basename}-notes.md；早期为 《basename》摘录.md
     const candidates = [
       `${oldBase.split(/[\\/]/).pop()}-notes.md`,
       `《${oldBase.split(/[\\/]/).pop()}》摘录.md`,
     ];
     for (const candidate of candidates) {
-      const candidatePath = normalizePath(`${parent}/${candidate}`);
+      const candidatePath = normalizePath(`${oldParent}/${candidate}`);
       const excerptFile = this.app.vault.getAbstractFileByPath(candidatePath);
       if (!(excerptFile instanceof TFile)) {
         continue;
@@ -334,9 +366,11 @@ export class AnnotationStore {
       try {
         const content = await this.app.vault.read(excerptFile);
         // 替换内容中所有旧路径引用（标题、wikilink、hidden anchor）
-        const updated = content.split(oldPath).join(newPath);
+        const updated = content
+          .split(oldPath).join(newPath)
+          .split(encodeURIComponent(oldPath)).join(encodeURIComponent(newPath));
         const newName = candidate.replace(oldBase.split(/[\\/]/).pop()!, newBase.split(/[\\/]/).pop()!);
-        const targetPath = normalizePath(`${parent}/${newName}`);
+        const targetPath = normalizePath(`${newParent}/${newName}`);
         if (updated !== content) {
           await this.app.vault.modify(excerptFile, updated);
         }
@@ -352,36 +386,27 @@ export class AnnotationStore {
   // ===== EPUB 标注 CRUD =====
 
   async addEpubHighlight(file: TFile, highlight: EpubHighlightAnnotation): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    const nextDocument: FileAnnotationDocument = {
+    return this.mutateDocument(file, (document) => ({
       ...document,
       epubHighlights: [...document.epubHighlights, highlight],
       lastModified: new Date().toISOString(),
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
+    }));
   }
 
   async addEpubComment(file: TFile, comment: EpubCommentAnnotation): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    const nextDocument: FileAnnotationDocument = {
+    return this.mutateDocument(file, (document) => ({
       ...document,
       epubComments: [...document.epubComments, comment],
       lastModified: new Date().toISOString(),
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
+    }));
   }
 
   async updateEpubComment(file: TFile, comment: EpubCommentAnnotation): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    const nextDocument: FileAnnotationDocument = {
+    return this.mutateDocument(file, (document) => ({
       ...document,
       epubComments: document.epubComments.map((item) => (item.id === comment.id ? comment : item)),
       lastModified: new Date().toISOString(),
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
+    }));
   }
 
   // ===== EPUB 进度 =====
@@ -392,12 +417,11 @@ export class AnnotationStore {
   }
 
   async saveEpubProgress(file: TFile, progress: EpubReadingProgress): Promise<void> {
-    const document = await this.getDocument(file);
-    await this.saveDocument({
+    await this.mutateDocument(file, (document) => ({
       ...document,
       epubProgress: progress,
       lastModified: new Date().toISOString(),
-    });
+    }));
   }
   // ===== PDF 进度 =====
 
@@ -407,37 +431,14 @@ export class AnnotationStore {
   }
 
   async savePdfProgress(file: TFile, progress: PdfReadingProgress): Promise<void> {
-    const document = await this.getDocument(file);
-    await this.saveDocument({
+    await this.mutateDocument(file, (document) => ({
       ...document,
       pdfProgress: progress,
       lastModified: new Date().toISOString(),
-    });
+    }));
   }
 
   // ===== 书签（EPUB/PDF 通用）=====
-
-  async addBookmark(file: TFile, bookmark: ReadingBookmark): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    const nextDocument: FileAnnotationDocument = {
-      ...document,
-      bookmarks: [...document.bookmarks, bookmark],
-      lastModified: new Date().toISOString(),
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
-  }
-
-  async removeBookmark(file: TFile, bookmarkId: string): Promise<FileAnnotationDocument> {
-    const document = await this.getDocument(file);
-    const nextDocument: FileAnnotationDocument = {
-      ...document,
-      bookmarks: document.bookmarks.filter((item) => item.id !== bookmarkId),
-      lastModified: new Date().toISOString(),
-    };
-    await this.saveDocument(nextDocument);
-    return nextDocument;
-  }
 
   async exportNotes(file: TFile, format: AnnotationExportFormat = "summary"): Promise<TFile> {
     const document = await this.getDocument(file);
@@ -545,6 +546,7 @@ export class AnnotationStore {
 
   private normalizeDocument(document: FileAnnotationDocument, filePath: string): FileAnnotationDocument {
     return {
+      ...document,
       filePath,
       fileHash: document.fileHash ?? "",
       lastModified: document.lastModified ?? new Date().toISOString(),
@@ -649,6 +651,43 @@ export class AnnotationStore {
     }
   }
 
+  private enqueueDocument<T>(filePath: string, task: () => Promise<T>): Promise<T> {
+    const key = this.toCacheKey(filePath);
+    const previous = this.documentWrites.get(key) ?? Promise.resolve();
+    const next = previous.catch(() => undefined).then(task);
+    const tail = next.then(() => undefined, () => undefined);
+    this.documentWrites.set(key, tail);
+    void tail.then(() => {
+      if (this.documentWrites.get(key) === tail) {
+        this.documentWrites.delete(key);
+      }
+    });
+    return next;
+  }
+
+  private enqueueIndexWrite<T>(task: () => Promise<T>): Promise<T> {
+    const next = this.indexWriteTail.catch(() => undefined).then(task);
+    this.indexWriteTail = next.then(() => undefined, () => undefined);
+    return next;
+  }
+
+  private findTargetInDocument(
+    filePath: string,
+    document: FileAnnotationDocument,
+    annotationId: string,
+  ): StoredAnnotationTarget | null {
+    const markdown = document.highlights.find((item) => item.id === annotationId) ?? document.comments.find((item) => item.id === annotationId);
+    if (markdown) {
+      return { filePath, id: annotationId, mode: "md", anchor: markdown.anchor };
+    }
+    const pdf = document.pdfHighlights.find((item) => item.id === annotationId) ?? document.pdfComments.find((item) => item.id === annotationId);
+    if (pdf) {
+      return { filePath, id: annotationId, mode: "pdf", anchor: pdf.anchor };
+    }
+    const epub = document.epubHighlights.find((item) => item.id === annotationId) ?? document.epubComments.find((item) => item.id === annotationId);
+    return epub ? { filePath, id: annotationId, mode: "epub", anchor: epub.anchor } : null;
+  }
+
   private normalizeVaultPath(filePath: string): string {
     return normalizePath(filePath);
   }
@@ -742,6 +781,7 @@ function collectExportEntries(source: ExportDocumentSource): ExportEntry[] {
       createdAt: highlight.createdAt,
       pageNumber: highlight.anchor.pageNumber,
       startOffset: Number.MAX_SAFE_INTEGER,
+      pdfRects: JSON.stringify(highlight.anchor.rects),
     })),
     ...source.document.pdfComments.map((comment): ExportEntry => ({
       id: comment.id,
@@ -754,6 +794,7 @@ function collectExportEntries(source: ExportDocumentSource): ExportEntry[] {
       createdAt: comment.updatedAt || comment.createdAt,
       pageNumber: comment.anchor.pageNumber,
       startOffset: Number.MAX_SAFE_INTEGER,
+      pdfRects: JSON.stringify(comment.anchor.rects),
     })),
     ...source.document.epubHighlights.map((highlight): ExportEntry => ({
       id: highlight.id,
@@ -796,7 +837,7 @@ function renderSummary(entries: ExportEntry[]): string[] {
     "",
     ...highlights.flatMap((entry) => renderAnnotationBlock(entry)),
     "",
-    "## Sticky Notes",
+    "## Notes",
     "",
     ...notes.flatMap((entry) => renderAnnotationBlock(entry)),
   ];
@@ -822,9 +863,9 @@ function renderByColor(entries: ExportEntry[]): string[] {
 function renderNotesOnly(entries: ExportEntry[]): string[] {
   const notes = entries.filter((entry) => entry.kind === "note" && entry.content.trim());
   if (!notes.length) {
-    return ["No sticky notes found.", ""];
+    return ["No notes found.", ""];
   }
-  return ["## Sticky Notes", "", ...notes.flatMap((entry) => renderAnnotationBlock(entry))];
+  return ["## Notes", "", ...notes.flatMap((entry) => renderAnnotationBlock(entry))];
 }
 
 function renderReadingNotes(entries: ExportEntry[]): string[] {
@@ -854,12 +895,8 @@ function renderAnnotationBlock(entry: ExportEntry): string[] {
     }
   }
 
-  const backLink = entryBackLink(entry, blockId);
-  if (backLink) {
-    lines.push(">");
-    lines.push(`> ${backLink}`);
-  }
-
+  lines.push(">");
+  lines.push(`> [返回原文](${createAnnotationUri(entry.sourcePath, entry.id)})`);
   const anchor = hiddenAnchor(entry);
   if (anchor) {
     lines.push(anchor);
@@ -869,27 +906,15 @@ function renderAnnotationBlock(entry: ExportEntry): string[] {
   return lines;
 }
 
-function entryBackLink(entry: ExportEntry, blockId: string): string {
-  if (entry.mode === "pdf" && entry.pageNumber) {
-    return `[[${entry.sourcePath}#page=${entry.pageNumber}|Back to source]]`;
-  }
-  if (entry.mode === "epub" && entry.cfiRange) {
-    return `[Back to source](#^${blockId})`;
-  }
-  if (entry.mode === "md") {
-    return `[[${entry.sourcePath}|Back to source]]`;
-  }
-  return "";
-}
-
 function hiddenAnchor(entry: ExportEntry): string {
   if (entry.mode === "epub" && entry.cfiRange) {
-    return `> <span style="display:none" data-yh-cfi="${escapeHtmlAttribute(entry.cfiRange)}" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
+    return `> <span style="display:none" data-yh-id="${escapeHtmlAttribute(entry.id)}" data-yh-mode="epub" data-yh-cfi="${escapeHtmlAttribute(entry.cfiRange)}" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
   }
   if (entry.mode === "pdf" && entry.pageNumber) {
-    return `> <span style="display:none" data-yh-pdf-page="${entry.pageNumber}" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}" data-yh-pdf-id="${escapeHtmlAttribute(entry.id)}"></span>`;
+    const rects = entry.pdfRects ? ` data-yh-pdf-rects="${escapeHtmlAttribute(entry.pdfRects)}"` : "";
+    return `> <span style="display:none" data-yh-id="${escapeHtmlAttribute(entry.id)}" data-yh-mode="pdf" data-yh-pdf-page="${entry.pageNumber}" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}" data-yh-pdf-id="${escapeHtmlAttribute(entry.id)}"${rects}></span>`;
   }
-  return "";
+  return `> <span style="display:none" data-yh-id="${escapeHtmlAttribute(entry.id)}" data-yh-mode="md" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
 }
 
 function escapeHtmlAttribute(value: string): string {

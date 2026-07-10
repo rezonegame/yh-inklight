@@ -5,7 +5,7 @@
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
-import { ItemView, MarkdownRenderer, MarkdownView, Notice, setIcon, TFile, WorkspaceLeaf } from "obsidian";
+import { ItemView, MarkdownRenderer, MarkdownView, Menu, Notice, setIcon, TFile, WorkspaceLeaf } from "obsidian";
 
 import type OverlayAnnotationsPlugin from "../../main";
 import { formatTime } from "../utils/format";
@@ -566,18 +566,24 @@ export class AnnotationSidebarView extends ItemView {
       }
     });
 
-    const remove = actions.createEl("button", {
-      cls: "yh-ov-btn yh-ov-btn--danger",
-      text: "删除",
-      attr: { type: "button", "data-action": "delete" },
+    const more = actions.createEl("button", {
+      cls: "yh-ov-btn yh-ov-btn--icon",
+      attr: { type: "button", title: "More annotation actions", "aria-label": "More annotation actions" },
     });
-    remove.disabled = !file;
-    remove.addEventListener("click", async () => {
+    setIcon(more, "ellipsis");
+    more.disabled = !file;
+    more.addEventListener("click", () => {
       if (file) {
-        await this.deleteCard(file, cardData);
-        new Notice("批注已删除");
-        await this.plugin.refreshAnnotations();
+        const rect = more.getBoundingClientRect();
+        this.openCardMenu(file, cardData, { x: rect.right, y: rect.bottom });
       }
+    });
+    card.addEventListener("contextmenu", (event) => {
+      if (!file) {
+        return;
+      }
+      event.preventDefault();
+      this.openCardMenu(file, cardData, event);
     });
 
     const edit = card.createDiv({ cls: "yh-ov-edit hidden" });
@@ -599,6 +605,26 @@ export class AnnotationSidebarView extends ItemView {
       attrs["data-note-id"] = card.note.id;
     }
     return attrs;
+  }
+
+  private openCardMenu(file: TFile, card: SidebarCard, position: MouseEvent | { x: number; y: number }): void {
+    const menu = new Menu();
+    const targetId = card.highlight?.id ?? card.note?.id ?? card.id;
+    menu.addItem((item) => {
+      item.setTitle("Copy annotation link").setIcon("link").onClick(() => {
+        void this.plugin.copyAnnotationLink(card.sourcePath, targetId);
+      });
+    });
+    menu.addItem((item) => {
+      item.setTitle("Delete annotation").setIcon("trash-2").onClick(() => {
+        void this.deleteCard(file, card).then(() => this.plugin.refreshAnnotations());
+      });
+    });
+    if (position instanceof MouseEvent) {
+      menu.showAtMouseEvent(position);
+    } else {
+      menu.showAtPosition(position);
+    }
   }
 
   private openInlineEditor(card: HTMLElement, file: TFile, cardData: SidebarCard, initialValue: string): void {
