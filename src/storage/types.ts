@@ -1,9 +1,13 @@
 /**
  * [INPUT]: 依赖 Obsidian 插件设置与 sidecar JSON 存储协议的领域约束
- * [OUTPUT]: 对外提供 Markdown/PDF 注释、高亮、锚点、响应式阅读设置、索引与存储文档类型
+ * [OUTPUT]: 对外提供 Markdown/PDF 注释、高亮、标签、响应式阅读设置、索引与存储文档类型
  * [POS]: storage 模块的类型真相源，被 editor、views、anchor、settings 和 store 共享
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
+
+import { AnnotationTagDefinition, cloneDefaultAnnotationTags } from "../tags/tagDomain";
+
+export type { AnnotationTagDefinition } from "../tags/tagDomain";
 
 export const ANNOTATION_COLORS = [
   "yellow",
@@ -97,6 +101,8 @@ export interface CommentAnnotation {
   highlightId?: string;
   anchor: TextAnchor;
   title?: string;
+  tagId?: string;
+  tagLabelSnapshot?: string;
   content: string;
   color: AnnotationColor;
   position: StickyPosition;
@@ -114,6 +120,8 @@ export interface PdfCommentAnnotation {
   highlightId?: string;
   anchor: PdfAnchor;
   title?: string;
+  tagId?: string;
+  tagLabelSnapshot?: string;
   content: string;
   color: AnnotationColor;
   position: StickyPosition;
@@ -167,6 +175,7 @@ export interface AnnotationPluginSettings {
   defaultHighlightColor: AnnotationColor;
   defaultAuthor: string;
   migrateOnRename: boolean;
+  annotationTags: AnnotationTagDefinition[];
   // --- EPUB 阅读 ---
   epubDefaultFlow: EpubFlowMode;
   epubFontSize: number;
@@ -187,6 +196,7 @@ export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
   defaultHighlightColor: "yellow",
   defaultAuthor: "读者",
   migrateOnRename: true,
+  annotationTags: cloneDefaultAnnotationTags(),
   // EPUB
   epubDefaultFlow: "scrolled",
   epubFontSize: 16,
@@ -229,6 +239,8 @@ export interface EpubCommentAnnotation {
   anchor: EpubCfiAnchor;
   note: string;
   noteType?: "insight" | "question" | "reminder";
+  tagId?: string;
+  tagLabelSnapshot?: string;
   createdAt: string;
   collapsed: boolean;
   author: string;
@@ -256,7 +268,7 @@ export interface PdfReadingProgress {
   lastRead: string;
 }
 
-// ===== 书签（EPUB/PDF 通用）=====
+// ===== 旧版书签兼容字段（EPUB/PDF 通用）=====
 
 export interface ReadingBookmark {
   id: string;

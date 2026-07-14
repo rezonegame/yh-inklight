@@ -8,6 +8,7 @@
 import { App, normalizePath, Notice, TFile } from "obsidian";
 
 import { createAnnotationUri } from "../links/annotationLink";
+import { AnnotationTagDefinition, resolveAnnotationTag } from "../tags/tagDomain";
 import {
   AnnotationIndex,
   AnnotationIndexEntry,
@@ -52,6 +53,7 @@ interface ExportEntry {
   cfiRange?: string;
   startOffset: number;
   pdfRects?: string;
+  tagName?: string;
 }
 
 export type StoredAnnotationTarget = {
@@ -82,7 +84,10 @@ export class AnnotationStore {
   private index: AnnotationIndex = EMPTY_INDEX;
   private changeVersion = 0;
 
-  constructor(private readonly app: App) {}
+  constructor(
+    private readonly app: App,
+    private readonly getAnnotationTags: () => AnnotationTagDefinition[] = () => [],
+  ) {}
 
   get version(): number {
     return this.changeVersion;
@@ -438,14 +443,14 @@ export class AnnotationStore {
     }));
   }
 
-  // ===== 书签（EPUB/PDF 通用）=====
+  // ===== 旧版书签兼容字段（EPUB/PDF 通用）=====
 
   async exportNotes(file: TFile, format: AnnotationExportFormat = "summary"): Promise<TFile> {
     const document = await this.getDocument(file);
     const baseName = file.basename || file.name.replace(/\.md$/i, "");
     const suffix = format === "summary" ? "" : `-${format}`;
     const targetPath = normalizePath(`${file.parent?.path ?? ""}/${baseName}-notes${suffix}.md`);
-    const lines = buildExportLines(`Notes for ${file.path}`, [{ filePath: file.path, document }], format);
+    const lines = buildExportLines(`Notes for ${file.path}`, [{ filePath: file.path, document }], format, this.getAnnotationTags());
 
     const existing = this.app.vault.getAbstractFileByPath(targetPath);
     if (existing instanceof TFile) {
@@ -461,7 +466,7 @@ export class AnnotationStore {
     const suffix = format === "summary" ? "" : `-${format}`;
     const targetPath = normalizePath(`inklight-all-notes${suffix}.md`);
     const sources = documents.map((document) => ({ filePath: document.filePath, document }));
-    const lines = buildExportLines("墨光批注全库汇总", sources, format);
+    const lines = buildExportLines("墨光批注全库汇总", sources, format, this.getAnnotationTags());
 
     const existing = this.app.vault.getAbstractFileByPath(targetPath);
     if (existing instanceof TFile) {
@@ -721,8 +726,9 @@ function buildExportLines(
   title: string,
   sources: ExportDocumentSource[],
   format: AnnotationExportFormat,
+  tags: AnnotationTagDefinition[],
 ): string[] {
-  const entries = sources.flatMap((source) => collectExportEntries(source));
+  const entries = sources.flatMap((source) => collectExportEntries(source, tags));
   const lines = [`# ${title}`, "", `Exported: ${new Date().toISOString()}`, ""];
 
   if (!entries.length) {
@@ -744,7 +750,7 @@ function buildExportLines(
   return [...lines, ...renderSummary(entries)];
 }
 
-function collectExportEntries(source: ExportDocumentSource): ExportEntry[] {
+function collectExportEntries(source: ExportDocumentSource, tags: AnnotationTagDefinition[]): ExportEntry[] {
   return [
     ...source.document.highlights.map((highlight): ExportEntry => ({
       id: highlight.id,
@@ -769,6 +775,7 @@ function collectExportEntries(source: ExportDocumentSource): ExportEntry[] {
       createdAt: comment.updatedAt || comment.createdAt,
       pageNumber: null,
       startOffset: comment.anchor.startOffset,
+      tagName: resolveAnnotationTag(tags, comment)?.name,
     })),
     ...source.document.pdfHighlights.map((highlight): ExportEntry => ({
       id: highlight.id,
@@ -795,6 +802,7 @@ function collectExportEntries(source: ExportDocumentSource): ExportEntry[] {
       pageNumber: comment.anchor.pageNumber,
       startOffset: Number.MAX_SAFE_INTEGER,
       pdfRects: JSON.stringify(comment.anchor.rects),
+      tagName: resolveAnnotationTag(tags, comment)?.name,
     })),
     ...source.document.epubHighlights.map((highlight): ExportEntry => ({
       id: highlight.id,
@@ -823,6 +831,7 @@ function collectExportEntries(source: ExportDocumentSource): ExportEntry[] {
       chapter: comment.anchor.chapter,
       cfiRange: comment.anchor.cfiRange,
       startOffset: Number.MAX_SAFE_INTEGER,
+      tagName: resolveAnnotationTag(tags, comment)?.name,
     })),
   ].sort((left, right) => {
     return left.sourcePath.localeCompare(right.sourcePath) || left.startOffset - right.startOffset;
@@ -886,6 +895,11 @@ function renderAnnotationBlock(entry: ExportEntry): string[] {
 
   for (const line of entry.text.split(/\r?\n/)) {
     lines.push(`> ${line}`);
+  }
+
+  if (entry.tagName) {
+    lines.push(">");
+    lines.push(`> 标签：${entry.tagName}`);
   }
 
   if (entry.content.trim()) {

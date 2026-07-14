@@ -44,6 +44,7 @@ import {
 	showFoliateStart,
 } from "./EpubFoliateLoader";
 import { EpubNoteModal, EpubNoteResult } from "./EpubNoteModal";
+import { legacyNoteTypeForTag } from "../tags/tagDomain";
 
 // ---- 常量 ----
 
@@ -462,7 +463,7 @@ private contextMenuEl: HTMLElement | null = null;
 	}
 
 	// ================================================================
-	// 书签（Phase 4-B P2）
+	// 兼容旧版书签数据（运行时入口已下线）
 	// ================================================================
 
 	/**
@@ -673,6 +674,7 @@ private contextMenuEl: HTMLElement | null = null;
 		new EpubNoteModal(
 			this.app,
 			text,
+			this.pluginSettings.annotationTags,
 			{
 				color: this.pluginSettings.defaultHighlightColor,
 				style: this.pluginSettings.epubHighlightStyle,
@@ -689,8 +691,10 @@ private contextMenuEl: HTMLElement | null = null;
 					style: result.style,
 					anchor: { cfiRange, chapter, selectedText: text },
 					note: result.note.trim(),
-					// 保留用户在 modal 选择的分类（insight/question/reminder），否则字段丢失
-					noteType: result.noteType,
+					tagId: result.tagId,
+					tagLabelSnapshot: result.tagLabelSnapshot,
+					// 保留旧字段，便于旧版插件读取内置标签。
+					noteType: result.tagId ? legacyNoteTypeForTag(result.tagId) : undefined,
 					createdAt: now,
 					collapsed: false,
 					author: this.pluginSettings.defaultAuthor,

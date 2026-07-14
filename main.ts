@@ -18,6 +18,12 @@ import { readProtocolParam } from "./src/links/annotationLink";
 import { AnnotationSettingsTab } from "./src/settings/settingsTab";
 import { AnnotationStore } from "./src/storage/annotationStore";
 import {
+  AnnotationTagDefinition,
+  legacyTitleForTag,
+  normalizeAnnotationTags,
+  resolveAnnotationTag,
+} from "./src/tags/tagDomain";
+import {
   AnnotationColor,
   AnnotationPluginSettings,
   CommentAnnotation,
@@ -35,15 +41,11 @@ import { EpubBookshelfView, EPUB_BOOKSHELF_VIEW_TYPE } from "./src/epub/EpubBook
 import { registerEpubGotoHandler } from "./src/epub/EpubGotoHandler";
 
 interface CommentModalValue {
-  title: string;
+  tagId: string;
+  tagLabelSnapshot: string;
+  legacyTitle?: string;
   content: string;
 }
-
-const NOTE_TITLE_OPTIONS = [
-  { value: "Insight", label: "💡 洞见" },
-  { value: "Question", label: "❓ 疑问" },
-  { value: "Reminder", label: "🔔 提醒" },
-] as const;
 
 const YH_INKLIGHT_ICON = `
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
@@ -74,7 +76,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     addIcon("yh-inklight-icon", YH_INKLIGHT_ICON);
     await this.loadSettings();
     console.info(`yh-inklight loaded v${this.manifest.version}`);
-    this.store = new AnnotationStore(this.app);
+    this.store = new AnnotationStore(this.app, () => this.settings.annotationTags);
     await this.store.initialize();
 
     this.registerView(ANNOTATION_SIDEBAR_VIEW, (leaf) => new AnnotationSidebarView(leaf, this));
@@ -187,14 +189,17 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   }
 
   async loadSettings(): Promise<void> {
+    const stored = (await this.loadData()) ?? {};
     this.settings = {
       ...DEFAULT_SETTINGS,
-      ...((await this.loadData()) ?? {}),
+      ...stored,
+      annotationTags: normalizeAnnotationTags((stored as Partial<AnnotationPluginSettings>).annotationTags),
     };
   }
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+    await this.refreshAnnotations();
   }
 
   async refreshAnnotations(): Promise<void> {
@@ -226,7 +231,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
   }
 
-  /** 跳转到 PDF 指定页（侧栏批注卡片跳转、书签等共用）。 */
+  /** 跳转到 PDF 指定页（侧栏批注卡片和深链回跳共用）。 */
   async gotoPdfPage(pageNumber: number): Promise<void> {
     const ok = await this.pdfViewerAdapter.goToPage(pageNumber, { flash: true, block: "center" });
     if (!ok) {
@@ -408,13 +413,15 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
   private async createComment(): Promise<void> {
     if (this.pdfLayer.isPdfActive()) {
-      const note = await new CommentModal(this.app, "", "").openAndRead();
+      const note = await new CommentModal(this.app, this.settings.annotationTags, "", "").openAndRead();
       if (note !== null) {
         await this.pdfLayer.createComment(
           this.settings.defaultHighlightColor,
           note.content,
           this.settings.defaultAuthor,
-          note.title,
+          note.legacyTitle,
+          note.tagId,
+          note.tagLabelSnapshot,
         );
       }
       this.toolbar.hide();
@@ -432,7 +439,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       return;
     }
 
-    const note = await new CommentModal(this.app, "", "").openAndRead();
+    const note = await new CommentModal(this.app, this.settings.annotationTags, "", "").openAndRead();
     if (note === null) {
       return;
     }
@@ -441,7 +448,9 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     const comment: CommentAnnotation = {
       id: crypto.randomUUID(),
       anchor: createAnchorForSnapshot(await this.app.vault.cachedRead(file), snapshot),
-      title: note.title,
+      title: note.legacyTitle,
+      tagId: note.tagId,
+      tagLabelSnapshot: note.tagLabelSnapshot,
       content: note.content,
       color: this.settings.defaultHighlightColor,
       position: { offsetX: 20, offsetY: 0 },
@@ -963,8 +972,10 @@ class CommentModal extends Modal {
 
   constructor(
     app: OverlayAnnotationsPlugin["app"],
+    private readonly tags: AnnotationTagDefinition[],
     private readonly initialTitle: string,
     private readonly initialContent: string,
+    private readonly initialTagId?: string,
   ) {
     super(app);
   }
@@ -981,12 +992,15 @@ class CommentModal extends Modal {
     this.contentEl.createEl("h2", { text: "便签" });
 
     const titleRow = this.contentEl.createDiv({ cls: "yh-modal-row" });
-    titleRow.createEl("label", { cls: "yh-modal-label", text: "类型" });
-    const title = titleRow.createEl("select", { cls: "yh-modal-select" });
-    for (const option of NOTE_TITLE_OPTIONS) {
-      title.createEl("option", { text: option.label, attr: { value: option.value } });
+    titleRow.createEl("label", { cls: "yh-modal-label", text: "标签" });
+    const tagSelect = titleRow.createEl("select", { cls: "yh-modal-select" });
+    const resolvedInitial = resolveAnnotationTag(this.tags, { tagId: this.initialTagId, title: this.initialTitle });
+    const selectableTags = this.tags.filter((tag) => tag.enabled || tag.id === resolvedInitial?.id);
+    for (const tag of selectableTags) {
+      const suffix = tag.enabled ? "" : "（已停用）";
+      tagSelect.createEl("option", { text: `${tag.name}${suffix}`, attr: { value: tag.id } });
     }
-    title.value = normalizedNoteTitle(this.initialTitle);
+    tagSelect.value = resolvedInitial?.id ?? selectableTags[0]?.id ?? "";
 
     const contentRow = this.contentEl.createDiv({ cls: "yh-modal-row" });
     contentRow.createEl("label", { cls: "yh-modal-label", text: "笔记" });
@@ -1004,10 +1018,11 @@ class CommentModal extends Modal {
       this.close();
     };
     const saveValue = (): void => {
-      this.value = {
-        title: title.value.trim(),
-        content: input.value.trim(),
-      };
+      const tag = this.tags.find((item) => item.id === tagSelect.value);
+      if (!tag) {
+        return;
+      }
+      this.value = { tagId: tag.id, tagLabelSnapshot: tag.name, legacyTitle: legacyTitleForTag(tag.id), content: input.value.trim() };
       this.close();
     };
     cancel.addEventListener("click", cancelValue);
@@ -1027,8 +1042,4 @@ class CommentModal extends Modal {
   onClose(): void {
     this.resolve?.(this.value);
   }
-}
-
-function normalizedNoteTitle(value: string): string {
-  return NOTE_TITLE_OPTIONS.some((option) => option.value === value) ? value : NOTE_TITLE_OPTIONS[0].value;
 }

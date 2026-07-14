@@ -23,6 +23,12 @@ import {
   PdfCommentAnnotation,
   PdfHighlightAnnotation,
 } from "../storage/types";
+import {
+  legacyNoteTypeForTag,
+  legacyTitleForTag,
+  resolveAnnotationTag,
+  ResolvedAnnotationTag,
+} from "../tags/tagDomain";
 
 export const ANNOTATION_SIDEBAR_VIEW = "yh-inklight-sidebar";
 
@@ -30,6 +36,10 @@ type AnnotationKind = "highlight" | "note";
 type AnnotationMode = "md" | "pdf" | "epub";
 type AnnotationScope = "current" | "all";
 type TypeFilter = "all" | AnnotationKind;
+type TagFilter = "__all__" | "__untagged__" | string;
+
+const ALL_TAGS_FILTER = "__all__";
+const UNTAGGED_FILTER = "__untagged__";
 
 type SidebarCard =
   | {
@@ -74,6 +84,7 @@ export class AnnotationSidebarView extends ItemView {
   private query = "";
   private color: AnnotationColor | "all" = "all";
   private type: TypeFilter = "all";
+  private tag: TagFilter = ALL_TAGS_FILTER;
   private sort: AnnotationSortMode = "document";
   private exportFormat: AnnotationExportFormat = "summary";
   private renderToken = 0;
@@ -118,9 +129,9 @@ export class AnnotationSidebarView extends ItemView {
 
     const file = this.app.workspace.getActiveFile();
     this.renderHeader(container);
-    this.renderControls(container);
 
     if (this.annotationScope === "current" && !file) {
+      this.renderControls(container, []);
       container.createDiv({ cls: "yh-empty", text: "Open a Markdown or PDF file to inspect annotations." });
       this.renderExportFooter(container, null);
       return;
@@ -132,6 +143,7 @@ export class AnnotationSidebarView extends ItemView {
       return;
     }
     const rawCards = documents.flatMap((document) => this.buildCards(document));
+    this.renderControls(container, rawCards);
     const cards = this.filterCards(rawCards);
     const highlightCount = rawCards.filter((card) => card.kind === "highlight" && !card.orphaned).length;
     const noteCount = rawCards.filter((card) => card.note && !card.orphaned).length;
@@ -398,7 +410,7 @@ export class AnnotationSidebarView extends ItemView {
     });
   }
 
-  private renderControls(container: Element): void {
+  private renderControls(container: Element, cards: SidebarCard[]): void {
     const searchRow = container.createDiv({ cls: "yh-ov-search-row" });
     const search = searchRow.createEl("input", {
       cls: "yh-ov-search",
@@ -451,6 +463,22 @@ export class AnnotationSidebarView extends ItemView {
       await this.render();
     });
 
+    const tag = filterRow.createEl("select", { cls: "yh-filter-select", attr: { title: "按标签筛选" } });
+    tag.createEl("option", { text: "全部标签", value: ALL_TAGS_FILTER });
+    tag.createEl("option", { text: "未分类", value: UNTAGGED_FILTER });
+    for (const resolvedTag of this.availableTags(cards)) {
+      const suffix = resolvedTag.unavailable ? "（已停用）" : "";
+      tag.createEl("option", { text: `${resolvedTag.name}${suffix}`, value: resolvedTag.id });
+    }
+    if (![...tag.options].some((option) => option.value === this.tag)) {
+      this.tag = ALL_TAGS_FILTER;
+    }
+    tag.value = this.tag;
+    tag.addEventListener("change", async () => {
+      this.tag = tag.value;
+      await this.render();
+    });
+
     const sort = filterRow.createEl("select", { cls: "yh-filter-select" });
     const sortOptions = { document: "文档顺序", newest: "最新优先", oldest: "最早优先" } as const;
     for (const item of ["document", "newest", "oldest"] as const) {
@@ -486,21 +514,17 @@ export class AnnotationSidebarView extends ItemView {
     head.createSpan({ cls: `yh-ov-label yh-label--${cardData.color}`, text: COLOR_LABELS[cardData.color] });
     head.createSpan({ cls: "yh-ov-meta", text: cardData.mode === "md" ? "Markdown" : cardData.mode === "pdf" ? "PDF" : "EPUB" });
     head.createSpan({ cls: "yh-ov-dot", text: "·" });
-    const title = (cardData.note && "title" in cardData.note ? cardData.note.title : "") ?? "";
-    const kindLabel = cardData.kind === "highlight" ? "高亮" : "笔记";
-    const type = head.createSpan({
-      cls: "yh-ov-type",
-      text: title ? getTitleLabel(title) : kindLabel,
-    });
-    if (title) {
-      type.dataset.title = title;
-    }
-    // EPUB 想法分类标签（insight/question/reminder），仅 EpubCommentAnnotation 有 noteType
-    const note = cardData.note;
-    const epubNoteType = note && "noteType" in note ? note.noteType : undefined;
-    if (epubNoteType) {
-      const labelMap: Record<string, string> = { insight: "💡洞见", question: "❓疑问", reminder: "🔔提醒" };
-      head.createSpan({ cls: "yh-ov-note-type", text: labelMap[epubNoteType] ?? epubNoteType });
+    const resolvedTag = this.cardTag(cardData);
+    const tag = head.createSpan({ cls: "yh-ov-tag", text: resolvedTag?.name ?? "未分类" });
+    if (resolvedTag) {
+      tag.dataset.tagId = resolvedTag.id;
+      if (resolvedTag.unavailable) {
+        tag.addClass("is-unavailable");
+      }
+      tag.empty();
+      const icon = tag.createSpan({ cls: "yh-ov-tag-icon" });
+      setIcon(icon, resolvedTag.icon);
+      tag.createSpan({ text: resolvedTag.name });
     }
     head.createSpan({ cls: "yh-ov-time", text: formatTime(cardData.createdAt) });
 
@@ -587,6 +611,8 @@ export class AnnotationSidebarView extends ItemView {
     });
 
     const edit = card.createDiv({ cls: "yh-ov-edit hidden" });
+    const tagSelect = edit.createEl("select", { cls: "yh-ov-tag-select", attr: { "aria-label": "笔记标签" } });
+    tagSelect.addClass("hidden");
     const textarea = edit.createEl("textarea", {
       cls: "yh-ov-textarea",
       attr: { placeholder: "写下你的想法..." },
@@ -605,6 +631,26 @@ export class AnnotationSidebarView extends ItemView {
       attrs["data-note-id"] = card.note.id;
     }
     return attrs;
+  }
+
+  private availableTags(cards: SidebarCard[]): ResolvedAnnotationTag[] {
+    const tags = new Map<string, ResolvedAnnotationTag>();
+    for (const definition of this.plugin.settings.annotationTags) {
+      if (definition.enabled) {
+        tags.set(definition.id, { ...definition, unavailable: false });
+      }
+    }
+    for (const card of cards) {
+      const tag = this.cardTag(card);
+      if (tag) {
+        tags.set(tag.id, tag);
+      }
+    }
+    return [...tags.values()].sort((left, right) => {
+      const leftOrder = this.plugin.settings.annotationTags.findIndex((tag) => tag.id === left.id);
+      const rightOrder = this.plugin.settings.annotationTags.findIndex((tag) => tag.id === right.id);
+      return (leftOrder < 0 ? Number.MAX_SAFE_INTEGER : leftOrder) - (rightOrder < 0 ? Number.MAX_SAFE_INTEGER : rightOrder) || left.name.localeCompare(right.name);
+    });
   }
 
   private openCardMenu(file: TFile, card: SidebarCard, position: MouseEvent | { x: number; y: number }): void {
@@ -629,21 +675,33 @@ export class AnnotationSidebarView extends ItemView {
 
   private openInlineEditor(card: HTMLElement, file: TFile, cardData: SidebarCard, initialValue: string): void {
     const edit = card.querySelector<HTMLElement>(".yh-ov-edit");
+    const tagSelect = card.querySelector<HTMLSelectElement>(".yh-ov-tag-select");
     const textarea = card.querySelector<HTMLTextAreaElement>(".yh-ov-textarea");
     const save = card.querySelector<HTMLButtonElement>(".yh-ov-save");
     const cancel = card.querySelector<HTMLButtonElement>(".yh-ov-cancel");
     const addNote = card.querySelector<HTMLElement>('[data-action="add-note"]');
-    if (!edit || !textarea || !save || !cancel) {
+    if (!edit || !textarea || !save || !cancel || !tagSelect) {
       return;
     }
 
+    tagSelect.empty();
+    const currentTag = this.cardTag(cardData);
+    const selectableTags = this.plugin.settings.annotationTags.filter((tag) => tag.enabled || tag.id === currentTag?.id);
+    for (const tag of selectableTags) {
+      const suffix = tag.enabled ? "" : "（已停用）";
+      tagSelect.createEl("option", { text: `${tag.name}${suffix}`, value: tag.id });
+    }
+    tagSelect.value = currentTag?.id && selectableTags.some((tag) => tag.id === currentTag.id)
+      ? currentTag.id
+      : selectableTags[0]?.id ?? "";
+    tagSelect.toggleClass("hidden", selectableTags.length === 0);
     textarea.value = initialValue;
     edit.removeClass("hidden");
     textarea.focus();
     textarea.setSelectionRange(textarea.value.length, textarea.value.length);
 
     const saveContent = async (): Promise<void> => {
-      await this.saveCardContent(file, cardData, textarea.value);
+      await this.saveCardContent(file, cardData, textarea.value, tagSelect.value);
       await this.plugin.refreshAnnotations();
     };
 
@@ -699,11 +757,17 @@ export class AnnotationSidebarView extends ItemView {
     });
   }
 
-  private async saveCardContent(file: TFile, card: SidebarCard, content: string): Promise<void> {
+  private async saveCardContent(file: TFile, card: SidebarCard, content: string, tagId: string): Promise<void> {
+    const tag = this.plugin.settings.annotationTags.find((item) => item.id === tagId);
+    const tagFields = tag
+      ? { tagId: tag.id, tagLabelSnapshot: tag.name }
+      : {};
     if (card.note && card.mode === "pdf") {
       await this.plugin.store.updatePdfComment(file, {
         ...(card.note as PdfCommentAnnotation),
         content,
+        ...tagFields,
+        title: tag ? legacyTitleForTag(tag.id) ?? (card.note as PdfCommentAnnotation).title : (card.note as PdfCommentAnnotation).title,
         updatedAt: new Date().toISOString(),
       });
       return;
@@ -713,6 +777,8 @@ export class AnnotationSidebarView extends ItemView {
       await this.plugin.store.updateComment(file, {
         ...(card.note as CommentAnnotation),
         content,
+        ...tagFields,
+        title: tag ? legacyTitleForTag(tag.id) ?? (card.note as CommentAnnotation).title : (card.note as CommentAnnotation).title,
         updatedAt: new Date().toISOString(),
       });
       return;
@@ -722,6 +788,8 @@ export class AnnotationSidebarView extends ItemView {
       await this.plugin.store.updateEpubComment(file, {
         ...(card.note as EpubCommentAnnotation),
         note: content,
+        ...tagFields,
+        noteType: tag ? legacyNoteTypeForTag(tag.id) ?? (card.note as EpubCommentAnnotation).noteType : (card.note as EpubCommentAnnotation).noteType,
         updatedAt: new Date().toISOString(),
       });
       return;
@@ -735,6 +803,8 @@ export class AnnotationSidebarView extends ItemView {
         highlightId: highlight.id,
         anchor: highlight.anchor,
         content,
+        ...tagFields,
+        title: tag ? legacyTitleForTag(tag.id) : undefined,
         color: highlight.color,
         position: { offsetX: 20, offsetY: 0 },
         collapsed: false,
@@ -755,6 +825,8 @@ export class AnnotationSidebarView extends ItemView {
         highlightId: highlight.id,
         anchor: highlight.anchor,
         content,
+        ...tagFields,
+        title: tag ? legacyTitleForTag(tag.id) : undefined,
         color: highlight.color,
         position: { offsetX: 20, offsetY: 0 },
         collapsed: false,
@@ -777,6 +849,8 @@ export class AnnotationSidebarView extends ItemView {
         style: highlight.style,
         anchor: highlight.anchor,
         note: content,
+        ...tagFields,
+        noteType: tag ? legacyNoteTypeForTag(tag.id) : undefined,
         createdAt: now,
         collapsed: false,
         author: this.plugin.settings.defaultAuthor,
@@ -814,6 +888,16 @@ export class AnnotationSidebarView extends ItemView {
         return Boolean(card.note);
       })
       .filter((card) => {
+        if (this.tag === ALL_TAGS_FILTER) {
+          return true;
+        }
+        const tag = this.cardTag(card);
+        if (this.tag === UNTAGGED_FILTER) {
+          return tag === null;
+        }
+        return tag?.id === this.tag;
+      })
+      .filter((card) => {
         const haystack = `${card.sourcePath} ${card.text} ${card.content}`.toLowerCase();
         return haystack.includes(this.query.toLowerCase());
       })
@@ -830,6 +914,19 @@ export class AnnotationSidebarView extends ItemView {
 
   private cardUpdatedAt(card: SidebarCard): string {
     return card.note?.updatedAt ?? card.createdAt;
+  }
+
+  private cardTag(card: SidebarCard): ResolvedAnnotationTag | null {
+    const note = card.note;
+    if (!note) {
+      return null;
+    }
+    return resolveAnnotationTag(this.plugin.settings.annotationTags, {
+      tagId: note.tagId,
+      tagLabelSnapshot: note.tagLabelSnapshot,
+      title: "title" in note ? note.title : undefined,
+      noteType: "noteType" in note ? note.noteType : undefined,
+    });
   }
 
   private renderExportFooter(container: Element, file: TFile | null): void {
@@ -893,15 +990,6 @@ export class AnnotationSidebarView extends ItemView {
     view.containerEl.addClass("yh-flash-target");
     window.setTimeout(() => view.containerEl.removeClass("yh-flash-target"), 850);
   }
-}
-
-function getTitleLabel(title: string): string {
-  const labels: Record<string, string> = {
-    Insight: "洞察",
-    Question: "疑问",
-    Reminder: "提醒",
-  };
-  return labels[title] ?? title;
 }
 
 function isCodeAnchor(anchor: HighlightAnnotation["anchor"] | PdfHighlightAnnotation["anchor"]): boolean {

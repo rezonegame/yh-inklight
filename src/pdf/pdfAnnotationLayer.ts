@@ -102,7 +102,14 @@ export class PdfAnnotationLayer {
     return true;
   }
 
-  async createComment(color: AnnotationColor, content: string, author: string, title = ""): Promise<boolean> {
+  async createComment(
+    color: AnnotationColor,
+    content: string,
+    author: string,
+    title = "",
+    tagId?: string,
+    tagLabelSnapshot?: string,
+  ): Promise<boolean> {
     const snapshot = this.resolveSelection();
     if (!snapshot) {
       new Notice("请先在 PDF 中选中文本。");
@@ -114,6 +121,8 @@ export class PdfAnnotationLayer {
       id: crypto.randomUUID(),
       anchor: snapshot.anchor,
       title,
+      tagId,
+      tagLabelSnapshot,
       content,
       color,
       position: { offsetX: 0, offsetY: 0 },

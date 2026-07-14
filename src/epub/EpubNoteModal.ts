@@ -4,7 +4,7 @@
  * [POS]: EPUB 想法输入 UI，与 yh-inklight 的 CommentModal 保持一致的风格
  */
 
-import { App, Modal } from "obsidian";
+import { App, Modal, setIcon } from "obsidian";
 import {
   AnnotationColor,
   ANNOTATION_COLORS,
@@ -13,19 +13,15 @@ import {
   EpubHighlightStyle,
   EPUB_HIGHLIGHT_STYLES,
 } from "../storage/types";
+import { AnnotationTagDefinition, resolveAnnotationTag } from "../tags/tagDomain";
 
 export interface EpubNoteResult {
   note: string;
   color: AnnotationColor;
   style: EpubHighlightStyle;
-  noteType: "insight" | "question" | "reminder";
+  tagId?: string;
+  tagLabelSnapshot?: string;
 }
-
-const NOTE_TYPE_OPTIONS = [
-  { value: "insight" as const, label: "💡 洞见" },
-  { value: "question" as const, label: "❓ 疑问" },
-  { value: "reminder" as const, label: "🔔 提醒" },
-];
 
 /**
  * Modal for writing a personal note (想法) attached to an EPUB text selection.
@@ -35,18 +31,21 @@ export class EpubNoteModal extends Modal {
   private note: string;
   private color: AnnotationColor;
   private style: EpubHighlightStyle;
-  private noteType: "insight" | "question" | "reminder";
+  private tagId: string;
   private onSubmit: (result: EpubNoteResult) => void;
   private titleText: string;
 
   constructor(
     app: App,
     selectedText: string,
+    private readonly tags: AnnotationTagDefinition[],
     initial: {
       note?: string;
       color?: AnnotationColor;
       style?: EpubHighlightStyle;
-      noteType?: "insight" | "question" | "reminder";
+      tagId?: string;
+      tagLabelSnapshot?: string;
+      noteType?: string;
     },
     onSubmit: (result: EpubNoteResult) => void,
     titleText = "写下你的想法",
@@ -56,7 +55,7 @@ export class EpubNoteModal extends Modal {
     this.note = initial.note ?? "";
     this.color = initial.color ?? "yellow";
     this.style = initial.style ?? "fill";
-    this.noteType = initial.noteType ?? "insight";
+    this.tagId = resolveAnnotationTag(tags, initial)?.id ?? tags.find((tag) => tag.enabled)?.id ?? "";
     this.onSubmit = onSubmit;
     this.titleText = titleText;
   }
@@ -68,7 +67,8 @@ export class EpubNoteModal extends Modal {
       note: this.note,
       color: this.color,
       style: this.style,
-      noteType: this.note ? this.noteType : "insight",
+      tagId: this.note ? this.tagId : undefined,
+      tagLabelSnapshot: this.note ? this.tags.find((tag) => tag.id === this.tagId)?.name : undefined,
     });
   }
 
@@ -129,30 +129,32 @@ export class EpubNoteModal extends Modal {
       styleEls[s.id] = chip;
     }
 
-    // 想法类型选择行
+    // 语义标签选择行
     const typeRow = contentEl.createDiv({ cls: "yh-epub-note-type-row" });
-    typeRow.createEl("span", { cls: "yh-epub-note-label", text: "想法类型" });
+    typeRow.createEl("span", { cls: "yh-epub-note-label", text: "标签" });
     const chips = typeRow.createDiv({ cls: "yh-epub-note-type-chips" });
     const chipEls: Record<string, HTMLElement> = {};
-    for (const t of NOTE_TYPE_OPTIONS) {
+    for (const tag of this.tags.filter((item) => item.enabled || item.id === this.tagId)) {
       const chip = chips.createDiv({ cls: "yh-epub-note-type-chip" });
-      chip.setText(t.label);
-      chip.title = t.label;
-      chip.setAttribute("data-type", t.value);
-      if (t.value === this.noteType) {
+      chip.title = tag.enabled ? tag.name : `${tag.name}（已停用）`;
+      chip.setAttribute("data-tag-id", tag.id);
+      const icon = chip.createSpan({ cls: "yh-epub-note-type-icon" });
+      setIcon(icon, tag.icon);
+      chip.createSpan({ text: tag.name });
+      if (tag.id === this.tagId) {
         chip.addClass("is-active");
       }
       chip.addEventListener("click", () => {
-        this.noteType = t.value;
+        this.tagId = tag.id;
         Object.values(chipEls).forEach((c) => c.removeClass("is-active"));
         chip.addClass("is-active");
       });
-      chipEls[t.value] = chip;
+      chipEls[tag.id] = chip;
     }
 
     // 文本输入区域
     const ta = contentEl.createEl("textarea", { cls: "yh-epub-note-textarea" });
-    ta.placeholder = "在这里写下你的想法、疑问或联想…";
+    ta.placeholder = "在这里写下你的想法或联想…";
     ta.value = this.note;
     ta.rows = 6;
     window.setTimeout(() => ta.focus(), 30);

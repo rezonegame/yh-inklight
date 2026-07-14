@@ -406,21 +406,36 @@
   font-size: 11px;
 }
 
-.yh-ov-type {
+.yh-ov-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  min-height: 18px;
   color: var(--text-muted);
   font-size: 11px;
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+  padding: 1px 5px;
 }
 
-.yh-ov-type[data-title="Insight"] {
-  color: #92700a;
+.theme-dark .yh-ov-tag {
+  background: rgba(255, 255, 255, 0.08);
 }
 
-.yh-ov-type[data-title="Question"] {
-  color: #003da0;
+.yh-ov-tag-icon {
+  display: inline-flex;
+  width: 12px;
+  height: 12px;
 }
 
-.yh-ov-type[data-title="Reminder"] {
-  color: #a0006b;
+.yh-ov-tag-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.yh-ov-tag.is-unavailable {
+  opacity: 0.72;
+  text-decoration: line-through;
 }
 
 .yh-ov-time {
@@ -483,6 +498,63 @@
 
 .yh-ov-content p {
   margin: 0 0 4px;
+}
+
+.yh-ov-tag-select {
+  width: 100%;
+  margin-bottom: 7px;
+}
+
+.yh-tag-settings {
+  margin: 10px 0 18px;
+}
+
+.yh-tag-settings-list {
+  display: grid;
+  gap: 6px;
+}
+
+.yh-tag-settings-row {
+  display: grid;
+  grid-template-columns: 92px minmax(90px, 1fr) 20px 28px 28px;
+  gap: 6px;
+  align-items: center;
+}
+
+.yh-tag-settings-row input[type="checkbox"] {
+  margin: 0;
+}
+
+.yh-tag-settings-row button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0;
+}
+
+.yh-tag-settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.yh-tag-settings-actions .mod-cta {
+  margin-left: auto;
+}
+
+.yh-tag-settings-error {
+  color: var(--text-error);
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 480px) {
+  .yh-tag-settings-row {
+    grid-template-columns: 78px minmax(72px, 1fr) 20px 26px 26px;
+    gap: 4px;
+  }
 }
 
 .yh-ov-card .yh-ov-expand-btn,
