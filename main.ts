@@ -71,9 +71,10 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private annotationLinks!: AnnotationLinkService;
   private lastSelection: SelectionSnapshot | null = null;
   private renameMigrationTimer: number | null = null;
-  private highlightUndo: {
+  private annotationUndo: {
     filePath: string;
     annotationId: string;
+    label: string;
     timer: number;
     notice: Notice;
   } | null = null;
@@ -86,7 +87,16 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     await this.store.initialize();
 
     this.registerView(ANNOTATION_SIDEBAR_VIEW, (leaf) => new AnnotationSidebarView(leaf, this));
-    this.registerView(EPUB_READER_VIEW_TYPE, (leaf) => new EpubReaderView(leaf, this.store, this.settings, () => this.refreshAnnotations()));
+    this.registerView(
+      EPUB_READER_VIEW_TYPE,
+      (leaf) => new EpubReaderView(
+        leaf,
+        this.store,
+        this.settings,
+        () => this.refreshAnnotations(),
+        (file, annotationId, label) => this.offerAnnotationUndo(file, annotationId, label),
+      ),
+    );
     // 把 foliate 支持的所有电子书格式绑定到阅读器视图：registerView 只注册视图工厂，
     // 还需要 registerExtensions 告诉 Obsidian「.epub/.mobi/... 用本视图打开」。
     // 参考 ob-epub-reader 与 obsidian-weave-reader 的实现；用 try/catch 防止
@@ -127,10 +137,12 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       addHighlight: async (file, highlight) => {
         await this.store.addPdfHighlight(file, highlight);
         await this.refreshAnnotations();
+        this.offerAnnotationUndo(file, highlight.id, "高亮");
       },
       addComment: async (file, comment) => {
         await this.store.addPdfComment(file, comment);
         await this.refreshAnnotations();
+        this.offerAnnotationUndo(file, comment.id, "批注");
       },
       updateComment: async (file, comment) => {
         await this.store.updatePdfComment(file, comment);
@@ -414,7 +426,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     await this.store.addHighlight(file, highlight);
     await this.refreshActiveReadingViewHighlights(file.path);
     await this.refreshAnnotations();
-    this.offerHighlightUndo(file, highlight.id);
+    this.offerAnnotationUndo(file, highlight.id, "高亮");
     this.toolbar.hide();
   }
 
@@ -508,11 +520,11 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
   }
 
-  private offerHighlightUndo(file: TFile, annotationId: string): void {
-    this.clearHighlightUndo();
+  private offerAnnotationUndo(file: TFile, annotationId: string, label: string): void {
+    this.clearAnnotationUndo();
 
     const content = document.createDocumentFragment();
-    content.append("已添加高亮 ");
+    content.append(`已添加${label} `);
     const undoButton = document.createElement("button");
     undoButton.type = "button";
     undoButton.textContent = "撤销";
@@ -521,11 +533,11 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
     const notice = new Notice(content, 7000);
     const timer = window.setTimeout(() => {
-      if (this.highlightUndo?.annotationId === annotationId) {
-        this.highlightUndo = null;
+      if (this.annotationUndo?.annotationId === annotationId) {
+        this.annotationUndo = null;
       }
     }, 7000);
-    this.highlightUndo = { filePath: file.path, annotationId, timer, notice };
+    this.annotationUndo = { filePath: file.path, annotationId, label, timer, notice };
 
     undoButton.addEventListener("click", () => {
       void this.undoLatestHighlight(annotationId);
@@ -533,31 +545,52 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   }
 
   private async undoLatestHighlight(annotationId: string): Promise<void> {
-    const pending = this.highlightUndo;
+    const pending = this.annotationUndo;
     if (!pending || pending.annotationId !== annotationId) {
       return;
     }
 
-    this.clearHighlightUndo();
+    this.clearAnnotationUndo();
     const file = this.app.vault.getAbstractFileByPath(pending.filePath);
     if (!(file instanceof TFile)) {
       return;
     }
 
     await this.store.removeAnnotation(file, pending.annotationId);
-    await this.refreshActiveReadingViewHighlights(file.path);
+    await this.refreshAnnotationPresentation(file);
     await this.refreshAnnotations();
-    new Notice("已撤销高亮");
+    new Notice(`已撤销${pending.label}`);
   }
 
-  private clearHighlightUndo(): void {
-    if (!this.highlightUndo) {
+  private clearAnnotationUndo(): void {
+    if (!this.annotationUndo) {
       return;
     }
 
-    window.clearTimeout(this.highlightUndo.timer);
-    this.highlightUndo.notice.hide();
-    this.highlightUndo = null;
+    window.clearTimeout(this.annotationUndo.timer);
+    this.annotationUndo.notice.hide();
+    this.annotationUndo = null;
+  }
+
+  private async refreshAnnotationPresentation(file: TFile): Promise<void> {
+    if (file.extension === "md") {
+      await this.refreshActiveReadingViewHighlights(file.path);
+      return;
+    }
+
+    if (file.extension === "pdf") {
+      this.pdfLayer.refresh();
+      return;
+    }
+
+    if ((SUPPORTED_BOOK_EXTENSIONS as readonly string[]).includes(file.extension.toLowerCase())) {
+      for (const leaf of this.app.workspace.getLeavesOfType(EPUB_READER_VIEW_TYPE)) {
+        const view = leaf.view;
+        if (view instanceof EpubReaderView && view.file?.path === file.path) {
+          view.refreshAnnotationsFromStore();
+        }
+      }
+    }
   }
 
   private async resolveSelection(): Promise<SelectionSnapshot | null> {

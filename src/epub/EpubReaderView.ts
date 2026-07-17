@@ -135,6 +135,7 @@ export class EpubReaderView extends FileView {
 	private readonly pluginSettings: AnnotationPluginSettings;
 	private readonly themeManager: EpubThemeManager;
 	private readonly refreshAnnotations: () => void;
+	private readonly offerAnnotationUndo: (file: TFile, annotationId: string, label: string) => void;
 
 	// ---- foliate 实例 ----
 
@@ -204,11 +205,13 @@ private contextMenuEl: HTMLElement | null = null;
 		store: AnnotationStore,
 		settings: AnnotationPluginSettings,
 		refreshAnnotations: () => void,
+		offerAnnotationUndo: (file: TFile, annotationId: string, label: string) => void,
 	) {
 		super(leaf);
 		this.store = store;
 		this.pluginSettings = settings;
 		this.refreshAnnotations = refreshAnnotations;
+		this.offerAnnotationUndo = offerAnnotationUndo;
 		this.themeManager = new EpubThemeManager();
 		this.currentFlowMode = settings.epubDefaultFlow;
 		this.currentFontSize = settings.epubFontSize;
@@ -441,6 +444,11 @@ private contextMenuEl: HTMLElement | null = null;
 		this.renderTocList();
 	}
 
+	refreshAnnotationsFromStore(): void {
+		this.refreshRenditionAnnotations();
+		this.renderSidebar();
+	}
+
 	/**
 	 * 渲染目录列表，点击条目跳转到对应章节。
 	 */
@@ -651,7 +659,7 @@ private contextMenuEl: HTMLElement | null = null;
 			this.renderAnnotationOnRendition(annotation);
 			this.renderSidebar();
 			this.refreshAnnotations();
-			new Notice(`已添加${COLOR_LABELS[color]}画线`);
+			this.offerAnnotationUndo(this.file, annotation.id, "高亮");
 		} catch (error) {
 			console.error("yh-inklight: EPUB highlight creation failed", error);
 			new Notice("画线创建失败");
@@ -708,7 +716,7 @@ private contextMenuEl: HTMLElement | null = null;
 					this.renderAnnotationOnRendition(annotation);
 					this.renderSidebar();
 					this.refreshAnnotations();
-					new Notice("已添加标注");
+					this.offerAnnotationUndo(this.file!, annotation.id, "批注");
 				} catch (error) {
 					console.error("yh-inklight: EPUB comment creation failed", error);
 					new Notice("标注创建失败");

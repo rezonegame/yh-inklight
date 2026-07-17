@@ -8641,7 +8641,7 @@ var SelectionToolbar = class {
     }
     const text = selection.toString().trim();
     const range = selection.getRangeAt(0);
-    if (!text || !isSelectionInsideMarkdownContent(range)) {
+    if (!text || !isSelectionInsideAnnotatableContent(range)) {
       this.hide();
       return;
     }
@@ -8691,7 +8691,7 @@ var SelectionToolbar = class {
     return button;
   }
 };
-function isSelectionInsideMarkdownContent(range) {
+function isSelectionInsideAnnotatableContent(range) {
   const container = range.commonAncestorContainer instanceof HTMLElement ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
   if (!container) {
     return false;
@@ -8699,7 +8699,11 @@ function isSelectionInsideMarkdownContent(range) {
   if (container.closest(".view-header, .workspace-tab-header, .sidebar, .modal-container, input, textarea")) {
     return false;
   }
-  return Boolean(container.closest(".cm-content, .markdown-preview-view"));
+  return Boolean(
+    container.closest(
+      ".cm-content, .markdown-preview-view, .pdf-container, .pdf-viewer, .pdf-embed, .workspace-leaf-content[data-type='pdf']"
+    )
+  );
 }
 var NOTE_ICON = `
   <svg width="14" height="14" viewBox="0 0 24 24"
@@ -8871,6 +8875,9 @@ var PdfAnnotationLayer = class {
   }
   isPdfActive() {
     return this.viewerAdapter.isPdfActive();
+  }
+  refresh() {
+    this.scheduleRender();
   }
   /** 实时计算当前视口中心的页码（不依赖缓存的 currentPage）。 */
   computeCurrentPage() {
@@ -12167,7 +12174,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
   // ================================================================
   // 构造 & 生命周期
   // ================================================================
-  constructor(leaf, store, settings, refreshAnnotations) {
+  constructor(leaf, store, settings, refreshAnnotations, offerAnnotationUndo) {
     super(leaf);
     // ---- foliate 实例 ----
     this.foliateView = null;
@@ -12244,6 +12251,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.store = store;
     this.pluginSettings = settings;
     this.refreshAnnotations = refreshAnnotations;
+    this.offerAnnotationUndo = offerAnnotationUndo;
     this.themeManager = new EpubThemeManager();
     this.currentFlowMode = settings.epubDefaultFlow;
     this.currentFontSize = settings.epubFontSize;
@@ -12435,6 +12443,10 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.sidebarContentEl.empty();
     this.renderTocList();
   }
+  refreshAnnotationsFromStore() {
+    this.refreshRenditionAnnotations();
+    this.renderSidebar();
+  }
   /**
    * 渲染目录列表，点击条目跳转到对应章节。
    */
@@ -12612,7 +12624,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       this.renderAnnotationOnRendition(annotation);
       this.renderSidebar();
       this.refreshAnnotations();
-      new import_obsidian12.Notice(`\u5DF2\u6DFB\u52A0${COLOR_LABELS[color]}\u753B\u7EBF`);
+      this.offerAnnotationUndo(this.file, annotation.id, "\u9AD8\u4EAE");
     } catch (error) {
       console.error("yh-inklight: EPUB highlight creation failed", error);
       new import_obsidian12.Notice("\u753B\u7EBF\u521B\u5EFA\u5931\u8D25");
@@ -12665,7 +12677,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
           this.renderAnnotationOnRendition(annotation);
           this.renderSidebar();
           this.refreshAnnotations();
-          new import_obsidian12.Notice("\u5DF2\u6DFB\u52A0\u6807\u6CE8");
+          this.offerAnnotationUndo(this.file, annotation.id, "\u6279\u6CE8");
         } catch (error) {
           console.error("yh-inklight: EPUB comment creation failed", error);
           new import_obsidian12.Notice("\u6807\u6CE8\u521B\u5EFA\u5931\u8D25");
@@ -13920,7 +13932,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
     this.settings = DEFAULT_SETTINGS;
     this.lastSelection = null;
     this.renameMigrationTimer = null;
-    this.highlightUndo = null;
+    this.annotationUndo = null;
   }
   async onload() {
     (0, import_obsidian15.addIcon)("yh-inklight-icon", YH_INKLIGHT_ICON);
@@ -13929,7 +13941,16 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
     this.store = new AnnotationStore(this.app, () => this.settings.annotationTags);
     await this.store.initialize();
     this.registerView(ANNOTATION_SIDEBAR_VIEW, (leaf) => new AnnotationSidebarView(leaf, this));
-    this.registerView(EPUB_READER_VIEW_TYPE, (leaf) => new EpubReaderView(leaf, this.store, this.settings, () => this.refreshAnnotations()));
+    this.registerView(
+      EPUB_READER_VIEW_TYPE,
+      (leaf) => new EpubReaderView(
+        leaf,
+        this.store,
+        this.settings,
+        () => this.refreshAnnotations(),
+        (file, annotationId, label) => this.offerAnnotationUndo(file, annotationId, label)
+      )
+    );
     try {
       this.registerExtensions([...SUPPORTED_BOOK_EXTENSIONS], EPUB_READER_VIEW_TYPE);
     } catch (error) {
@@ -13965,10 +13986,12 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
       addHighlight: async (file, highlight) => {
         await this.store.addPdfHighlight(file, highlight);
         await this.refreshAnnotations();
+        this.offerAnnotationUndo(file, highlight.id, "\u9AD8\u4EAE");
       },
       addComment: async (file, comment) => {
         await this.store.addPdfComment(file, comment);
         await this.refreshAnnotations();
+        this.offerAnnotationUndo(file, comment.id, "\u6279\u6CE8");
       },
       updateComment: async (file, comment) => {
         await this.store.updatePdfComment(file, comment);
@@ -14215,7 +14238,7 @@ ${lines.slice(0, 8).join("\n")}`);
     await this.store.addHighlight(file, highlight);
     await this.refreshActiveReadingViewHighlights(file.path);
     await this.refreshAnnotations();
-    this.offerHighlightUndo(file, highlight.id);
+    this.offerAnnotationUndo(file, highlight.id, "\u9AD8\u4EAE");
     this.toolbar.hide();
   }
   async createComment() {
@@ -14296,10 +14319,10 @@ ${lines.slice(0, 8).join("\n")}`);
       }
     }
   }
-  offerHighlightUndo(file, annotationId) {
-    this.clearHighlightUndo();
+  offerAnnotationUndo(file, annotationId, label) {
+    this.clearAnnotationUndo();
     const content = document.createDocumentFragment();
-    content.append("\u5DF2\u6DFB\u52A0\u9AD8\u4EAE ");
+    content.append(`\u5DF2\u6DFB\u52A0${label} `);
     const undoButton = document.createElement("button");
     undoButton.type = "button";
     undoButton.textContent = "\u64A4\u9500";
@@ -14307,37 +14330,55 @@ ${lines.slice(0, 8).join("\n")}`);
     content.appendChild(undoButton);
     const notice = new import_obsidian15.Notice(content, 7e3);
     const timer = window.setTimeout(() => {
-      if (this.highlightUndo?.annotationId === annotationId) {
-        this.highlightUndo = null;
+      if (this.annotationUndo?.annotationId === annotationId) {
+        this.annotationUndo = null;
       }
     }, 7e3);
-    this.highlightUndo = { filePath: file.path, annotationId, timer, notice };
+    this.annotationUndo = { filePath: file.path, annotationId, label, timer, notice };
     undoButton.addEventListener("click", () => {
       void this.undoLatestHighlight(annotationId);
     });
   }
   async undoLatestHighlight(annotationId) {
-    const pending = this.highlightUndo;
+    const pending = this.annotationUndo;
     if (!pending || pending.annotationId !== annotationId) {
       return;
     }
-    this.clearHighlightUndo();
+    this.clearAnnotationUndo();
     const file = this.app.vault.getAbstractFileByPath(pending.filePath);
     if (!(file instanceof import_obsidian15.TFile)) {
       return;
     }
     await this.store.removeAnnotation(file, pending.annotationId);
-    await this.refreshActiveReadingViewHighlights(file.path);
+    await this.refreshAnnotationPresentation(file);
     await this.refreshAnnotations();
-    new import_obsidian15.Notice("\u5DF2\u64A4\u9500\u9AD8\u4EAE");
+    new import_obsidian15.Notice(`\u5DF2\u64A4\u9500${pending.label}`);
   }
-  clearHighlightUndo() {
-    if (!this.highlightUndo) {
+  clearAnnotationUndo() {
+    if (!this.annotationUndo) {
       return;
     }
-    window.clearTimeout(this.highlightUndo.timer);
-    this.highlightUndo.notice.hide();
-    this.highlightUndo = null;
+    window.clearTimeout(this.annotationUndo.timer);
+    this.annotationUndo.notice.hide();
+    this.annotationUndo = null;
+  }
+  async refreshAnnotationPresentation(file) {
+    if (file.extension === "md") {
+      await this.refreshActiveReadingViewHighlights(file.path);
+      return;
+    }
+    if (file.extension === "pdf") {
+      this.pdfLayer.refresh();
+      return;
+    }
+    if (SUPPORTED_BOOK_EXTENSIONS.includes(file.extension.toLowerCase())) {
+      for (const leaf of this.app.workspace.getLeavesOfType(EPUB_READER_VIEW_TYPE)) {
+        const view = leaf.view;
+        if (view instanceof EpubReaderView && view.file?.path === file.path) {
+          view.refreshAnnotationsFromStore();
+        }
+      }
+    }
   }
   async resolveSelection() {
     const editor = this.activeEditor();

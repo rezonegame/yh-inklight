@@ -42,7 +42,7 @@ export class SelectionToolbar {
 
     const text = selection.toString().trim();
     const range = selection.getRangeAt(0);
-    if (!text || !isSelectionInsideMarkdownContent(range)) {
+    if (!text || !isSelectionInsideAnnotatableContent(range)) {
       this.hide();
       return;
     }
@@ -102,7 +102,7 @@ export class SelectionToolbar {
   }
 }
 
-function isSelectionInsideMarkdownContent(range: Range): boolean {
+function isSelectionInsideAnnotatableContent(range: Range): boolean {
   const container =
     range.commonAncestorContainer instanceof HTMLElement
       ? range.commonAncestorContainer
@@ -116,7 +116,11 @@ function isSelectionInsideMarkdownContent(range: Range): boolean {
     return false;
   }
 
-  return Boolean(container.closest(".cm-content, .markdown-preview-view"));
+  return Boolean(
+    container.closest(
+      ".cm-content, .markdown-preview-view, .pdf-container, .pdf-viewer, .pdf-embed, .workspace-leaf-content[data-type='pdf']",
+    ),
+  );
 }
 
 const NOTE_ICON = `

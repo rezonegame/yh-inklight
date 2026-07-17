@@ -142,6 +142,10 @@ export class PdfAnnotationLayer {
     return this.viewerAdapter.isPdfActive();
   }
 
+  refresh(): void {
+    this.scheduleRender();
+  }
+
   /** 实时计算当前视口中心的页码（不依赖缓存的 currentPage）。 */
   private computeCurrentPage(): number {
     return this.viewerAdapter.getCurrentPageNumber();
