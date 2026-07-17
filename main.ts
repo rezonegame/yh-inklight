@@ -523,15 +523,15 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private offerAnnotationUndo(file: TFile, annotationId: string, label: string): void {
     this.clearAnnotationUndo();
 
-    const content = document.createDocumentFragment();
-    content.append(`已添加${label} `);
-    const undoButton = document.createElement("button");
-    undoButton.type = "button";
-    undoButton.textContent = "撤销";
-    undoButton.addClass("mod-cta");
-    content.appendChild(undoButton);
-
-    const notice = new Notice(content, 7000);
+    const notice = new Notice("", 7000);
+    const message = notice.messageEl ?? notice.noticeEl;
+    message.empty();
+    message.createSpan({ text: `已添加${label} ` });
+    const undoButton = message.createEl("button", {
+      cls: "mod-cta",
+      text: "撤销",
+      attr: { type: "button" },
+    });
     const timer = window.setTimeout(() => {
       if (this.annotationUndo?.annotationId === annotationId) {
         this.annotationUndo = null;

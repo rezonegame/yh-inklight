@@ -14321,14 +14321,15 @@ ${lines.slice(0, 8).join("\n")}`);
   }
   offerAnnotationUndo(file, annotationId, label) {
     this.clearAnnotationUndo();
-    const content = document.createDocumentFragment();
-    content.append(`\u5DF2\u6DFB\u52A0${label} `);
-    const undoButton = document.createElement("button");
-    undoButton.type = "button";
-    undoButton.textContent = "\u64A4\u9500";
-    undoButton.addClass("mod-cta");
-    content.appendChild(undoButton);
-    const notice = new import_obsidian15.Notice(content, 7e3);
+    const notice = new import_obsidian15.Notice("", 7e3);
+    const message = notice.messageEl ?? notice.noticeEl;
+    message.empty();
+    message.createSpan({ text: `\u5DF2\u6DFB\u52A0${label} ` });
+    const undoButton = message.createEl("button", {
+      cls: "mod-cta",
+      text: "\u64A4\u9500",
+      attr: { type: "button" }
+    });
     const timer = window.setTimeout(() => {
       if (this.annotationUndo?.annotationId === annotationId) {
         this.annotationUndo = null;

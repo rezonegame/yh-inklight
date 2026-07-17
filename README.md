@@ -117,6 +117,9 @@
 
 ## 📋 版本历史
 
+### v0.20.3
+- Fixed: Render the immediate Undo action directly inside Obsidian's notice message container so the action is visible and clickable after annotation creation.
+
 ### v0.20.2
 - Added: PDF text selection again opens the color annotation menu. The same selection actions remain available through keyboard shortcuts.
 - Fixed: The immediate Undo action now covers newly created Markdown, PDF, and EPUB highlights and annotations, refreshing the corresponding reader surface after undo.
