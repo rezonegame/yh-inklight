@@ -71,6 +71,12 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private annotationLinks!: AnnotationLinkService;
   private lastSelection: SelectionSnapshot | null = null;
   private renameMigrationTimer: number | null = null;
+  private highlightUndo: {
+    filePath: string;
+    annotationId: string;
+    timer: number;
+    notice: Notice;
+  } | null = null;
 
   async onload(): Promise<void> {
     addIcon("yh-inklight-icon", YH_INKLIGHT_ICON);
@@ -408,6 +414,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     await this.store.addHighlight(file, highlight);
     await this.refreshActiveReadingViewHighlights(file.path);
     await this.refreshAnnotations();
+    this.offerHighlightUndo(file, highlight.id);
     this.toolbar.hide();
   }
 
@@ -476,9 +483,6 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
     const document = this.store.getCachedDocument(filePath) ?? (await this.store.getDocument(file));
     const marks = [...document.highlights, ...document.comments].filter((item) => !item.orphaned);
-    if (!marks.length) {
-      return;
-    }
 
     for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
       const view = leaf.view;
@@ -502,6 +506,58 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         }
       }
     }
+  }
+
+  private offerHighlightUndo(file: TFile, annotationId: string): void {
+    this.clearHighlightUndo();
+
+    const content = document.createDocumentFragment();
+    content.append("已添加高亮 ");
+    const undoButton = document.createElement("button");
+    undoButton.type = "button";
+    undoButton.textContent = "撤销";
+    undoButton.addClass("mod-cta");
+    content.appendChild(undoButton);
+
+    const notice = new Notice(content, 7000);
+    const timer = window.setTimeout(() => {
+      if (this.highlightUndo?.annotationId === annotationId) {
+        this.highlightUndo = null;
+      }
+    }, 7000);
+    this.highlightUndo = { filePath: file.path, annotationId, timer, notice };
+
+    undoButton.addEventListener("click", () => {
+      void this.undoLatestHighlight(annotationId);
+    });
+  }
+
+  private async undoLatestHighlight(annotationId: string): Promise<void> {
+    const pending = this.highlightUndo;
+    if (!pending || pending.annotationId !== annotationId) {
+      return;
+    }
+
+    this.clearHighlightUndo();
+    const file = this.app.vault.getAbstractFileByPath(pending.filePath);
+    if (!(file instanceof TFile)) {
+      return;
+    }
+
+    await this.store.removeAnnotation(file, pending.annotationId);
+    await this.refreshActiveReadingViewHighlights(file.path);
+    await this.refreshAnnotations();
+    new Notice("已撤销高亮");
+  }
+
+  private clearHighlightUndo(): void {
+    if (!this.highlightUndo) {
+      return;
+    }
+
+    window.clearTimeout(this.highlightUndo.timer);
+    this.highlightUndo.notice.hide();
+    this.highlightUndo = null;
   }
 
   private async resolveSelection(): Promise<SelectionSnapshot | null> {

@@ -42,7 +42,7 @@ export class SelectionToolbar {
 
     const text = selection.toString().trim();
     const range = selection.getRangeAt(0);
-    if (!text || !isSelectionInsideWorkspace(range)) {
+    if (!text || !isSelectionInsideMarkdownContent(range)) {
       this.hide();
       return;
     }
@@ -102,7 +102,7 @@ export class SelectionToolbar {
   }
 }
 
-function isSelectionInsideWorkspace(range: Range): boolean {
+function isSelectionInsideMarkdownContent(range: Range): boolean {
   const container =
     range.commonAncestorContainer instanceof HTMLElement
       ? range.commonAncestorContainer
@@ -112,11 +112,11 @@ function isSelectionInsideWorkspace(range: Range): boolean {
     return false;
   }
 
-  return Boolean(
-    container.closest(".workspace") ||
-      container.closest(".callout-content") ||
-      container.closest(".markdown-preview-view"),
-  );
+  if (container.closest(".view-header, .workspace-tab-header, .sidebar, .modal-container, input, textarea")) {
+    return false;
+  }
+
+  return Boolean(container.closest(".cm-content, .markdown-preview-view"));
 }
 
 const NOTE_ICON = `

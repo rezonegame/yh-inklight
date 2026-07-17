@@ -1,6 +1,6 @@
 {
 	"name": "yh-inklight",
-	"version": "0.20.0",
+	"version": "0.20.1",
 	"private": true,
 	"description": "Non-invasive Obsidian annotations for Markdown, PDF, and EPUB with a unified sidebar, semantic tags, deep links, and sidecar storage.",
 	"main": "main.js",

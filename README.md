@@ -117,6 +117,10 @@
 
 ## 📋 版本历史
 
+### v0.20.1
+- Fixed: After creating a Markdown highlight, a seven-second "Undo" action is shown. Undoing refreshes both Reading View and the annotation sidebar.
+- Fixed: The selection toolbar now responds only to Markdown editor and Reading View body text, excluding note titles, sidebars, search, settings, and other input controls.
+
 ### v0.20.0
 - 新增：Markdown、PDF、EPUB 共用的语义标签系统；默认提供洞见、疑问、提醒，最多启用 5 个标签
 - 新增：设置页支持标签改名、排序、停用、启用、预设图标与恢复默认；名称会进行空格、全半角、大小写归一化并强制禁止重复

@@ -8641,7 +8641,7 @@ var SelectionToolbar = class {
     }
     const text = selection.toString().trim();
     const range = selection.getRangeAt(0);
-    if (!text || !isSelectionInsideWorkspace(range)) {
+    if (!text || !isSelectionInsideMarkdownContent(range)) {
       this.hide();
       return;
     }
@@ -8691,14 +8691,15 @@ var SelectionToolbar = class {
     return button;
   }
 };
-function isSelectionInsideWorkspace(range) {
+function isSelectionInsideMarkdownContent(range) {
   const container = range.commonAncestorContainer instanceof HTMLElement ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
   if (!container) {
     return false;
   }
-  return Boolean(
-    container.closest(".workspace") || container.closest(".callout-content") || container.closest(".markdown-preview-view")
-  );
+  if (container.closest(".view-header, .workspace-tab-header, .sidebar, .modal-container, input, textarea")) {
+    return false;
+  }
+  return Boolean(container.closest(".cm-content, .markdown-preview-view"));
 }
 var NOTE_ICON = `
   <svg width="14" height="14" viewBox="0 0 24 24"
@@ -13919,6 +13920,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
     this.settings = DEFAULT_SETTINGS;
     this.lastSelection = null;
     this.renameMigrationTimer = null;
+    this.highlightUndo = null;
   }
   async onload() {
     (0, import_obsidian15.addIcon)("yh-inklight-icon", YH_INKLIGHT_ICON);
@@ -14213,6 +14215,7 @@ ${lines.slice(0, 8).join("\n")}`);
     await this.store.addHighlight(file, highlight);
     await this.refreshActiveReadingViewHighlights(file.path);
     await this.refreshAnnotations();
+    this.offerHighlightUndo(file, highlight.id);
     this.toolbar.hide();
   }
   async createComment() {
@@ -14273,9 +14276,6 @@ ${lines.slice(0, 8).join("\n")}`);
     }
     const document2 = this.store.getCachedDocument(filePath) ?? await this.store.getDocument(file);
     const marks = [...document2.highlights, ...document2.comments].filter((item) => !item.orphaned);
-    if (!marks.length) {
-      return;
-    }
     for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
       const view = leaf.view;
       if (!(view instanceof import_obsidian15.MarkdownView) || view.file?.path !== filePath) {
@@ -14295,6 +14295,49 @@ ${lines.slice(0, 8).join("\n")}`);
         }
       }
     }
+  }
+  offerHighlightUndo(file, annotationId) {
+    this.clearHighlightUndo();
+    const content = document.createDocumentFragment();
+    content.append("\u5DF2\u6DFB\u52A0\u9AD8\u4EAE ");
+    const undoButton = document.createElement("button");
+    undoButton.type = "button";
+    undoButton.textContent = "\u64A4\u9500";
+    undoButton.addClass("mod-cta");
+    content.appendChild(undoButton);
+    const notice = new import_obsidian15.Notice(content, 7e3);
+    const timer = window.setTimeout(() => {
+      if (this.highlightUndo?.annotationId === annotationId) {
+        this.highlightUndo = null;
+      }
+    }, 7e3);
+    this.highlightUndo = { filePath: file.path, annotationId, timer, notice };
+    undoButton.addEventListener("click", () => {
+      void this.undoLatestHighlight(annotationId);
+    });
+  }
+  async undoLatestHighlight(annotationId) {
+    const pending = this.highlightUndo;
+    if (!pending || pending.annotationId !== annotationId) {
+      return;
+    }
+    this.clearHighlightUndo();
+    const file = this.app.vault.getAbstractFileByPath(pending.filePath);
+    if (!(file instanceof import_obsidian15.TFile)) {
+      return;
+    }
+    await this.store.removeAnnotation(file, pending.annotationId);
+    await this.refreshActiveReadingViewHighlights(file.path);
+    await this.refreshAnnotations();
+    new import_obsidian15.Notice("\u5DF2\u64A4\u9500\u9AD8\u4EAE");
+  }
+  clearHighlightUndo() {
+    if (!this.highlightUndo) {
+      return;
+    }
+    window.clearTimeout(this.highlightUndo.timer);
+    this.highlightUndo.notice.hide();
+    this.highlightUndo = null;
   }
   async resolveSelection() {
     const editor = this.activeEditor();
