@@ -118,18 +118,20 @@ Configure under **Settings → Book Note**:
 
 ## Data storage
 
-All annotation data lives in sidecar JSON files under `<vault>/.obsidian-annotations/`:
+All annotation data lives in sidecar files under a configurable vault-relative directory (default `<vault>/.obsidian-annotations/`):
 
-- One `<filename>.json` per annotated file.
+- One sidecar file per annotated file; choose **JSON** (compact) or **Markdown** (human-readable) storage in Settings → Storage. In Markdown format, metadata and reading progress live in YAML frontmatter and each annotation becomes its own heading.
 - Stores highlights, notes, reading progress, plus legacy fields kept for backward compatibility.
 - **Your original documents are never touched** — delete a sidecar file to erase that file's annotations.
+- Change the storage folder or format in Settings → Storage; existing annotations are migrated automatically.
 
 ```text
-.obsidian-annotations/
-  index.json
-  notes__reading__book.md.json      # Markdown annotations
-  papers__example.pdf.json           # PDF annotations
-  books__novel.epub.json             # EPUB annotations (CFI anchors + reading progress)
+.obsidian-annotations/          # default folder (configurable)
+  index.json                   # index of all sidecars (basic info only)
+  notes__reading__book.md.json # Markdown annotations (JSON format)
+  notes__reading__book.md.md   # Markdown annotations (Markdown format)
+  papers__example.pdf.json     # PDF annotations
+  books__novel.epub.json       # EPUB annotations (CFI anchors + reading progress)
 ```
 
 ### Deep links

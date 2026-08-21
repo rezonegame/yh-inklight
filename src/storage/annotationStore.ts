@@ -15,23 +15,26 @@ import {
   AnnotationIndexEntry,
   AnnotationColor,
   AnnotationExportFormat,
+  CanvasBinding,
+  CanvasExcerptNode,
   CommentAnnotation,
   EMPTY_INDEX,
+  EpubCommentAnnotation,
+  EpubCfiAnchor,
+  EpubHighlightAnnotation,
+  EpubReadingProgress,
   FileAnnotationDocument,
   HighlightAnnotation,
+  PdfAnchor,
   PdfCommentAnnotation,
   PdfHighlightAnnotation,
   PdfReadingProgress,
-  EpubHighlightAnnotation,
-  EpubCommentAnnotation,
-  EpubReadingProgress,
-  EpubCfiAnchor,
-  PdfAnchor,
+  ReadingBookmark,
+  StorageFormat,
   TextAnchor,
 } from "./types";
 
-const STORE_DIR = ".obsidian-annotations";
-const INDEX_PATH = normalizePath(`${STORE_DIR}/index.json`);
+const DEFAULT_STORE_DIR = ".obsidian-annotations";
 const MAX_LEGACY_SIDECAR_NAME_LENGTH = 180;
 const MAX_COMPACT_SIDECAR_PREFIX_LENGTH = 96;
 
@@ -78,6 +81,11 @@ export class AnnotationStoreWriteError extends Error {
   }
 }
 
+export interface StorageConfig {
+  baseDir: string;
+  format: StorageFormat;
+}
+
 export class AnnotationStore {
   private readonly documents = new Map<string, FileAnnotationDocument>();
   private readonly documentWrites = new Map<string, Promise<unknown>>();
@@ -88,15 +96,33 @@ export class AnnotationStore {
   constructor(
     private readonly app: App,
     private readonly getAnnotationTags: () => AnnotationTagDefinition[] = () => [],
+    private readonly getStorageConfig: () => StorageConfig = () => ({ baseDir: DEFAULT_STORE_DIR, format: "json" }),
   ) {}
 
   get version(): number {
     return this.changeVersion;
   }
 
+  getStorageConfigResolved(): StorageConfig {
+    const cfg = this.getStorageConfig?.() ?? { baseDir: DEFAULT_STORE_DIR, format: "json" };
+    return { baseDir: resolveStoreDir(cfg.baseDir), format: cfg.format === "md" ? "md" : "json" };
+  }
+
+  private getBaseDir(): string {
+    return this.getStorageConfigResolved().baseDir;
+  }
+
+  private getFormat(): StorageFormat {
+    return this.getStorageConfigResolved().format;
+  }
+
+  private getIndexPath(): string {
+    return normalizePath(`${this.getBaseDir()}/index.json`);
+  }
+
   async initialize(): Promise<void> {
     await this.ensureStoreDir();
-    this.index = await this.readJson<AnnotationIndex>(INDEX_PATH, EMPTY_INDEX, { allowCorruptFallback: true });
+    this.index = await this.readJson<AnnotationIndex>(this.getIndexPath(), EMPTY_INDEX, { allowCorruptFallback: true });
   }
 
   getCachedDocument(filePath: string): FileAnnotationDocument | null {
@@ -129,7 +155,7 @@ export class AnnotationStore {
 
     const sidecarPath = this.toSidecarPath(filePath);
     const fallback = await this.createEmptyDocument(file);
-    const document = await this.readJson<FileAnnotationDocument>(sidecarPath, fallback);
+    const document = await this.readDocumentOrFallback(sidecarPath, fallback);
     this.documents.set(cacheKey, this.normalizeDocument(document, filePath));
     return this.documents.get(cacheKey)!;
   }
@@ -180,8 +206,10 @@ export class AnnotationStore {
 
     try {
       await this.ensureStoreDir();
-      await this.app.vault.adapter.write(sidecarPath, JSON.stringify(normalized, null, 2));
-      const persisted = await this.readExistingJson<FileAnnotationDocument>(sidecarPath);
+      const serialized =
+        this.getFormat() === "md" ? serializeDocumentToMarkdown(normalized) : JSON.stringify(normalized, null, 2);
+      await this.app.vault.adapter.write(sidecarPath, serialized);
+      const persisted = await this.readDocumentOrThrow(sidecarPath);
       this.verifyPersistedDocument(normalized, persisted, sidecarPath);
       await this.enqueueIndexWrite(async () => {
         const nextIndex: AnnotationIndex = {
@@ -317,10 +345,10 @@ export class AnnotationStore {
   async migrateFilePath(oldPath: string, file: TFile): Promise<void> {
     const normalizedOldPath = this.normalizeVaultPath(oldPath);
     const oldSidecar = this.toSidecarPath(normalizedOldPath);
-    const oldDocument = await this.readJson<FileAnnotationDocument | null>(oldSidecar, null);
-    if (!oldDocument) {
+    if (!(await this.app.vault.adapter.exists(oldSidecar))) {
       return;
     }
+    const oldDocument = await this.readDocumentOrThrow(oldSidecar);
 
     const nextDocument: FileAnnotationDocument = {
       ...oldDocument,
@@ -480,7 +508,7 @@ export class AnnotationStore {
 
   async testWriteAccess(): Promise<string> {
     await this.ensureStoreDir();
-    const testPath = normalizePath(`${STORE_DIR}/.write-test.json`);
+    const testPath = normalizePath(`${this.getBaseDir()}/.write-test.json`);
     const payload = JSON.stringify({ ok: true, timestamp: new Date().toISOString() }, null, 2);
 
     try {
@@ -517,13 +545,17 @@ export class AnnotationStore {
     return this.toCompactSidecarPath(filePath);
   }
 
+  private sidecarExtension(): string {
+    return this.getFormat() === "md" ? "md" : "json";
+  }
+
   private toLegacySidecarPath(filePath: string): string {
     const safeName = this.normalizeVaultPath(filePath)
       .toLowerCase()
       .split(/[\\/]/)
       .map((part) => encodeURIComponent(part))
       .join("__");
-    return normalizePath(`${STORE_DIR}/${safeName}.json`);
+    return normalizePath(`${this.getBaseDir()}/${safeName}.${this.sidecarExtension()}`);
   }
 
   private toCompactSidecarPath(filePath: string): string {
@@ -531,7 +563,7 @@ export class AnnotationStore {
     const fileName = normalizedPath.split(/[\\/]/).pop() ?? "annotation";
     const encodedName = encodeURIComponent(fileName).replace(/%/g, "_").replace(/[^a-z0-9._-]/g, "_");
     const prefix = encodedName.slice(0, MAX_COMPACT_SIDECAR_PREFIX_LENGTH).replace(/[._-]+$/g, "") || "annotation";
-    return normalizePath(`${STORE_DIR}/${prefix}--${hashPath(normalizedPath)}.json`);
+    return normalizePath(`${this.getBaseDir()}/${prefix}--${hashPath(normalizedPath)}.${this.sidecarExtension()}`);
   }
 
   private async createEmptyDocument(file: TFile): Promise<FileAnnotationDocument> {
@@ -585,7 +617,7 @@ export class AnnotationStore {
   }
 
   private async ensureStoreDir(): Promise<void> {
-    await this.ensureDir(STORE_DIR);
+    await this.ensureDir(this.getBaseDir());
   }
 
   private async ensureDir(path: string): Promise<void> {
@@ -597,7 +629,7 @@ export class AnnotationStore {
 
   private async writeIndex(nextIndex: AnnotationIndex = this.index): Promise<void> {
     await this.ensureStoreDir();
-    await this.app.vault.adapter.write(INDEX_PATH, JSON.stringify(nextIndex, null, 2));
+    await this.app.vault.adapter.write(this.getIndexPath(), JSON.stringify(nextIndex, null, 2));
   }
 
   private verifyPersistedDocument(expected: FileAnnotationDocument, persisted: FileAnnotationDocument, sidecarPath: string): void {
@@ -641,13 +673,78 @@ export class AnnotationStore {
     }
   }
 
-  private async readExistingJson<T>(path: string): Promise<T> {
+  private async readDocumentOrFallback(path: string, fallback: FileAnnotationDocument): Promise<FileAnnotationDocument> {
     const normalizedPath = normalizePath(path);
     if (!(await this.app.vault.adapter.exists(normalizedPath))) {
-      throw new Error(`Expected JSON file does not exist: ${normalizedPath}`);
+      return fallback;
+    }
+    try {
+      return this.parseDocument(await this.app.vault.adapter.read(normalizedPath), normalizedPath);
+    } catch (error) {
+      new Notice(t("notice.cannotRead", { path: normalizedPath }));
+      return fallback;
+    }
+  }
+
+  private async readDocumentOrThrow(path: string): Promise<FileAnnotationDocument> {
+    const normalizedPath = normalizePath(path);
+    if (!(await this.app.vault.adapter.exists(normalizedPath))) {
+      throw new AnnotationStoreReadError(normalizedPath, new Error("missing"));
+    }
+    try {
+      return this.parseDocument(await this.app.vault.adapter.read(normalizedPath), normalizedPath);
+    } catch (error) {
+      throw new AnnotationStoreReadError(normalizedPath, error);
+    }
+  }
+
+  private parseDocument(raw: string, path: string): FileAnnotationDocument {
+    const format: StorageFormat = path.toLowerCase().endsWith(".md") ? "md" : "json";
+    if (format === "md") {
+      return parseMarkdownDocument(raw, path);
+    }
+    return JSON.parse(raw) as FileAnnotationDocument;
+  }
+
+  /** Rewrite every indexed sidecar to the current storage directory and format. */
+  async migrateAll(): Promise<{ migrated: number; failed: number }> {
+    const result = { migrated: 0, failed: 0 };
+    const filePaths = Object.keys(this.index.files);
+
+    for (const filePath of filePaths) {
+      const entry = this.index.files[filePath];
+      const oldSidecar = entry.sidecarPath;
+      const newSidecar = this.toSidecarPath(filePath);
+      const oldFormat: StorageFormat = oldSidecar.toLowerCase().endsWith(".md") ? "md" : "json";
+
+      if (!(await this.app.vault.adapter.exists(oldSidecar))) {
+        continue;
+      }
+      if (oldSidecar === newSidecar && oldFormat === this.getFormat()) {
+        continue;
+      }
+
+      try {
+        const document = await this.readDocumentOrThrow(oldSidecar);
+        const normalized = this.normalizeDocument(document, filePath);
+        await this.ensureStoreDir();
+        const serialized =
+          this.getFormat() === "md" ? serializeDocumentToMarkdown(normalized) : JSON.stringify(normalized, null, 2);
+        await this.app.vault.adapter.write(newSidecar, serialized);
+        if (newSidecar !== oldSidecar) {
+          await this.deleteIfExists(oldSidecar);
+        }
+        this.index.files[filePath] = this.toIndexEntry(normalized, newSidecar);
+        this.documents.delete(this.toCacheKey(filePath));
+        result.migrated += 1;
+      } catch (error) {
+        console.warn("book-note: migrate sidecar failed", oldSidecar, error);
+        result.failed += 1;
+      }
     }
 
-    return JSON.parse(await this.app.vault.adapter.read(normalizedPath)) as T;
+    await this.writeIndex();
+    return result;
   }
 
   private async deleteIfExists(path: string): Promise<void> {
@@ -948,4 +1045,298 @@ function entrySource(entry: ExportEntry): string {
     return `${entry.sourcePath} · ${entry.chapter.trim()}`;
   }
   return entry.sourcePath;
+}
+
+// ===== Markdown sidecar storage (StorageFormat = "md") =====
+// Document-level metadata (including reading progress) is stored in YAML
+// frontmatter. Each annotation is a level-1 heading; the machine-readable data
+// lives in a hidden span (data-book-note) so the file round-trips losslessly.
+
+const MD_ANNOTATION_ATTR = "data-book-note";
+
+interface SerializedAnnotation {
+  kind: "md-highlight" | "md-comment" | "pdf-highlight" | "pdf-comment" | "epub-highlight" | "epub-comment";
+  value: unknown;
+}
+
+interface DocMeta {
+  filePath: string;
+  fileHash: string;
+  lastModified: string;
+  epubProgress: EpubReadingProgress | null;
+  pdfProgress: PdfReadingProgress | null;
+  bookmarks: ReadingBookmark[];
+  canvasBinding: CanvasBinding | null;
+  canvasNodes: CanvasExcerptNode[];
+}
+
+function emptyDocMeta(): DocMeta {
+  return {
+    filePath: "",
+    fileHash: "",
+    lastModified: new Date().toISOString(),
+    epubProgress: null,
+    pdfProgress: null,
+    bookmarks: [],
+    canvasBinding: null,
+    canvasNodes: [],
+  };
+}
+
+/**
+ * Resolve a user-provided storage directory to a safe, vault-relative path.
+ * Only vault-relative paths are allowed (mobile-safe, no Node fs). Anything
+ * absolute, containing "..", or empty falls back to the default directory.
+ */
+function resolveStoreDir(raw: string): string {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) {
+    return DEFAULT_STORE_DIR;
+  }
+  const normalized = normalizePath(trimmed);
+  if (
+    normalized.startsWith("/") ||
+    normalized.startsWith("\\") ||
+    /^[A-Za-z]:[\\/]/.test(normalized) ||
+    normalized.includes("..") ||
+    normalized === "." ||
+    normalized === ".."
+  ) {
+    return DEFAULT_STORE_DIR;
+  }
+  return normalized;
+}
+
+export function serializeDocumentToMarkdown(document: FileAnnotationDocument): string {
+  const meta: DocMeta = {
+    filePath: document.filePath,
+    fileHash: document.fileHash,
+    lastModified: document.lastModified,
+    epubProgress: document.epubProgress ?? null,
+    pdfProgress: document.pdfProgress ?? null,
+    bookmarks: document.bookmarks ?? [],
+    canvasBinding: document.canvasBinding ?? null,
+    canvasNodes: document.canvasNodes ?? [],
+  };
+
+  const lines: string[] = [];
+  lines.push("---");
+  lines.push(`filePath: ${yamlValue(meta.filePath)}`);
+  lines.push(`fileHash: ${yamlValue(meta.fileHash)}`);
+  lines.push(`lastModified: ${yamlValue(meta.lastModified)}`);
+  lines.push(`pdfProgress: ${yamlValue(meta.pdfProgress)}`);
+  lines.push(`epubProgress: ${yamlValue(meta.epubProgress)}`);
+  lines.push(`bookmarks: ${yamlValue(meta.bookmarks)}`);
+  lines.push(`canvasBinding: ${yamlValue(meta.canvasBinding)}`);
+  lines.push(`canvasNodes: ${yamlValue(meta.canvasNodes)}`);
+  lines.push("---");
+  lines.push("");
+
+  const pushBlock = (
+    mode: "md" | "pdf" | "epub",
+    kind: SerializedAnnotation["kind"],
+    value: { id: string },
+    title: string,
+    content: string,
+    resolved: boolean,
+    replies: { createdAt: string; content: string }[],
+  ): void => {
+    const blockId = `bn-${mode}-${value.id}`;
+    const heading = (title || "Annotation").split(/\r?\n/)[0].trim().slice(0, 200) || "Annotation";
+    lines.push(`# ${heading} ^${blockId}`);
+    if (content.trim()) {
+      lines.push(">");
+      for (const line of content.split(/\r?\n/)) {
+        lines.push(`> Note: ${line}`);
+      }
+    }
+    if (replies.length) {
+      lines.push(">");
+      for (const reply of replies) {
+        lines.push(`> reply ${reply.createdAt}: ${reply.content}`);
+      }
+    }
+    if (resolved) {
+      lines.push(">");
+      lines.push("> resolved");
+    }
+    lines.push(`<span style="display:none" ${MD_ANNOTATION_ATTR}="${escapeHtmlAttribute(JSON.stringify({ kind, value }))}"></span>`);
+    lines.push("");
+  };
+
+  for (const highlight of document.highlights) {
+    pushBlock("md", "md-highlight", highlight, highlight.anchor.selectedText, "", false, []);
+  }
+  for (const comment of document.comments) {
+    pushBlock("md", "md-comment", comment, comment.anchor.selectedText, comment.content, comment.resolved, comment.replies);
+  }
+  for (const highlight of document.pdfHighlights) {
+    pushBlock("pdf", "pdf-highlight", highlight, highlight.anchor.selectedText, "", false, []);
+  }
+  for (const comment of document.pdfComments) {
+    pushBlock("pdf", "pdf-comment", comment, comment.anchor.selectedText, comment.content, comment.resolved, comment.replies);
+  }
+  for (const highlight of document.epubHighlights) {
+    pushBlock("epub", "epub-highlight", highlight, highlight.anchor.selectedText, "", false, []);
+  }
+  for (const comment of document.epubComments) {
+    pushBlock("epub", "epub-comment", comment, comment.anchor.selectedText, comment.note, comment.resolved, comment.replies);
+  }
+
+  return lines.join("\n");
+}
+
+export function parseMarkdownDocument(raw: string, path: string): FileAnnotationDocument {
+  const meta = parseFrontmatter(raw);
+  const annotations = extractAnnotations(raw);
+  const document: FileAnnotationDocument = {
+    filePath: meta.filePath,
+    fileHash: meta.fileHash ?? "",
+    lastModified: meta.lastModified ?? new Date().toISOString(),
+    highlights: [],
+    comments: [],
+    pdfHighlights: [],
+    pdfComments: [],
+    epubHighlights: [],
+    epubComments: [],
+    epubProgress: meta.epubProgress ?? undefined,
+    pdfProgress: meta.pdfProgress ?? undefined,
+    bookmarks: meta.bookmarks ?? [],
+    canvasBinding: meta.canvasBinding ?? undefined,
+    canvasNodes: meta.canvasNodes ?? [],
+  };
+
+  for (const item of annotations) {
+    switch (item.kind) {
+      case "md-highlight":
+        document.highlights.push(item.value as HighlightAnnotation);
+        break;
+      case "md-comment":
+        document.comments.push(item.value as CommentAnnotation);
+        break;
+      case "pdf-highlight":
+        document.pdfHighlights.push(item.value as PdfHighlightAnnotation);
+        break;
+      case "pdf-comment":
+        document.pdfComments.push(item.value as PdfCommentAnnotation);
+        break;
+      case "epub-highlight":
+        document.epubHighlights.push(item.value as EpubHighlightAnnotation);
+        break;
+      case "epub-comment":
+        document.epubComments.push(item.value as EpubCommentAnnotation);
+        break;
+    }
+  }
+
+  return document;
+}
+
+function parseFrontmatter(raw: string): DocMeta {
+  const meta = emptyDocMeta();
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(raw);
+  if (!match) {
+    return meta;
+  }
+  for (const line of match[1].split(/\r?\n/)) {
+    const idx = line.indexOf(":");
+    if (idx <= 0) {
+      continue;
+    }
+    const key = line.slice(0, idx).trim();
+    const value = parseYamlScalar(line.slice(idx + 1).trim());
+    switch (key) {
+      case "filePath":
+        meta.filePath = typeof value === "string" ? value : "";
+        break;
+      case "fileHash":
+        meta.fileHash = typeof value === "string" ? value : "";
+        break;
+      case "lastModified":
+        meta.lastModified = typeof value === "string" ? value : new Date().toISOString();
+        break;
+      case "pdfProgress":
+        meta.pdfProgress = isObject(value) ? (value as unknown as PdfReadingProgress) : null;
+        break;
+      case "epubProgress":
+        meta.epubProgress = isObject(value) ? (value as unknown as EpubReadingProgress) : null;
+        break;
+      case "bookmarks":
+        meta.bookmarks = Array.isArray(value) ? (value as unknown as ReadingBookmark[]) : [];
+        break;
+      case "canvasBinding":
+        meta.canvasBinding = isObject(value) ? (value as unknown as CanvasBinding) : null;
+        break;
+      case "canvasNodes":
+        meta.canvasNodes = Array.isArray(value) ? (value as CanvasExcerptNode[]) : [];
+        break;
+    }
+  }
+  return meta;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Serialize any value into a YAML-safe single-quoted scalar. The value is
+ * JSON-encoded first, then wrapped in single quotes (with internal single
+ * quotes escaped as ''), which keeps the frontmatter a valid YAML document
+ * while guaranteeing a lossless round-trip through parseYamlScalar.
+ */
+function yamlValue(value: unknown): string {
+  const json = JSON.stringify(value ?? null);
+  return `'${json.replace(/'/g, "''")}'`;
+}
+
+function parseYamlScalar(raw: string): unknown {
+  const s = raw.trim();
+  if (s.startsWith("'") && s.endsWith("'") && s.length >= 2) {
+    try {
+      return JSON.parse(s.slice(1, -1).replace(/''/g, "'"));
+    } catch {
+      return s.slice(1, -1).replace(/''/g, "'");
+    }
+  }
+  if (s.startsWith('"') && s.endsWith('"') && s.length >= 2) {
+    try {
+      return JSON.parse(s.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
+    } catch {
+      return s.slice(1, -1);
+    }
+  }
+  if (s === "" || s === "null") {
+    return null;
+  }
+  try {
+    return JSON.parse(s);
+  } catch {
+    return s;
+  }
+}
+
+function extractAnnotations(raw: string): SerializedAnnotation[] {
+  const regex = new RegExp(`<span[^>]*\\s${MD_ANNOTATION_ATTR}="([^"]*)"[^>]*>\\s*</span>`, "g");
+  const result: SerializedAnnotation[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(raw)) !== null) {
+    try {
+      const item = JSON.parse(unescapeHtmlAttribute(match[1])) as SerializedAnnotation;
+      if (item && typeof item.kind === "string" && "value" in item) {
+        result.push(item);
+      }
+    } catch {
+      // skip malformed annotation span; readable callout is cosmetic only
+    }
+  }
+  return result;
+}
+
+function unescapeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
 }

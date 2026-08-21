@@ -32,6 +32,9 @@ export type AnnotationColor = (typeof ANNOTATION_COLORS)[number];
 export type AnnotationSortMode = "newest" | "oldest" | "document";
 export type AnnotationExportFormat = "summary" | "by-color" | "notes-only" | "reading-notes";
 
+/** Sidecar storage format for per-document annotation data. */
+export type StorageFormat = "json" | "md";
+
 export interface TextAnchor {
   startOffset: number;
   endOffset: number;
@@ -177,6 +180,9 @@ export interface AnnotationPluginSettings {
   defaultAuthor: string;
   migrateOnRename: boolean;
   annotationTags: AnnotationTagDefinition[];
+  // --- 存储 ---
+  storageFormat: StorageFormat;
+  storagePath: string;
   // --- 通用 ---
   showRibbonIcon: boolean;
   // --- EPUB 阅读 ---
@@ -200,6 +206,9 @@ export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
   defaultAuthor: "读者",
   migrateOnRename: true,
   annotationTags: cloneDefaultAnnotationTags(),
+  // 存储
+  storageFormat: "json",
+  storagePath: ".obsidian-annotations",
   // 通用
   showRibbonIcon: true,
   // EPUB

@@ -114,18 +114,20 @@ Obsidian 默认隐藏未知扩展名。要让 `.epub` 显示在文件树中：
 
 ## 数据存储
 
-所有批注数据存放在 `<vault>/.obsidian-annotations/` 下的 sidecar JSON 中：
+所有批注数据存放在一个可由设置配置的 Vault 内相对目录（默认 `<vault>/.obsidian-annotations/`）的 sidecar 文件中：
 
-- 每个被批注的文件对应一个 `<filename>.json`。
+- 每个被批注的文件对应一个 sidecar 文件；可在「设置 → 存储」中选择 **JSON（紧凑）** 或 **Markdown（可读）** 存储格式。Markdown 格式下，元数据和阅读进度写入 YAML frontmatter，每条批注就是一个独立标题。
 - 包含：高亮、笔记、阅读进度，以及为兼容旧版保留的历史字段。
 - **原始文档零修改**，删除某个 sidecar 即可清除该文件的批注。
+- 在「设置 → 存储」中修改存储目录或格式时，已有批注会自动迁移。
 
 ```text
-.obsidian-annotations/
-  index.json
-  notes__reading__book.md.json      # Markdown 批注
-  papers__example.pdf.json           # PDF 批注
-  books__novel.epub.json             # EPUB 批注（含 CFI 锚点和阅读进度）
+.obsidian-annotations/          # 默认目录（可在设置中修改）
+  index.json                   # 全部 sidecar 的索引（仅基本信息）
+  notes__reading__book.md.json # Markdown 批注（JSON 格式）
+  notes__reading__book.md.md   # Markdown 批注（Markdown 格式）
+  papers__example.pdf.json     # PDF 批注
+  books__novel.epub.json       # EPUB 批注（含 CFI 锚点和阅读进度）
 ```
 
 ### 深链

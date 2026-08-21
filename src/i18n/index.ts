@@ -71,6 +71,17 @@ const en: Dict = {
   "settings.pdf.heading": "PDF reading",
   "settings.pdf.progress.name": "Track PDF reading progress",
   "settings.pdf.progress.desc": "Saves current page and progress; existing progress is kept after closing.",
+  "settings.storage.heading": "Storage",
+  "settings.storageFormat.name": "Annotation storage format",
+  "settings.storageFormat.desc": "How annotation data is stored per source file. Markdown stores metadata and reading progress in YAML frontmatter and renders each annotation as a heading; JSON is more compact.",
+  "settings.storageFormat.json": "JSON (compact)",
+  "settings.storageFormat.md": "Markdown (readable)",
+  "settings.storagePath.name": "Storage folder (vault-relative)",
+  "settings.storagePath.desc": "Folder inside the vault for sidecar files. Leave empty for the default .obsidian-annotations directory. Only vault-relative paths are allowed.",
+  "settings.storagePath.placeholder": "e.g. .obsidian-annotations",
+  "settings.storage.test": "Test write access",
+  "settings.storage.migrate": "Migrate existing annotations",
+  "settings.storage.migrate.desc": "Rewrite all existing annotation sidecars to the current folder and format. Runs automatically when you change the format or folder above.",
 
   // Sidebar
   "sidebar.emptyHint": "Open a Markdown or PDF file to inspect annotations.",
@@ -203,6 +214,9 @@ const en: Dict = {
   "notice.cannotRead": "Book Note cannot read {{path}}; writing stopped to protect annotation data.",
   "notice.storageWritable": "Book Note storage is writable: {{path}}",
   "notice.storageNotWritable": "Book Note storage is not writable. Check the .obsidian-annotations directory permissions or sync status.",
+  "notice.storageMigrated": "Migrated {{count}} annotation file(s) to the new storage.",
+  "notice.storageMigratePartial": "Migrated {{migrated}} file(s); {{failed}} failed.",
+  "notice.storageMigrateFailed": "Failed to migrate annotations: {{error}}",
 
   // Tag validation
   "tag.atLeastOne": "Keep at least one tag.",
@@ -319,6 +333,17 @@ const zh: Dict = {
   "settings.pdf.heading": "PDF 阅读",
   "settings.pdf.progress.name": "记录 PDF 阅读进度",
   "settings.pdf.progress.desc": "保存当前页和阅读进度；关闭后不会删除已有进度。",
+  "settings.storage.heading": "存储",
+  "settings.storageFormat.name": "批注存储格式",
+  "settings.storageFormat.desc": "每个源文件批注数据的存储方式。Markdown 将元数据和阅读进度存入 YAML frontmatter，每条批注作为一个标题；JSON 更紧凑。",
+  "settings.storageFormat.json": "JSON（紧凑）",
+  "settings.storageFormat.md": "Markdown（可读）",
+  "settings.storagePath.name": "存储目录（Vault 相对路径）",
+  "settings.storagePath.desc": "Vault 内用于存放 sidecar 文件的目录，留空使用默认 .obsidian-annotations。仅允许 Vault 内相对路径。",
+  "settings.storagePath.placeholder": "例如 .obsidian-annotations",
+  "settings.storage.test": "测试写入",
+  "settings.storage.migrate": "迁移已有批注",
+  "settings.storage.migrate.desc": "将所有已有批注 sidecar 重写到当前目录与格式。修改上方的格式或目录时会自动执行。",
 
   // Sidebar
   "sidebar.emptyHint": "打开 Markdown 或 PDF 文件以查看批注。",
@@ -451,6 +476,9 @@ const zh: Dict = {
   "notice.cannotRead": "Book Note无法读取 {{path}}，已停止写入以保护批注数据。",
   "notice.storageWritable": "Book Note存储可写：{{path}}",
   "notice.storageNotWritable": "Book Note存储不可写，请检查 .obsidian-annotations 目录权限或同步状态。",
+  "notice.storageMigrated": "已将 {{count}} 个批注文件迁移至新存储。",
+  "notice.storageMigratePartial": "已迁移 {{migrated}} 个文件，{{failed}} 个失败。",
+  "notice.storageMigrateFailed": "批注迁移失败：{{error}}",
 
   // Tag validation
   "tag.atLeastOne": "请至少保留一个标签。",

@@ -78,7 +78,11 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     addIcon("book-note-icon", BOOK_NOTE_ICON);
     await this.loadSettings();
     console.info(`book-note loaded v${this.manifest.version}`);
-    this.store = new AnnotationStore(this.app, () => this.settings.annotationTags);
+    this.store = new AnnotationStore(
+      this.app,
+      () => this.settings.annotationTags,
+      () => ({ baseDir: this.settings.storagePath, format: this.settings.storageFormat }),
+    );
     await this.store.initialize();
 
     this.registerView(ANNOTATION_SIDEBAR_VIEW, (leaf) => new AnnotationSidebarView(leaf, this));

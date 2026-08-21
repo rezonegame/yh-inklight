@@ -18,6 +18,7 @@ import {
   EpubFlowMode,
   EpubHighlightStyle,
   EpubReadingTheme,
+  StorageFormat,
 } from "../storage/types";
 import {
   cloneDefaultAnnotationTags,
@@ -79,9 +80,82 @@ export class AnnotationSettingsTab extends PluginSettingTab {
         });
       });
 
+    this.renderStorageSettings();
     this.renderTagSettings();
     this.renderEpubSettings();
     this.renderPdfSettings();
+  }
+
+  private renderStorageSettings(): void {
+    const { containerEl } = this;
+    containerEl.createEl("h3", { text: t("settings.storage.heading") });
+
+    new Setting(containerEl)
+      .setName(t("settings.storageFormat.name"))
+      .setDesc(t("settings.storageFormat.desc"))
+      .addDropdown((dropdown) => {
+        dropdown.addOption("json", t("settings.storageFormat.json"));
+        dropdown.addOption("md", t("settings.storageFormat.md"));
+        dropdown.setValue(this.plugin.settings.storageFormat).onChange(async (value) => {
+          const oldConfig = this.plugin.store.getStorageConfigResolved();
+          this.plugin.settings.storageFormat = value as StorageFormat;
+          await this.plugin.saveSettings();
+          await this.migrateIfStorageChanged(oldConfig);
+        });
+      });
+
+    new Setting(containerEl)
+      .setName(t("settings.storagePath.name"))
+      .setDesc(t("settings.storagePath.desc"))
+      .addText((text) => {
+        text.setPlaceholder(t("settings.storagePath.placeholder")).setValue(this.plugin.settings.storagePath).onChange(async (value) => {
+          const oldConfig = this.plugin.store.getStorageConfigResolved();
+          this.plugin.settings.storagePath = value.trim();
+          await this.plugin.saveSettings();
+          await this.migrateIfStorageChanged(oldConfig);
+        });
+      })
+      .addButton((button) => {
+        button.setButtonText(t("settings.storage.test")).onClick(async () => {
+          try {
+            const path = await this.plugin.store.testWriteAccess();
+            new Notice(t("notice.storageWritable", { path }));
+          } catch {
+            new Notice(t("notice.storageNotWritable"));
+          }
+        });
+      });
+
+    new Setting(containerEl)
+      .setName(t("settings.storage.migrate"))
+      .setDesc(t("settings.storage.migrate.desc"))
+      .addButton((button) => {
+        button.setButtonText(t("settings.storage.migrate")).onClick(() => {
+          void this.migrateAndNotify();
+        });
+      });
+  }
+
+  private async migrateIfStorageChanged(oldConfig: { baseDir: string; format: StorageFormat }): Promise<void> {
+    const newConfig = this.plugin.store.getStorageConfigResolved();
+    if (oldConfig.format === newConfig.format && oldConfig.baseDir === newConfig.baseDir) {
+      return;
+    }
+    await this.migrateAndNotify();
+  }
+
+  private async migrateAndNotify(): Promise<void> {
+    try {
+      const result = await this.plugin.store.migrateAll();
+      if (result.failed > 0) {
+        new Notice(t("notice.storageMigratePartial", { migrated: result.migrated, failed: result.failed }));
+      } else {
+        new Notice(t("notice.storageMigrated", { count: result.migrated }));
+      }
+      this.display();
+    } catch (error) {
+      new Notice(t("notice.storageMigrateFailed", { error: String(error) }));
+    }
   }
 
   private renderTagSettings(): void {
