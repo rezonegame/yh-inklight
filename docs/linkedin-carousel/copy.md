@@ -1,4 +1,4 @@
-# Axl Light LinkedIn Carousel Copy
+# Book Note LinkedIn Carousel Copy
 
 ## Slide 1
 I built an Obsidian plugin for people who read inside their vault.
@@ -18,7 +18,7 @@ Select text.
 Pick a color.
 Keep reading.
 
-Axl Light overlays highlights visually, without changing the source file.
+Book Note overlays highlights visually, without changing the source file.
 
 ## Slide 4
 Highlights and notes stay together.
@@ -41,22 +41,22 @@ Markdown and PDFs stay untouched.
 The annotation data lives in sidecar JSON files.
 
 ## Slide 7
-If you use Obsidian to read papers, docs, courses, or long PDFs, try Axl Light.
+If you use Obsidian to read papers, docs, courses, or long PDFs, try Book Note.
 
 GitHub:
-github.com/little-pond/axl-light
+github.com/hellokunzai/obsidian-book-note
 
 ## LinkedIn Caption
-I built a small Obsidian plugin called Axl Light.
+I built a small Obsidian plugin called Book Note.
 
 The idea came from a very specific pain: I love using Obsidian as a personal knowledge base, but I do not want my reading annotations to pollute the original Markdown or PDF files.
 
-Axl Light lets you highlight text, add sticky notes beside the passage, search annotations later, jump back to the source, and export everything into a new Markdown note.
+Book Note lets you highlight text, add sticky notes beside the passage, search annotations later, jump back to the source, and export everything into a new Markdown note.
 
 The original files stay clean. The annotations live separately.
 
 Still early, but the core reading flow is working.
 
-GitHub: https://github.com/little-pond/axl-light
+GitHub: https://github.com/hellokunzai/obsidian-book-note
 
 #Obsidian #PKM #KnowledgeManagement #Markdown #PDF #OpenSource #Productivity #IndieHacking

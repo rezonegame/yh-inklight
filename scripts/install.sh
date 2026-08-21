@@ -1,17 +1,17 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="little-pond/axl-light"
-PLUGIN_ID="axl-light"
+REPO="hellokunzai/obsidian-book-note"
+PLUGIN_ID="book-note"
 VERSION="${AXL_LIGHT_VERSION:-latest}"
 VAULT_PATH="${1:-${OBSIDIAN_VAULT:-}}"
 
 if [[ -z "${VAULT_PATH}" ]]; then
   cat >&2 <<'EOF'
-Axl Light installer
+Book Note installer
 
 Usage:
-  curl -fsSL https://raw.githubusercontent.com/little-pond/axl-light/main/scripts/install.sh | bash -s -- "/path/to/your/Obsidian Vault"
+  curl -fsSL https://raw.githubusercontent.com/hellokunzai/obsidian-book-note/main/scripts/install.sh | bash -s -- "/path/to/your/Obsidian Vault"
 
 Or:
   OBSIDIAN_VAULT="/path/to/your/Obsidian Vault" bash install.sh
@@ -45,7 +45,7 @@ download_asset "styles.css"
 
 cat <<EOF
 
-Axl Light installed successfully.
+Book Note installed successfully.
 
 Plugin folder:
   ${PLUGIN_DIR}
@@ -53,5 +53,5 @@ Plugin folder:
 Next steps:
   1. Restart Obsidian.
   2. Open Settings -> Community plugins.
-  3. Enable Axl Light.
+  3. Enable Book Note.
 EOF

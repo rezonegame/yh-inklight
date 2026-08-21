@@ -57,7 +57,7 @@ export class EpubProgressManager {
     try {
       await this.store.saveEpubProgress(file, entry);
     } catch (err) {
-      console.error("yh-inklight: epub progress save failed", err);
+      console.error("book-note: epub progress save failed", err);
     }
   }
 
@@ -124,7 +124,7 @@ export class EpubProgressManager {
       this.persistedReadingSeconds = total;
     } catch (err) {
       this.unsavedReadingSeconds = unsaved;
-      console.error("yh-inklight: epub reading time flush failed", err);
+      console.error("book-note: epub reading time flush failed", err);
     }
 
     if (resumeAfter && this.canTrack()) {

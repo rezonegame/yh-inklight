@@ -214,7 +214,7 @@ export class PdfViewerAdapter {
           pdfViewer.currentPageNumber = pageNumber;
         }
       } catch (error) {
-        console.warn("yh-inklight: pdf viewer navigation failed, falling back to DOM scroll", error);
+        console.warn("book-note: pdf viewer navigation failed, falling back to DOM scroll", error);
       }
     }
 
@@ -273,8 +273,8 @@ export class PdfViewerAdapter {
   }
 
   flashPage(page: HTMLElement): void {
-    page.addClass("yh-flash-target");
-    window.setTimeout(() => page.removeClass("yh-flash-target"), 850);
+    page.addClass("book-note-flash-target");
+    window.setTimeout(() => page.removeClass("book-note-flash-target"), 850);
   }
 
   private async waitForPage(pageNumber: number, context: PdfViewerContext): Promise<HTMLElement | null> {

@@ -32,7 +32,7 @@
     <rect x="0" y="0" width="58" height="58" rx="16" fill="url(#gold)" filter="url(#tinyShadow)"/>
     <path d="M19 39 L23 23 L36 10 C41 13 45 17 48 22 L35 35 Z" fill="none" stroke="#121212" stroke-width="5" stroke-linejoin="round"/>
     <path d="M17 44 H40" stroke="#121212" stroke-width="5" stroke-linecap="round"/>
-    <text x="78" y="25" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800" fill="#121212">Axl Light</text>
+    <text x="78" y="25" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800" fill="#121212">Book Note</text>
     <text x="78" y="55" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="19" fill="#666">Obsidian reading annotations</text>
   </g>
   <g transform="translate(902 50)">
@@ -60,7 +60,7 @@
     <clipPath id="clip-70-742">
       <rect x="0" y="0" width="940" height="529" rx="28"/>
     </clipPath>
-    <image href="file:///Users/epiphanyxiao/Documents/Playground/obsidian-annotation-plugin/docs/images/highlight-with-axl-light.png" x="0" y="0" width="940" height="529" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-70-742)"/>
+    <image href="file:///D:/WorkSprace/gitee/obsidian-book-note/docs/images/highlight-with-book-note.png" x="0" y="0" width="940" height="529" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-70-742)"/>
     <rect x="0" y="0" width="940" height="529" rx="28" fill="none" stroke="#eadfca" stroke-width="2"/>
   </g>
   <g transform="translate(152 1156)">

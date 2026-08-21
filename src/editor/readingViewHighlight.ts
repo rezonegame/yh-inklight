@@ -35,7 +35,7 @@ interface NormalizedIndex {
   map: number[];
 }
 
-const MARK_SELECTOR = ".yh-reading-highlight, mark.yh-highlight";
+const MARK_SELECTOR = ".book-note-reading-highlight, mark.book-note-highlight";
 const MOBILE_RENDER_DELAYS = [0, 80, 220, 520, 900];
 const DESKTOP_RENDER_DELAYS = [0, 40, 160];
 
@@ -339,7 +339,7 @@ function collectText(root: HTMLElement): { text: string; segments: TextSegment[]
         return NodeFilter.FILTER_REJECT;
       }
 
-      if (parent.closest(`${MARK_SELECTOR}, mark.yh-highlight, pre, textarea, input`)) {
+      if (parent.closest(`${MARK_SELECTOR}, mark.book-note-highlight, pre, textarea, input`)) {
         return NodeFilter.FILTER_REJECT;
       }
 
@@ -377,9 +377,9 @@ function wrapRange(segments: TextSegment[], range: RenderedRange, color: Annotat
 
     const selected = splitTextRange(segment.node, localStart, localEnd);
     const mark = document.createElement("mark");
-    mark.className = `yh-reading-highlight yh-highlight yh-highlight--${color}`;
-    mark.dataset.yhColor = color;
-    mark.dataset.yhId = id;
+    mark.className = `book-note-reading-highlight book-note-highlight book-note-highlight--${color}`;
+    mark.dataset.bookNoteColor = color;
+    mark.dataset.bookNoteId = id;
     mark.style.setProperty("background-color", highlightBackground(color), "important");
     mark.tabIndex = 0;
     selected.parentNode?.insertBefore(mark, selected);
@@ -424,5 +424,5 @@ function cssEscape(value: string): string {
 
 function highlightSelectorForId(id: string): string {
   const escaped = cssEscape(id);
-  return `.yh-reading-highlight[data-yh-id="${escaped}"], mark.yh-highlight[data-yh-id="${escaped}"]`;
+  return `.book-note-reading-highlight[data-book-note-id="${escaped}"], mark.book-note-highlight[data-book-note-id="${escaped}"]`;
 }

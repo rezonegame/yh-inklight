@@ -8,7 +8,7 @@ import { ItemView, TFile, WorkspaceLeaf } from "obsidian";
 import { AnnotationStore } from "../storage/annotationStore";
 import { SUPPORTED_BOOK_EXTENSIONS } from "../storage/types";
 
-export const EPUB_BOOKSHELF_VIEW_TYPE = "inklight-epub-bookshelf";
+export const EPUB_BOOKSHELF_VIEW_TYPE = "book-note-epub-bookshelf";
 
 export class EpubBookshelfView extends ItemView {
   private store: AnnotationStore;
@@ -51,7 +51,7 @@ export class EpubBookshelfView extends ItemView {
   private render(): void {
     const container = this.contentEl;
     container.empty();
-    container.addClass("yh-epub-bookshelf-view");
+    container.addClass("book-note-epub-bookshelf-view");
 
     container.createEl("h4", {
       cls: "bookshelf-heading",

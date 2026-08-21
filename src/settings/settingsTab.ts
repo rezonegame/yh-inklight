@@ -35,7 +35,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "墨光批注" });
+    containerEl.createEl("h2", { text: "Book Note" });
 
     new Setting(containerEl)
       .setName("默认高亮颜色")
@@ -80,11 +80,11 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       text: `标签用于分类笔记和想法。最多启用 ${MAX_ENABLED_ANNOTATION_TAGS} 个；修改名称会立即同步显示，不会批量改写批注文件。`,
     });
 
-    const section = containerEl.createDiv({ cls: "yh-tag-settings" });
+    const section = containerEl.createDiv({ cls: "book-note-tag-settings" });
     let draft = this.plugin.settings.annotationTags.map((tag) => ({ ...tag }));
-    const error = section.createDiv({ cls: "yh-tag-settings-error hidden" });
-    const list = section.createDiv({ cls: "yh-tag-settings-list" });
-    const actions = section.createDiv({ cls: "yh-tag-settings-actions" });
+    const error = section.createDiv({ cls: "book-note-tag-settings-error hidden" });
+    const list = section.createDiv({ cls: "book-note-tag-settings-list" });
+    const actions = section.createDiv({ cls: "book-note-tag-settings-actions" });
     const add = actions.createEl("button", { text: "添加标签", attr: { type: "button" } });
     const reset = actions.createEl("button", { attr: { type: "button", title: "恢复默认标签", "aria-label": "恢复默认标签" } });
     setIcon(reset, "rotate-ccw");
@@ -101,7 +101,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
     const renderRows = (): void => {
       list.empty();
       draft.forEach((tag, index) => {
-        const row = list.createDiv({ cls: "yh-tag-settings-row" });
+        const row = list.createDiv({ cls: "book-note-tag-settings-row" });
         const icon = row.createEl("select", { cls: "dropdown", attr: { "aria-label": `${tag.name} 图标` } });
         for (const option of TAG_ICON_OPTIONS) {
           icon.createEl("option", { text: option.label, value: option.id });

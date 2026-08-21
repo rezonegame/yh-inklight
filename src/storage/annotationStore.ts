@@ -194,7 +194,7 @@ export class AnnotationStore {
         this.index = nextIndex;
       });
     } catch (error) {
-      new Notice(`墨光批注未保存，请检查写入权限或同步状态：${sidecarPath}`);
+      new Notice(`Book Note未保存，请检查写入权限或同步状态：${sidecarPath}`);
       throw new AnnotationStoreWriteError(sidecarPath, error);
     }
 
@@ -346,7 +346,7 @@ export class AnnotationStore {
   /**
    * 重命名/移动源文件后，把对应的摘录导出文件一并迁移：
    * 1. 文件名从旧 basename 派生改为新 basename 派生（兼容 {-notes.md} 与 《名》摘录.md 两种历史格式）；
-   * 2. 文件内容里所有指向旧路径的 source 引用（标题、[[wikilink]]、data-yh-source-path）替换为新路径。
+   * 2. 文件内容里所有指向旧路径的 source 引用（标题、[[wikilink]]、data-book-note-source-path）替换为新路径。
    * 摘录文件不存在时静默跳过。
    */
   private async migrateExcerptFile(oldPath: string, newPath: string): Promise<void> {
@@ -383,7 +383,7 @@ export class AnnotationStore {
           await this.app.vault.rename(excerptFile, targetPath);
         }
       } catch (error) {
-        console.warn("yh-inklight: migrate excerpt file failed", candidatePath, error);
+        console.warn("book-note: migrate excerpt file failed", candidatePath, error);
       }
     }
   }
@@ -464,9 +464,9 @@ export class AnnotationStore {
   async exportAllNotes(format: AnnotationExportFormat = "summary"): Promise<TFile> {
     const documents = await this.getIndexedDocuments();
     const suffix = format === "summary" ? "" : `-${format}`;
-    const targetPath = normalizePath(`inklight-all-notes${suffix}.md`);
+    const targetPath = normalizePath(`book-note-all-notes${suffix}.md`);
     const sources = documents.map((document) => ({ filePath: document.filePath, document }));
-    const lines = buildExportLines("墨光批注全库汇总", sources, format, this.getAnnotationTags());
+    const lines = buildExportLines("Book Note全库汇总", sources, format, this.getAnnotationTags());
 
     const existing = this.app.vault.getAbstractFileByPath(targetPath);
     if (existing instanceof TFile) {
@@ -491,7 +491,7 @@ export class AnnotationStore {
       await this.deleteIfExists(testPath);
       return testPath;
     } catch (error) {
-      new Notice(`墨光批注存储测试失败：${testPath}`);
+      new Notice(`Book Note存储测试失败：${testPath}`);
       throw new AnnotationStoreWriteError(testPath, error);
     }
   }
@@ -635,7 +635,7 @@ export class AnnotationStore {
       if (options.allowCorruptFallback) {
         return fallback;
       }
-      new Notice(`墨光批注无法读取 ${normalizedPath}，已停止写入以保护批注数据。`);
+      new Notice(`Book Note无法读取 ${normalizedPath}，已停止写入以保护批注数据。`);
       throw new AnnotationStoreReadError(normalizedPath, error);
     }
   }
@@ -889,7 +889,7 @@ function renderReadingNotes(entries: ExportEntry[]): string[] {
 
 function renderAnnotationBlock(entry: ExportEntry): string[] {
   const blockId = `${entry.mode}-${entry.id}`;
-  const calloutType = entry.mode === "epub" ? "inklight-epub" : entry.mode === "pdf" ? "inklight-pdf" : "inklight-md";
+  const calloutType = entry.mode === "epub" ? "book-note-epub" : entry.mode === "pdf" ? "book-note-pdf" : "book-note-md";
   const header = `> [!${calloutType}|${entry.color}] ${entrySource(entry)} - ${entry.createdAt} ^${blockId}`;
   const lines = [header];
 
@@ -922,13 +922,13 @@ function renderAnnotationBlock(entry: ExportEntry): string[] {
 
 function hiddenAnchor(entry: ExportEntry): string {
   if (entry.mode === "epub" && entry.cfiRange) {
-    return `> <span style="display:none" data-yh-id="${escapeHtmlAttribute(entry.id)}" data-yh-mode="epub" data-yh-cfi="${escapeHtmlAttribute(entry.cfiRange)}" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
+    return `> <span style="display:none" data-book-note-id="${escapeHtmlAttribute(entry.id)}" data-book-note-mode="epub" data-book-note-cfi="${escapeHtmlAttribute(entry.cfiRange)}" data-book-note-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
   }
   if (entry.mode === "pdf" && entry.pageNumber) {
-    const rects = entry.pdfRects ? ` data-yh-pdf-rects="${escapeHtmlAttribute(entry.pdfRects)}"` : "";
-    return `> <span style="display:none" data-yh-id="${escapeHtmlAttribute(entry.id)}" data-yh-mode="pdf" data-yh-pdf-page="${entry.pageNumber}" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}" data-yh-pdf-id="${escapeHtmlAttribute(entry.id)}"${rects}></span>`;
+    const rects = entry.pdfRects ? ` data-book-note-pdf-rects="${escapeHtmlAttribute(entry.pdfRects)}"` : "";
+    return `> <span style="display:none" data-book-note-id="${escapeHtmlAttribute(entry.id)}" data-book-note-mode="pdf" data-book-note-pdf-page="${entry.pageNumber}" data-book-note-source-path="${escapeHtmlAttribute(entry.sourcePath)}" data-book-note-pdf-id="${escapeHtmlAttribute(entry.id)}"${rects}></span>`;
   }
-  return `> <span style="display:none" data-yh-id="${escapeHtmlAttribute(entry.id)}" data-yh-mode="md" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
+  return `> <span style="display:none" data-book-note-id="${escapeHtmlAttribute(entry.id)}" data-book-note-mode="md" data-book-note-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
 }
 
 function escapeHtmlAttribute(value: string): string {

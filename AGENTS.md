@@ -1,4 +1,4 @@
-# obsidian-annotation-plugin/ - Axl Light overlay annotation plugin for Obsidian reading
+# obsidian-annotation-plugin/ - Book Note overlay annotation plugin for Obsidian reading
 > L2 | 父级: /Users/epiphanyxiao/Documents/Playground/AGENTS.md
 
 成员清单

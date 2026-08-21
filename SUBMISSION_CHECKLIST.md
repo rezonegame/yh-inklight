@@ -1,14 +1,14 @@
-# Axl Light Obsidian Community Plugin Submission Checklist
+# Book Note Obsidian Community Plugin Submission Checklist
 
-Use this checklist before submitting Axl Light to `obsidianmd/obsidian-releases`.
+Use this checklist before submitting Book Note to `obsidianmd/obsidian-releases`.
 
 ## Repository Readiness
 
-- [ ] Confirm `manifest.json` uses plugin id `axl-light`.
+- [ ] Confirm `manifest.json` uses plugin id `book-note`.
 - [ ] Confirm `manifest.json` version matches the GitHub release tag.
 - [ ] Confirm `manifest.json` includes `name`, `version`, `minAppVersion`, `description`, `author`, `authorUrl`, and `isDesktopOnly`.
 - [ ] Confirm `isDesktopOnly` is `false`.
-- [ ] Confirm `README.md` explains that Axl Light never modifies Markdown or PDF files.
+- [ ] Confirm `README.md` explains that Book Note never modifies Markdown or PDF files.
 - [ ] Confirm `LICENSE` exists and matches the README license section.
 
 ## Runtime Safety
@@ -23,9 +23,9 @@ Use this checklist before submitting Axl Light to `obsidianmd/obsidian-releases`
 
 ## CSS and UI
 
-- [ ] Confirm all custom CSS classes use the `.axl-` prefix.
-- [ ] Confirm TypeScript DOM class references use `axl-` classes.
-- [ ] Confirm custom data attributes use `data-axl-*`.
+- [ ] Confirm all custom CSS classes use the `.book-note-` prefix.
+- [ ] Confirm TypeScript DOM class references use `book-note-` classes.
+- [ ] Confirm custom data attributes use `data-book-note-*`.
 - [ ] Test light theme and dark theme readability.
 - [ ] Test narrow pane behavior.
 
@@ -60,7 +60,7 @@ Use this checklist before submitting Axl Light to `obsidianmd/obsidian-releases`
 ## obsidian-releases PR
 
 - [ ] Fork `https://github.com/obsidianmd/obsidian-releases`.
-- [ ] Add Axl Light to `community-plugins.json` with id `axl-light`.
+- [ ] Add Book Note to `community-plugins.json` with id `book-note`.
 - [ ] Add version entry to the release metadata as required by the current Obsidian submission instructions.
 - [ ] Open a PR from the fork to `obsidianmd/obsidian-releases`.
 - [ ] Include a short summary, repository URL, release URL, and testing notes.

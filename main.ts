@@ -47,7 +47,7 @@ interface CommentModalValue {
   content: string;
 }
 
-const YH_INKLIGHT_ICON = `
+const BOOK_NOTE_ICON = `
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
     <rect x="5" y="5" width="90" height="90" rx="20" ry="20" fill="#F5C518"/>
     <g transform="translate(50,50) rotate(-45) translate(-18,-18)"
@@ -73,9 +73,9 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private renameMigrationTimer: number | null = null;
 
   async onload(): Promise<void> {
-    addIcon("yh-inklight-icon", YH_INKLIGHT_ICON);
+    addIcon("book-note-icon", BOOK_NOTE_ICON);
     await this.loadSettings();
-    console.info(`yh-inklight loaded v${this.manifest.version}`);
+    console.info(`book-note loaded v${this.manifest.version}`);
     this.store = new AnnotationStore(this.app, () => this.settings.annotationTags);
     await this.store.initialize();
 
@@ -88,7 +88,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     try {
       this.registerExtensions([...SUPPORTED_BOOK_EXTENSIONS], EPUB_READER_VIEW_TYPE);
     } catch (error) {
-      console.warn("yh-inklight: 注册电子书扩展名失败（可能与其他插件冲突）", error);
+      console.warn("book-note: 注册电子书扩展名失败（可能与其他插件冲突）", error);
     }
     this.registerView(
       EPUB_BOOKSHELF_VIEW_TYPE,
@@ -158,17 +158,17 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       if (!detail?.page || detail.page < 1) return;
       void this.gotoPdfPage(detail.page);
     };
-    document.addEventListener("yh-pdf-goto-page", gotoPageHandler);
-    this.register(() => document.removeEventListener("yh-pdf-goto-page", gotoPageHandler));
+    document.addEventListener("book-note-pdf-goto-page", gotoPageHandler);
+    this.register(() => document.removeEventListener("book-note-pdf-goto-page", gotoPageHandler));
     // Phase 4-B P1: EPUB 双向溯源 + 摘录导出
     registerEpubGotoHandler(this, (file, cfi) => this.openEpubAtCfi(file, cfi));
-    this.registerObsidianProtocolHandler("inklight", (params) => {
+    this.registerObsidianProtocolHandler("book-note", (params) => {
       void this.annotationLinks.open({
         file: readProtocolParam(params.file),
         id: readProtocolParam(params.id),
       });
     });
-    this.registerObsidianProtocolHandler("inklight-epub", (params) => {
+    this.registerObsidianProtocolHandler("book-note-epub", (params) => {
       const filePath = readProtocolParam(params.file);
       const cfi = readProtocolParam(params.cfi);
       if (filePath && cfi) {
@@ -216,7 +216,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         view.refresh();
       }
     }
-    // 从墨光批注侧栏删除/编辑 EPUB 标注后，刷新打开的 EpubReaderView 高亮层
+    // 从Book Note侧栏删除/编辑 EPUB 标注后，刷新打开的 EpubReaderView 高亮层
     for (const leaf of this.app.workspace.getLeavesOfType(EPUB_READER_VIEW_TYPE)) {
       const view = leaf.view;
       if (view instanceof EpubReaderView) {
@@ -240,10 +240,10 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   }
 
   private registerRibbonIcon(): void {
-    const icon = this.addRibbonIcon("highlighter", "打开墨光批注", () => {
+    const icon = this.addRibbonIcon("highlighter", "打开Book Note", () => {
       void this.activateSidebar();
     });
-    icon.addClass("yh-ribbon-icon");
+    icon.addClass("book-note-ribbon-icon");
   }
 
   private registerCommands(): void {
@@ -301,13 +301,13 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
     this.addCommand({
       id: "test-annotation-storage",
-      name: "测试墨光批注存储",
+      name: "测试Book Note存储",
       callback: async () => {
         try {
           const path = await this.store.testWriteAccess();
-          new Notice(`墨光批注存储可写：${path}`);
+          new Notice(`Book Note存储可写：${path}`);
         } catch {
-          new Notice("墨光批注存储不可写，请检查 .obsidian-annotations 目录权限或同步状态。");
+          new Notice("Book Note存储不可写，请检查 .obsidian-annotations 目录权限或同步状态。");
         }
       },
     });
@@ -316,7 +316,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private registerEvents(): void {
     this.registerDomEvent(document, "selectionchange", () => this.toolbar.showForSelection());
     this.registerDomEvent(document, "mousedown", (event) => {
-      if (!(event.target instanceof HTMLElement) || !event.target.closest(".yh-selection-toolbar")) {
+      if (!(event.target instanceof HTMLElement) || !event.target.closest(".book-note-selection-toolbar")) {
         window.setTimeout(() => this.toolbar.showForSelection(), 0);
       }
     });
@@ -611,9 +611,9 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     view.editor.setSelection(from, to);
     view.editor.scrollIntoView({ from, to }, true);
     window.setTimeout(() => {
-      const target = document.querySelector<HTMLElement>(`[data-yh-id="${CSS.escape(annotationId)}"]`);
-      target?.addClass("yh-flash-target");
-      window.setTimeout(() => target?.removeClass("yh-flash-target"), 850);
+      const target = document.querySelector<HTMLElement>(`[data-book-note-id="${CSS.escape(annotationId)}"]`);
+      target?.addClass("book-note-flash-target");
+      window.setTimeout(() => target?.removeClass("book-note-flash-target"), 850);
     }, 100);
     return true;
   }
@@ -639,9 +639,9 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     const opened = await this.navigateEpubToCfi(file, cfi);
     if (opened && annotationId) {
       window.setTimeout(() => {
-        const target = document.querySelector<HTMLElement>(`[data-yh-id="${CSS.escape(annotationId)}"]`);
-        target?.addClass("yh-flash-target");
-        window.setTimeout(() => target?.removeClass("yh-flash-target"), 850);
+        const target = document.querySelector<HTMLElement>(`[data-book-note-id="${CSS.escape(annotationId)}"]`);
+        target?.addClass("book-note-flash-target");
+        window.setTimeout(() => target?.removeClass("book-note-flash-target"), 850);
       }, 100);
     }
     return opened;
@@ -698,15 +698,15 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       return;
     }
 
-    const mark = target.closest<HTMLElement>(".yh-highlight, .yh-reading-highlight");
+    const mark = target.closest<HTMLElement>(".book-note-highlight, .book-note-reading-highlight");
     if (!mark) {
-      if (!target.closest(".yh-annotation-popover")) {
+      if (!target.closest(".book-note-annotation-popover")) {
         this.popover.hide();
       }
       return;
     }
 
-    const annotationId = mark.dataset.yhId;
+    const annotationId = mark.dataset.bookNoteId;
     const file = this.app.workspace.getActiveFile();
     if (!annotationId || !(file instanceof TFile)) {
       return;
@@ -991,9 +991,9 @@ class CommentModal extends Modal {
     this.contentEl.empty();
     this.contentEl.createEl("h2", { text: "便签" });
 
-    const titleRow = this.contentEl.createDiv({ cls: "yh-modal-row" });
-    titleRow.createEl("label", { cls: "yh-modal-label", text: "标签" });
-    const tagSelect = titleRow.createEl("select", { cls: "yh-modal-select" });
+    const titleRow = this.contentEl.createDiv({ cls: "book-note-modal-row" });
+    titleRow.createEl("label", { cls: "book-note-modal-label", text: "标签" });
+    const tagSelect = titleRow.createEl("select", { cls: "book-note-modal-select" });
     const resolvedInitial = resolveAnnotationTag(this.tags, { tagId: this.initialTagId, title: this.initialTitle });
     const selectableTags = this.tags.filter((tag) => tag.enabled || tag.id === resolvedInitial?.id);
     for (const tag of selectableTags) {
@@ -1002,17 +1002,17 @@ class CommentModal extends Modal {
     }
     tagSelect.value = resolvedInitial?.id ?? selectableTags[0]?.id ?? "";
 
-    const contentRow = this.contentEl.createDiv({ cls: "yh-modal-row" });
-    contentRow.createEl("label", { cls: "yh-modal-label", text: "笔记" });
+    const contentRow = this.contentEl.createDiv({ cls: "book-note-modal-row" });
+    contentRow.createEl("label", { cls: "book-note-modal-label", text: "笔记" });
     const input = contentRow.createEl("textarea", {
-      cls: "yh-modal-textarea",
+      cls: "book-note-modal-textarea",
       attr: { rows: "8", placeholder: "写下你的想法..." },
     });
     input.value = this.initialContent;
 
-    const actions = this.contentEl.createDiv({ cls: "yh-modal-actions" });
-    const cancel = actions.createEl("button", { text: "取消", cls: "yh-modal-cancel", attr: { type: "button" } });
-    const save = actions.createEl("button", { text: "保存", cls: "yh-modal-save", attr: { type: "button" } });
+    const actions = this.contentEl.createDiv({ cls: "book-note-modal-actions" });
+    const cancel = actions.createEl("button", { text: "取消", cls: "book-note-modal-cancel", attr: { type: "button" } });
+    const save = actions.createEl("button", { text: "保存", cls: "book-note-modal-save", attr: { type: "button" } });
     const cancelValue = (): void => {
       this.value = null;
       this.close();

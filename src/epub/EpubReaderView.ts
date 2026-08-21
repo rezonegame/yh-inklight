@@ -49,7 +49,7 @@ import { legacyNoteTypeForTag } from "../tags/tagDomain";
 // ---- 常量 ----
 
 /** 注册到 Obsidian workspace 的视图类型标识 */
-export const EPUB_READER_VIEW_TYPE = "inklight-epub-reader";
+export const EPUB_READER_VIEW_TYPE = "book-note-epub-reader";
 
 /** 阅读时间 flush 间隔（毫秒） */
 const READING_TIME_FLUSH_INTERVAL_MS = 60_000;
@@ -118,7 +118,7 @@ interface FoliateDrawAnnotationDetail {
 // ---- EpubReaderView ----
 
 /**
- * yh-inklight EPUB 阅读器核心视图。
+ * book-note EPUB 阅读器核心视图。
  *
  * 继承 Obsidian FileView，将 foliate-js <foliate-view> 嵌入 leaf 容器。
  * 负责：
@@ -258,7 +258,7 @@ private contextMenuEl: HTMLElement | null = null;
 
 	/** 视图打开时构建 DOM 骨架 */
 	override async onOpen(): Promise<void> {
-		this.contentEl.addClass("yh-epub-reader");
+		this.contentEl.addClass("book-note-epub-reader");
 		this.buildLayout();
 		this.startReadingTimeTracker();
 		this.startObsidianThemeWatcher();
@@ -308,7 +308,7 @@ private contextMenuEl: HTMLElement | null = null;
 			this.renderToolbar();
 			this.renderSidebar();
 		} catch (error) {
-			console.error("yh-inklight: EPUB load failed", error);
+			console.error("book-note: EPUB load failed", error);
 			new Notice(`墨光 EPUB 加载失败: ${error instanceof Error ? error.message : String(error)}`);
 		}
 	}
@@ -343,28 +343,28 @@ private contextMenuEl: HTMLElement | null = null;
 		this.toolbarOverflowBtn = null;
 		this.toolbarOverflowEl = null;
 
-		this.toolbarEl = this.contentEl.createDiv({ cls: "yh-epub-toolbar" });
-		this.toolbarOverflowEl = this.toolbarEl.createDiv({ cls: "yh-epub-toolbar-overflow-menu" });
+		this.toolbarEl = this.contentEl.createDiv({ cls: "book-note-epub-toolbar" });
+		this.toolbarOverflowEl = this.toolbarEl.createDiv({ cls: "book-note-epub-toolbar-overflow-menu" });
 
-		const body = this.contentEl.createDiv({ cls: "yh-epub-body" });
+		const body = this.contentEl.createDiv({ cls: "book-note-epub-body" });
 
-		this.sidebarContainerEl = body.createDiv({ cls: "yh-epub-sidebar" });
+		this.sidebarContainerEl = body.createDiv({ cls: "book-note-epub-sidebar" });
 		this.sidebarContainerEl.toggleClass("is-open", this.sidebarOpen);
 
-		const sidebarTabs = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-tabs" });
+		const sidebarTabs = this.sidebarContainerEl.createDiv({ cls: "book-note-epub-sidebar-tabs" });
 		const tocTab = sidebarTabs.createEl("button", {
-			cls: "yh-epub-sidebar-tab is-active",
+			cls: "book-note-epub-sidebar-tab is-active",
 			text: "目录",
 			attr: { type: "button", "data-tab": "toc" },
 		});
 		tocTab.addEventListener("click", () => this.renderSidebar());
 
-		this.sidebarContentEl = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-content" });
+		this.sidebarContentEl = this.sidebarContainerEl.createDiv({ cls: "book-note-epub-sidebar-content" });
 
-		this.readerContainerEl = body.createDiv({ cls: "yh-epub-reader-area" });
+		this.readerContainerEl = body.createDiv({ cls: "book-note-epub-reader-area" });
 		// 脚注预览 popover 元素（Phase 4-B P3）
 
-		this.progressEl = this.contentEl.createDiv({ cls: "yh-epub-progress" });
+		this.progressEl = this.contentEl.createDiv({ cls: "book-note-epub-progress" });
 
 		this.contentEl.addEventListener("keydown", (event) => this.handleKeydown(event));
 		this.readerContainerEl.addEventListener("wheel", (event) => this.handleWheel(event), { passive: false });
@@ -421,7 +421,7 @@ private contextMenuEl: HTMLElement | null = null;
 		const children = Array.from(this.toolbarEl.children);
 		for (const child of children) {
 			if (child === this.toolbarOverflowEl) continue;
-			if (child.hasClass("yh-epub-toolbar-btn") || child.hasClass("yh-epub-theme-swatches")) {
+			if (child.hasClass("book-note-epub-toolbar-btn") || child.hasClass("book-note-epub-theme-swatches")) {
 				child.remove();
 			}
 		}
@@ -439,7 +439,7 @@ private contextMenuEl: HTMLElement | null = null;
 			onClick: () => void;
 		}): HTMLElement => {
 			const btn = this.toolbarEl.createEl("button", {
-				cls: "yh-epub-toolbar-btn",
+				cls: "book-note-epub-toolbar-btn",
 				attr: { type: "button", title: opts.title, "aria-label": opts.title },
 			});
 			if (opts.icon) setIcon(btn, opts.icon);
@@ -480,7 +480,7 @@ private contextMenuEl: HTMLElement | null = null;
 			title: "更多",
 			onClick: () => this.toggleToolbarOverflow(),
 		});
-		this.toolbarOverflowBtn.addClass("yh-epub-toolbar-overflow-btn");
+		this.toolbarOverflowBtn.addClass("book-note-epub-toolbar-overflow-btn");
 		this.toolbarItems.push(this.toolbarOverflowBtn);
 
 		// 普通项按顺序插入，溢出按钮固定在最右侧
@@ -507,11 +507,11 @@ private contextMenuEl: HTMLElement | null = null;
 	 * @returns 主题色块容器元素
 	 */
 	private renderThemeSwatches(): HTMLElement {
-		const container = this.toolbarEl.createDiv({ cls: "yh-epub-theme-swatches" });
+		const container = this.toolbarEl.createDiv({ cls: "book-note-epub-theme-swatches" });
 
 		for (const theme of EPUB_READING_THEMES) {
 			const swatch = container.createEl("button", {
-				cls: "yh-epub-theme-swatch",
+				cls: "book-note-epub-theme-swatch",
 				attr: {
 					type: "button",
 					title: theme.label,
@@ -664,7 +664,7 @@ private contextMenuEl: HTMLElement | null = null;
 
 	/**
 	 * 渲染侧边栏内容（目录）。
-	 * 标注已统一到「墨光批注」共用面板，此处仅保留目录导航。
+	 * 标注已统一到「Book Note」共用面板，此处仅保留目录导航。
 	 */
 	private renderSidebar(): void {
 		this.sidebarContentEl.empty();
@@ -676,15 +676,15 @@ private contextMenuEl: HTMLElement | null = null;
 	 */
 	private renderTocList(): void {
 		if (this.tocEntries.length === 0) {
-			this.sidebarContentEl.createDiv({ cls: "yh-epub-empty", text: "未找到目录信息。" });
+			this.sidebarContentEl.createDiv({ cls: "book-note-epub-empty", text: "未找到目录信息。" });
 			return;
 		}
 
-		const list = this.sidebarContentEl.createDiv({ cls: "yh-epub-toc-list" });
+		const list = this.sidebarContentEl.createDiv({ cls: "book-note-epub-toc-list" });
 
 		for (const entry of this.tocEntries) {
 			const item = list.createEl("button", {
-				cls: "yh-epub-toc-item",
+				cls: "book-note-epub-toc-item",
 				text: entry.label,
 				attr: { type: "button" },
 			});
@@ -708,7 +708,7 @@ private contextMenuEl: HTMLElement | null = null;
 	 */
 	private configureFoliateView(view: FoliateViewHandle): void {
 		const element = view as unknown as HTMLElement;
-		element.addClass("yh-epub-foliate-view");
+		element.addClass("book-note-epub-foliate-view");
 		element.setAttribute("flow", this.currentFlowMode);
 		element.setAttribute("margin", this.currentFlowMode === "paginated" ? "28px" : "0px");
 		element.setAttribute("gap", "8%");
@@ -770,12 +770,12 @@ private contextMenuEl: HTMLElement | null = null;
 	private showContextMenu(left: number, top: number, text: string, cfiRange: string): void {
 		this.dismissContextMenu();
 
-		const menu = document.body.createDiv({ cls: "yh-epub-context-menu" });
+		const menu = document.body.createDiv({ cls: "book-note-epub-context-menu" });
 
-		const colorRow = menu.createDiv({ cls: "yh-epub-context-colors" });
+		const colorRow = menu.createDiv({ cls: "book-note-epub-context-colors" });
 		for (const color of ANNOTATION_COLORS) {
 			const dot = colorRow.createEl("button", {
-				cls: `yh-epub-context-dot yh-dot--${color}`,
+				cls: `book-note-epub-context-dot book-note-dot--${color}`,
 				attr: {
 					type: "button",
 					title: COLOR_LABELS[color],
@@ -790,7 +790,7 @@ private contextMenuEl: HTMLElement | null = null;
 		}
 
 		const noteBtn = menu.createEl("button", {
-			cls: "yh-epub-context-note-btn",
+			cls: "book-note-epub-context-note-btn",
 			attr: { type: "button", title: "添加标注" },
 			text: "\u{1F4DD}",
 		});
@@ -883,7 +883,7 @@ private contextMenuEl: HTMLElement | null = null;
 			this.refreshAnnotations();
 			new Notice(`已添加${COLOR_LABELS[color]}画线`);
 		} catch (error) {
-			console.error("yh-inklight: EPUB highlight creation failed", error);
+			console.error("book-note: EPUB highlight creation failed", error);
 			new Notice("画线创建失败");
 		}
 	}
@@ -940,7 +940,7 @@ private contextMenuEl: HTMLElement | null = null;
 					this.refreshAnnotations();
 					new Notice("已添加标注");
 				} catch (error) {
-					console.error("yh-inklight: EPUB comment creation failed", error);
+					console.error("book-note: EPUB comment creation failed", error);
 					new Notice("标注创建失败");
 				}
 			},
@@ -1016,7 +1016,7 @@ private contextMenuEl: HTMLElement | null = null;
 			this.refreshAnnotations();
 			new Notice("标注已删除");
 		} catch (error) {
-			console.error("yh-inklight: EPUB annotation deletion failed", error);
+			console.error("book-note: EPUB annotation deletion failed", error);
 			new Notice("标注删除失败");
 		}
 	}
@@ -1090,11 +1090,11 @@ private contextMenuEl: HTMLElement | null = null;
 	private updateProgressBar(percent: number): void {
 		this.progressEl.empty();
 
-		const bar = this.progressEl.createDiv({ cls: "yh-epub-progress-bar" });
+		const bar = this.progressEl.createDiv({ cls: "book-note-epub-progress-bar" });
 		bar.createDiv({
-			cls: "yh-epub-progress-fill",
+			cls: "book-note-epub-progress-fill",
 		});
-		const fill = bar.querySelector<HTMLElement>(".yh-epub-progress-fill");
+		const fill = bar.querySelector<HTMLElement>(".book-note-epub-progress-fill");
 		if (fill) {
 			fill.style.width = `${Math.round(percent * 100)}%`;
 		}
@@ -1103,7 +1103,7 @@ private contextMenuEl: HTMLElement | null = null;
 		const remaining = this.formatRemainingTime();
 
 		this.progressEl.createDiv({
-			cls: "yh-epub-progress-text",
+			cls: "book-note-epub-progress-text",
 			text: remaining ? `${percentText}  ·  ${remaining}` : percentText,
 		});
 	}
@@ -1182,7 +1182,7 @@ private contextMenuEl: HTMLElement | null = null;
 		try {
 			await this.store.saveEpubProgress(this.file, progress);
 		} catch (error) {
-			console.error("yh-inklight: EPUB progress save failed", error);
+			console.error("book-note: EPUB progress save failed", error);
 		}
 	}
 
@@ -1947,7 +1947,7 @@ private contextMenuEl: HTMLElement | null = null;
 		try {
 			void this.foliateView.goTo(cfiRange);
 		} catch (error) {
-			console.warn("yh-inklight: navigateToCfi failed", error);
+			console.warn("book-note: navigateToCfi failed", error);
 		}
 	}
 
@@ -1969,15 +1969,15 @@ private contextMenuEl: HTMLElement | null = null;
 	// ================================================================
 
 	private renderSearchBox(): void {
-		const container = this.sidebarContentEl.createDiv({ cls: "yh-epub-search-box" });
+		const container = this.sidebarContentEl.createDiv({ cls: "book-note-epub-search-box" });
 		this.searchInputEl = container.createEl("input", {
-			cls: "yh-epub-search-input",
+			cls: "book-note-epub-search-input",
 			attr: { type: "text", placeholder: "搜索全文…" },
 		}) as HTMLInputElement;
 		this.searchInputEl.addEventListener("keydown", (ev: KeyboardEvent) => {
 			ev.stopPropagation();
 		}, { capture: true });
-		this.searchResultsEl = container.createDiv({ cls: "yh-epub-search-results" });
+		this.searchResultsEl = container.createDiv({ cls: "book-note-epub-search-results" });
 		this.searchInputEl.addEventListener("input", this.searchDebounce, { passive: true });
 	}
 
@@ -2013,12 +2013,12 @@ private contextMenuEl: HTMLElement | null = null;
 			}
 		}
 		if (results.length === 0) {
-			this.searchResultsEl.createDiv({ cls: "yh-epub-search-empty", text: "未找到匹配" });
+			this.searchResultsEl.createDiv({ cls: "book-note-epub-search-empty", text: "未找到匹配" });
 			return;
 		}
 		for (const r of results) {
-			const item = this.searchResultsEl.createEl("button", { cls: "yh-epub-search-result", attr: { type: "button" } });
-			item.createSpan({ cls: "yh-epub-search-text", text: r.excerpt.slice(0, 100) });
+			const item = this.searchResultsEl.createEl("button", { cls: "book-note-epub-search-result", attr: { type: "button" } });
+			item.createSpan({ cls: "book-note-epub-search-text", text: r.excerpt.slice(0, 100) });
 			if (r.cfi) item.addEventListener("click", () => { if (this.foliateView) void this.foliateView.goTo(r.cfi); });
 		}
 	}
@@ -2309,7 +2309,7 @@ private contextMenuEl: HTMLElement | null = null;
 		try {
 			return normalizeCfi(this.foliateView.getCFI(index, range.cloneRange()));
 		} catch (error) {
-			console.warn("yh-inklight: EPUB selection CFI failed", { index, error });
+			console.warn("book-note: EPUB selection CFI failed", { index, error });
 			return "";
 		}
 	}
@@ -2541,14 +2541,14 @@ private contextMenuEl: HTMLElement | null = null;
 	// ================================================================
 
 	private toggleToolbarSearch(): void {
-		const existing = this.toolbarEl.querySelector(".yh-epub-toolbar-search");
+		const existing = this.toolbarEl.querySelector(".book-note-epub-toolbar-search");
 		if (existing) { existing.remove(); return; }
-		const container = this.toolbarEl.createDiv({ cls: "yh-epub-toolbar-search" });
+		const container = this.toolbarEl.createDiv({ cls: "book-note-epub-toolbar-search" });
 		const input = container.createEl("input", {
-			cls: "yh-epub-toolbar-search-input",
+			cls: "book-note-epub-toolbar-search-input",
 			attr: { type: "text", placeholder: "搜索正文…" },
 		}) as HTMLInputElement;
-		const results = container.createDiv({ cls: "yh-epub-toolbar-search-results" });
+		const results = container.createDiv({ cls: "book-note-epub-toolbar-search-results" });
 		input.addEventListener("keydown", (ev: KeyboardEvent) => { ev.stopPropagation(); }, { capture: true });
 		let timer: number | null = null;
 		input.addEventListener("input", () => {
@@ -2570,7 +2570,7 @@ private contextMenuEl: HTMLElement | null = null;
 		const searchGen = (this.foliateView as any).search?.({ query: query.trim() });
 		if (!searchGen || typeof searchGen[Symbol.asyncIterator] !== 'function') {
 			// foliate 不支持 search，回退到当前 section
-			resultsEl.createDiv({ cls: "yh-epub-toolbar-search-empty", text: "搜索功能不支持" });
+			resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-empty", text: "搜索功能不支持" });
 			return;
 		}
 
@@ -2578,7 +2578,7 @@ private contextMenuEl: HTMLElement | null = null;
 		let searching = true;
 
 		// 添加进度指示
-		const progressEl = resultsEl.createDiv({ cls: "yh-epub-toolbar-search-progress", text: "搜索中..." });
+		const progressEl = resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-progress", text: "搜索中..." });
 
 		try {
 			for await (const result of searchGen) {
@@ -2598,13 +2598,13 @@ private contextMenuEl: HTMLElement | null = null;
 				if (hits.length >= 100) break;
 			}
 		} catch (e) {
-			console.error("yh-inklight: search error", e);
+			console.error("book-note: search error", e);
 		}
 
 		progressEl.remove();
 
 		if (hits.length === 0) {
-			resultsEl.createDiv({ cls: "yh-epub-toolbar-search-empty", text: "未找到匹配内容" });
+			resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-empty", text: "未找到匹配内容" });
 			return;
 		}
 
@@ -2613,9 +2613,9 @@ private contextMenuEl: HTMLElement | null = null;
 		for (const h of hits) {
 			if (h.label && h.label !== currentLabel) {
 				currentLabel = h.label;
-				resultsEl.createDiv({ cls: "yh-epub-toolbar-search-chapter", text: currentLabel });
+				resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-chapter", text: currentLabel });
 			}
-			const btn = resultsEl.createEl("button", { cls: "yh-epub-toolbar-search-hit", attr: { type: "button" } });
+			const btn = resultsEl.createEl("button", { cls: "book-note-epub-toolbar-search-hit", attr: { type: "button" } });
 			btn.innerHTML = `${this.escapeHtml(h.excerpt.pre)}<strong>${this.escapeHtml(h.excerpt.match)}</strong>${this.escapeHtml(h.excerpt.post)}`;
 			btn.addEventListener("click", () => {
 				if (this.foliateView) {

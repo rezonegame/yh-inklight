@@ -24,7 +24,7 @@ export class AnnotationLinkService {
 
   async open(params: AnnotationLinkParams): Promise<boolean> {
     if (!params.file || !params.id) {
-      new Notice("墨光批注链接无效");
+      new Notice("Book Note链接无效");
       return false;
     }
 

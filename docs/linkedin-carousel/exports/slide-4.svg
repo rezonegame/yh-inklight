@@ -32,7 +32,7 @@
     <rect x="0" y="0" width="58" height="58" rx="16" fill="url(#gold)" filter="url(#tinyShadow)"/>
     <path d="M19 39 L23 23 L36 10 C41 13 45 17 48 22 L35 35 Z" fill="none" stroke="#121212" stroke-width="5" stroke-linejoin="round"/>
     <path d="M17 44 H40" stroke="#121212" stroke-width="5" stroke-linecap="round"/>
-    <text x="78" y="25" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800" fill="#121212">Axl Light</text>
+    <text x="78" y="25" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800" fill="#121212">Book Note</text>
     <text x="78" y="55" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="19" fill="#666">Obsidian reading annotations</text>
   </g>
   <g transform="translate(902 50)">
@@ -62,7 +62,7 @@
     <circle cx="26" cy="24" r="6" fill="#ff5f57"/>
     <circle cx="46" cy="24" r="6" fill="#ffbd2e"/>
     <circle cx="66" cy="24" r="6" fill="#28c840"/>
-    <text x="124" y="30" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#555">Axl Light demo vault</text>
+    <text x="124" y="30" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#555">Book Note demo vault</text>
     <rect x="0" y="48" width="54" height="481" fill="#f7f7f8"/>
     <rect x="54" y="48" width="186" height="481" fill="#fbfbfb"/>
     <rect x="240" y="48" width="410" height="481" fill="#fff"/>

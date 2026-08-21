@@ -32,7 +32,7 @@
     <rect x="0" y="0" width="58" height="58" rx="16" fill="url(#gold)" filter="url(#tinyShadow)"/>
     <path d="M19 39 L23 23 L36 10 C41 13 45 17 48 22 L35 35 Z" fill="none" stroke="#121212" stroke-width="5" stroke-linejoin="round"/>
     <path d="M17 44 H40" stroke="#121212" stroke-width="5" stroke-linecap="round"/>
-    <text x="78" y="25" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800" fill="#121212">Axl Light</text>
+    <text x="78" y="25" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800" fill="#121212">Book Note</text>
     <text x="78" y="55" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="19" fill="#666">Obsidian reading annotations</text>
   </g>
   <g transform="translate(902 50)">
@@ -51,7 +51,7 @@
   <path d="M72 594 C244 576, 476 577, 810 590" fill="none" stroke="#f5c518" stroke-width="13" stroke-linecap="round" opacity="0.82"/>
   
   <text x="74" y="652" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="31" font-weight="600" fill="#1c1c1c">
-    <tspan x="74" dy="0">github.com/little-pond/axl-light</tspan>
+    <tspan x="74" dy="0">github.com/hellokunzai/obsidian-book-note</tspan>
   </text>
   
   
@@ -60,13 +60,13 @@
     <clipPath id="clip-86-734">
       <rect x="0" y="0" width="908" height="511" rx="28"/>
     </clipPath>
-    <image href="file:///Users/epiphanyxiao/Documents/Playground/obsidian-annotation-plugin/docs/images/install-axl-light-command.png" x="0" y="0" width="908" height="511" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-86-734)"/>
+    <image href="file:///D:/WorkSprace/gitee/obsidian-book-note/docs/images/install-book-note-command.png" x="0" y="0" width="908" height="511" preserveAspectRatio="xMidYMid slice" clip-path="url(#clip-86-734)"/>
     <rect x="0" y="0" width="908" height="511" rx="28" fill="none" stroke="#eadfca" stroke-width="2"/>
   </g>
   <g transform="translate(110 1035)" filter="url(#softShadow)">
     <rect x="0" y="0" width="860" height="234" rx="32" fill="#111" opacity="0.96"/>
     <text x="52" y="82" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="28" font-weight="850" fill="#ffe16a">Install / Star / Try it</text>
-    <text x="52" y="148" font-family="Menlo, Monaco, monospace" font-size="24" fill="#fff">github.com/little-pond/axl-light</text>
+    <text x="52" y="148" font-family="Menlo, Monaco, monospace" font-size="24" fill="#fff">github.com/hellokunzai/obsidian-book-note</text>
     <text x="52" y="196" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="22" fill="#ddd">Built for readers who want clean source files.</text>
   </g>
   

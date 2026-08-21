@@ -22,7 +22,7 @@ export class SelectionToolbar {
   };
 
   constructor(private readonly options: SelectionToolbarOptions) {
-    this.element = document.body.createDiv({ cls: "yh-toolbar yh-selection-toolbar" });
+    this.element = document.body.createDiv({ cls: "book-note-toolbar book-note-selection-toolbar" });
     this.render();
     this.hide();
     document.addEventListener("mouseup", this.handleMouseUp);
@@ -66,17 +66,17 @@ export class SelectionToolbar {
   private render(): void {
     for (const color of ANNOTATION_COLORS) {
       const button = this.element.createEl("button", {
-        cls: `yh-toolbar-color yh-toolbar-color--${color}`,
+        cls: `book-note-toolbar-color book-note-toolbar-color--${color}`,
         attr: {
           type: "button",
           "aria-label": `高亮 ${COLOR_LABELS[color]}`,
-          "data-yh-color": color,
+          "data-book-note-color": color,
         },
       });
       button.addEventListener("click", () => this.options.onHighlight(color));
     }
 
-    this.element.createDiv({ cls: "yh-toolbar-sep" });
+    this.element.createDiv({ cls: "book-note-toolbar-sep" });
 
     const commentButton = this.iconButton("添加便签", NOTE_ICON);
     commentButton.addEventListener("click", () => this.options.onComment());
@@ -90,7 +90,7 @@ export class SelectionToolbar {
 
   private iconButton(label: string, svg: string): HTMLButtonElement {
     const button = this.element.createEl("button", {
-      cls: "yh-toolbar-action",
+      cls: "book-note-toolbar-action",
       attr: {
         type: "button",
         "aria-label": label,

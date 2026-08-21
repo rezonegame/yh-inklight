@@ -125,7 +125,7 @@ async function inlineBlobStylesheetsInHtml(html: string): Promise<string> {
 				style.textContent = css;
 				link.replaceWith(style);
 			} catch (error) {
-				console.warn("yh-inklight: inline blob css failed", href, error);
+				console.warn("book-note: inline blob css failed", href, error);
 			}
 		}),
 	);

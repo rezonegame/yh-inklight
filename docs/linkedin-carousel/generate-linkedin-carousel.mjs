@@ -1,6 +1,6 @@
 /**
  * [INPUT]: Uses built-in Node.js fs/path and local carousel copy constants.
- * [OUTPUT]: Generates 1080x1350 SVG slides for the Axl Light LinkedIn carousel.
+ * [OUTPUT]: Generates 1080x1350 SVG slides for the Book Note LinkedIn carousel.
  * [POS]: docs/linkedin-carousel asset generator; deterministic visual source for export images.
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -17,13 +17,13 @@ mkdirSync(outDir, { recursive: true });
 const W = 1080;
 const H = 1350;
 const screenshotsDir = join(here, "..", "images");
-const IMG_HIGHLIGHT = pathToFileURL(join(screenshotsDir, "highlight-with-axl-light.png")).href;
+const IMG_HIGHLIGHT = pathToFileURL(join(screenshotsDir, "highlight-with-book-note.png")).href;
 const IMG_STICKY = pathToFileURL(join(screenshotsDir, "sticky-notes-overview.png")).href;
-const IMG_INSTALL = pathToFileURL(join(screenshotsDir, "install-axl-light-command.png")).href;
+const IMG_INSTALL = pathToFileURL(join(screenshotsDir, "install-book-note-command.png")).href;
 
 const slides = [
   {
-    kicker: "Axl Light for Obsidian",
+    kicker: "Book Note for Obsidian",
     title: ["I built an", "Obsidian reading", "annotation plugin"],
     subtitle: "Markdown / PDF highlights, sticky notes, search, jump, export. Original files stay clean.",
     badge: "01 / 07",
@@ -67,7 +67,7 @@ const slides = [
   {
     kicker: "Open source",
     title: ["If you read inside", "Obsidian, try it."],
-    subtitle: "github.com/little-pond/axl-light",
+    subtitle: "github.com/hellokunzai/obsidian-book-note",
     badge: "07 / 07",
     scene: "cta",
   },
@@ -118,7 +118,7 @@ function brandHeader(badge) {
     <rect x="0" y="0" width="58" height="58" rx="16" fill="url(#gold)" filter="url(#tinyShadow)"/>
     <path d="M19 39 L23 23 L36 10 C41 13 45 17 48 22 L35 35 Z" fill="none" stroke="#121212" stroke-width="5" stroke-linejoin="round"/>
     <path d="M17 44 H40" stroke="#121212" stroke-width="5" stroke-linecap="round"/>
-    <text x="78" y="25" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800" fill="#121212">Axl Light</text>
+    <text x="78" y="25" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="30" font-weight="800" fill="#121212">Book Note</text>
     <text x="78" y="55" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="19" fill="#666">Obsidian reading annotations</text>
   </g>
   <g transform="translate(902 50)">
@@ -186,7 +186,7 @@ function dirtyScene() {
   </g>
   <g transform="translate(586 750)" filter="url(#softShadow)">
     <rect x="0" y="0" width="400" height="310" rx="26" fill="#fff"/>
-    <text x="34" y="58" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="26" font-weight="800" fill="#111">Axl Light</text>
+    <text x="34" y="58" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="26" font-weight="800" fill="#111">Book Note</text>
     <text x="34" y="118" font-family="Menlo, Monaco, monospace" font-size="21" fill="#333">important line</text>
     <rect x="31" y="93" width="185" height="34" rx="8" fill="#ffe16a" opacity="0.72"/>
     <text x="34" y="166" font-family="Menlo, Monaco, monospace" font-size="21" fill="#333">plain Markdown</text>
@@ -269,7 +269,7 @@ function obsidianSurface(x, y, width, height, variant) {
     <circle cx="26" cy="24" r="6" fill="#ff5f57"/>
     <circle cx="46" cy="24" r="6" fill="#ffbd2e"/>
     <circle cx="66" cy="24" r="6" fill="#28c840"/>
-    <text x="124" y="30" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#555">Axl Light demo vault</text>
+    <text x="124" y="30" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#555">Book Note demo vault</text>
     <rect x="0" y="48" width="54" height="481" fill="#f7f7f8"/>
     <rect x="54" y="48" width="186" height="481" fill="#fbfbfb"/>
     <rect x="240" y="48" width="410" height="481" fill="#fff"/>
@@ -428,7 +428,7 @@ function ctaScene() {
   <g transform="translate(110 1035)" filter="url(#softShadow)">
     <rect x="0" y="0" width="860" height="234" rx="32" fill="#111" opacity="0.96"/>
     <text x="52" y="82" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="28" font-weight="850" fill="#ffe16a">Install / Star / Try it</text>
-    <text x="52" y="148" font-family="Menlo, Monaco, monospace" font-size="24" fill="#fff">github.com/little-pond/axl-light</text>
+    <text x="52" y="148" font-family="Menlo, Monaco, monospace" font-size="24" fill="#fff">github.com/hellokunzai/obsidian-book-note</text>
     <text x="52" y="196" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="22" fill="#ddd">Built for readers who want clean source files.</text>
   </g>`;
 }
