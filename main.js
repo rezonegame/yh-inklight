@@ -7800,6 +7800,8 @@ var en = {
   "settings.defaultColor": "Default highlight color",
   "settings.defaultAuthor": "Default author",
   "settings.migrateOnRename": "Migrate annotations on rename",
+  "settings.showRibbonIcon.name": "Show ribbon icon",
+  "settings.showRibbonIcon.desc": "Show the highlighter icon in the left ribbon to open the Book Note sidebar.",
   "settings.tags.heading": "Annotation tags",
   "settings.tags.desc": "Tags categorize notes and ideas. Up to {{max}} can be enabled; renaming syncs instantly without rewriting annotation files.",
   "settings.tags.add": "Add tag",
@@ -8025,6 +8027,8 @@ var zh = {
   "settings.defaultColor": "\u9ED8\u8BA4\u9AD8\u4EAE\u989C\u8272",
   "settings.defaultAuthor": "\u9ED8\u8BA4\u4F5C\u8005",
   "settings.migrateOnRename": "\u91CD\u547D\u540D\u65F6\u8FC1\u79FB\u6279\u6CE8",
+  "settings.showRibbonIcon.name": "\u663E\u793A\u4FA7\u8FB9\u680F\u56FE\u6807",
+  "settings.showRibbonIcon.desc": "\u5728\u5DE6\u4FA7\u680F\u663E\u793A Book Note \u9AD8\u4EAE\u7B14\u56FE\u6807\uFF0C\u70B9\u51FB\u53EF\u6253\u5F00\u6279\u6CE8\u603B\u89C8\u9762\u677F\u3002",
   "settings.tags.heading": "\u6279\u6CE8\u6807\u7B7E",
   "settings.tags.desc": "\u6807\u7B7E\u7528\u4E8E\u5206\u7C7B\u7B14\u8BB0\u548C\u60F3\u6CD5\u3002\u6700\u591A\u542F\u7528 {{max}} \u4E2A\uFF1B\u4FEE\u6539\u540D\u79F0\u4F1A\u7ACB\u5373\u540C\u6B65\u663E\u793A\uFF0C\u4E0D\u4F1A\u6279\u91CF\u6539\u5199\u6279\u6CE8\u6587\u4EF6\u3002",
   "settings.tags.add": "\u6DFB\u52A0\u6807\u7B7E",
@@ -9046,6 +9050,8 @@ var DEFAULT_SETTINGS = {
   defaultAuthor: "\u8BFB\u8005",
   migrateOnRename: true,
   annotationTags: cloneDefaultAnnotationTags(),
+  // 通用
+  showRibbonIcon: true,
   // EPUB
   epubDefaultFlow: "scrolled",
   epubFontSize: 16,
@@ -10039,6 +10045,13 @@ var AnnotationSettingsTab = class extends import_obsidian7.PluginSettingTab {
       toggle.setValue(this.plugin.settings.migrateOnRename).onChange(async (value) => {
         this.plugin.settings.migrateOnRename = value;
         await this.plugin.saveSettings();
+      });
+    });
+    new import_obsidian7.Setting(containerEl).setName(t("settings.showRibbonIcon.name")).setDesc(t("settings.showRibbonIcon.desc")).addToggle((toggle) => {
+      toggle.setValue(this.plugin.settings.showRibbonIcon).onChange(async (value) => {
+        this.plugin.settings.showRibbonIcon = value;
+        await this.plugin.saveSettings();
+        this.plugin.updateRibbonIcon();
       });
     });
     this.renderTagSettings();
@@ -14994,6 +15007,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
     this.settings = DEFAULT_SETTINGS;
     this.lastSelection = null;
     this.renameMigrationTimer = null;
+    this.ribbonIconEl = null;
   }
   async onload() {
     (0, import_obsidian16.addIcon)("book-note-icon", BOOK_NOTE_ICON);
@@ -15096,6 +15110,8 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
     }
     this.toolbar?.destroy();
     this.popover?.destroy();
+    this.ribbonIconEl?.remove();
+    this.ribbonIconEl = null;
     this.app.workspace.detachLeavesOfType(ANNOTATION_SIDEBAR_VIEW);
     this.app.workspace.detachLeavesOfType(EPUB_BOOKSHELF_VIEW_TYPE);
   }
@@ -15143,11 +15159,24 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
       new import_obsidian16.Notice(t("notice.pageNotFound", { page: pageNumber }));
     }
   }
+  /** 根据 settings.showRibbonIcon 增删左侧栏高亮笔图标（即时生效，无需重载插件）。 */
   registerRibbonIcon() {
-    const icon = this.addRibbonIcon("highlighter", t("ribbon.open"), () => {
-      void this.activateSidebar();
-    });
-    icon.addClass("book-note-ribbon-icon");
+    this.updateRibbonIcon();
+  }
+  /** 设置面板切换开关时调用，即时增删 ribbon 图标。 */
+  updateRibbonIcon() {
+    if (this.settings.showRibbonIcon) {
+      if (!this.ribbonIconEl) {
+        const icon = this.addRibbonIcon("highlighter", t("ribbon.open"), () => {
+          void this.activateSidebar();
+        });
+        icon.addClass("book-note-ribbon-icon");
+        this.ribbonIconEl = icon;
+      }
+    } else if (this.ribbonIconEl) {
+      this.ribbonIconEl.remove();
+      this.ribbonIconEl = null;
+    }
   }
   registerCommands() {
     this.addCommand({

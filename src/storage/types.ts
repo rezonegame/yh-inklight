@@ -177,6 +177,8 @@ export interface AnnotationPluginSettings {
   defaultAuthor: string;
   migrateOnRename: boolean;
   annotationTags: AnnotationTagDefinition[];
+  // --- 通用 ---
+  showRibbonIcon: boolean;
   // --- EPUB 阅读 ---
   epubDefaultFlow: EpubFlowMode;
   epubFontSize: number;
@@ -198,6 +200,8 @@ export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
   defaultAuthor: "读者",
   migrateOnRename: true,
   annotationTags: cloneDefaultAnnotationTags(),
+  // 通用
+  showRibbonIcon: true,
   // EPUB
   epubDefaultFlow: "scrolled",
   epubFontSize: 16,

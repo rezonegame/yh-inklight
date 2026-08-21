@@ -68,6 +68,17 @@ export class AnnotationSettingsTab extends PluginSettingTab {
         });
       });
 
+    new Setting(containerEl)
+      .setName(t("settings.showRibbonIcon.name"))
+      .setDesc(t("settings.showRibbonIcon.desc"))
+      .addToggle((toggle) => {
+        toggle.setValue(this.plugin.settings.showRibbonIcon).onChange(async (value) => {
+          this.plugin.settings.showRibbonIcon = value;
+          await this.plugin.saveSettings();
+          this.plugin.updateRibbonIcon();
+        });
+      });
+
     this.renderTagSettings();
     this.renderEpubSettings();
     this.renderPdfSettings();

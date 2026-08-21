@@ -72,6 +72,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private annotationLinks!: AnnotationLinkService;
   private lastSelection: SelectionSnapshot | null = null;
   private renameMigrationTimer: number | null = null;
+  private ribbonIconEl: HTMLElement | null = null;
 
   async onload(): Promise<void> {
     addIcon("book-note-icon", BOOK_NOTE_ICON);
@@ -185,6 +186,8 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
     this.toolbar?.destroy();
     this.popover?.destroy();
+    this.ribbonIconEl?.remove();
+    this.ribbonIconEl = null;
     this.app.workspace.detachLeavesOfType(ANNOTATION_SIDEBAR_VIEW);
     this.app.workspace.detachLeavesOfType(EPUB_BOOKSHELF_VIEW_TYPE);
   }
@@ -240,11 +243,25 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
   }
 
+  /** 根据 settings.showRibbonIcon 增删左侧栏高亮笔图标（即时生效，无需重载插件）。 */
   private registerRibbonIcon(): void {
-    const icon = this.addRibbonIcon("highlighter", t("ribbon.open"), () => {
-      void this.activateSidebar();
-    });
-    icon.addClass("book-note-ribbon-icon");
+    this.updateRibbonIcon();
+  }
+
+  /** 设置面板切换开关时调用，即时增删 ribbon 图标。 */
+  updateRibbonIcon(): void {
+    if (this.settings.showRibbonIcon) {
+      if (!this.ribbonIconEl) {
+        const icon = this.addRibbonIcon("highlighter", t("ribbon.open"), () => {
+          void this.activateSidebar();
+        });
+        icon.addClass("book-note-ribbon-icon");
+        this.ribbonIconEl = icon;
+      }
+    } else if (this.ribbonIconEl) {
+      this.ribbonIconEl.remove();
+      this.ribbonIconEl = null;
+    }
   }
 
   private registerCommands(): void {
