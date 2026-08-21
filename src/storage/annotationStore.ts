@@ -6,6 +6,7 @@
  */
 
 import { App, normalizePath, Notice, TFile } from "obsidian";
+import { t } from "../i18n";
 
 import { createAnnotationUri } from "../links/annotationLink";
 import { AnnotationTagDefinition, resolveAnnotationTag } from "../tags/tagDomain";
@@ -194,7 +195,7 @@ export class AnnotationStore {
         this.index = nextIndex;
       });
     } catch (error) {
-      new Notice(`Book Note未保存，请检查写入权限或同步状态：${sidecarPath}`);
+      new Notice(t("notice.notSaved", { path: sidecarPath }));
       throw new AnnotationStoreWriteError(sidecarPath, error);
     }
 
@@ -466,7 +467,7 @@ export class AnnotationStore {
     const suffix = format === "summary" ? "" : `-${format}`;
     const targetPath = normalizePath(`book-note-all-notes${suffix}.md`);
     const sources = documents.map((document) => ({ filePath: document.filePath, document }));
-    const lines = buildExportLines("Book Note全库汇总", sources, format, this.getAnnotationTags());
+    const lines = buildExportLines(t("export.heading"), sources, format, this.getAnnotationTags());
 
     const existing = this.app.vault.getAbstractFileByPath(targetPath);
     if (existing instanceof TFile) {
@@ -491,7 +492,7 @@ export class AnnotationStore {
       await this.deleteIfExists(testPath);
       return testPath;
     } catch (error) {
-      new Notice(`Book Note存储测试失败：${testPath}`);
+      new Notice(t("notice.storageTestFailed", { path: testPath }));
       throw new AnnotationStoreWriteError(testPath, error);
     }
   }
@@ -635,7 +636,7 @@ export class AnnotationStore {
       if (options.allowCorruptFallback) {
         return fallback;
       }
-      new Notice(`Book Note无法读取 ${normalizedPath}，已停止写入以保护批注数据。`);
+      new Notice(t("notice.cannotRead", { path: normalizedPath }));
       throw new AnnotationStoreReadError(normalizedPath, error);
     }
   }

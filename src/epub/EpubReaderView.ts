@@ -11,6 +11,7 @@
  */
 
 import { FileView, Notice, Platform, setIcon, TFile, WorkspaceLeaf } from "obsidian";
+import { t } from "../i18n";
 
 import {
 	ANNOTATION_COLORS,
@@ -309,7 +310,7 @@ private contextMenuEl: HTMLElement | null = null;
 			this.renderSidebar();
 		} catch (error) {
 			console.error("book-note: EPUB load failed", error);
-			new Notice(`墨光 EPUB 加载失败: ${error instanceof Error ? error.message : String(error)}`);
+			new Notice(t("epub.loadFailed", { error: error instanceof Error ? error.message : String(error) }));
 		}
 	}
 
@@ -354,7 +355,7 @@ private contextMenuEl: HTMLElement | null = null;
 		const sidebarTabs = this.sidebarContainerEl.createDiv({ cls: "book-note-epub-sidebar-tabs" });
 		const tocTab = sidebarTabs.createEl("button", {
 			cls: "book-note-epub-sidebar-tab is-active",
-			text: "目录",
+			text: t("epub.toc"),
 			attr: { type: "button", "data-tab": "toc" },
 		});
 		tocTab.addEventListener("click", () => this.renderSidebar());
@@ -454,30 +455,30 @@ private contextMenuEl: HTMLElement | null = null;
 				? (this.mobileTapEnabled ? "hand" : "move")
 				: (this.pcNavMode === "keyboard" ? "keyboard" : "mouse"),
 			title: Platform.isMobile
-				? (this.mobileTapEnabled ? "切换为滑动翻页" : "切换为点按翻页")
-				: (this.pcNavMode === "keyboard" ? "切换为滚轮翻页" : "切换为键盘翻页"),
+				? (this.mobileTapEnabled ? t("epub.toggleToSwipe") : t("epub.toggleToTap"))
+				: (this.pcNavMode === "keyboard" ? t("epub.toggleToWheel") : t("epub.toggleToKeyboard")),
 			onClick: () => this.toggleKeyNav(),
 		});
 
 		this.toolbarItems.push(
-			createBtn({ icon: "menu", title: "切换侧边栏", onClick: () => this.toggleSidebar() }),
-			createBtn({ text: "A-", title: "缩小字号", onClick: () => this.changeFontSize(-1) }),
-			createBtn({ text: "A+", title: "放大字号", onClick: () => this.changeFontSize(1) }),
-			createBtn({ icon: "search", title: "搜索全文", onClick: () => this.toggleToolbarSearch() }),
+			createBtn({ icon: "menu", title: t("aria.toggleSidebar"), onClick: () => this.toggleSidebar() }),
+			createBtn({ text: "A-", title: t("aria.decreaseFont"), onClick: () => this.changeFontSize(-1) }),
+			createBtn({ text: "A+", title: t("aria.increaseFont"), onClick: () => this.changeFontSize(1) }),
+			createBtn({ icon: "search", title: t("aria.searchFull"), onClick: () => this.toggleToolbarSearch() }),
 			createBtn({
 				icon: this.currentFlowMode === "paginated" ? "lines-of-text" : "scroll",
-				title: this.currentFlowMode === "paginated" ? "切换为滚动" : "切换为分页",
+				title: this.currentFlowMode === "paginated" ? t("epub.toggleScroll") : t("epub.togglePaginate"),
 				onClick: () => this.toggleFlowMode(),
 			}),
 			keyNavBtn,
-			createBtn({ icon: "chevron-left", title: "上一页", onClick: () => this.prevPage() }),
-			createBtn({ icon: "chevron-right", title: "下一页", onClick: () => this.nextPage() }),
+			createBtn({ icon: "chevron-left", title: t("aria.prevPage"), onClick: () => this.prevPage() }),
+			createBtn({ icon: "chevron-right", title: t("aria.nextPage"), onClick: () => this.nextPage() }),
 			this.renderThemeSwatches(),
 		);
 
 		this.toolbarOverflowBtn = createBtn({
 			icon: "more-vertical",
-			title: "更多",
+			title: t("common.more"),
 			onClick: () => this.toggleToolbarOverflow(),
 		});
 		this.toolbarOverflowBtn.addClass("book-note-epub-toolbar-overflow-btn");
@@ -515,7 +516,7 @@ private contextMenuEl: HTMLElement | null = null;
 				attr: {
 					type: "button",
 					title: theme.label,
-					"aria-label": `主题: ${theme.label}`,
+					"aria-label": `${t("aria.theme", { label: theme.label })}`,
 					"data-theme": theme.id,
 				},
 			});
@@ -676,7 +677,7 @@ private contextMenuEl: HTMLElement | null = null;
 	 */
 	private renderTocList(): void {
 		if (this.tocEntries.length === 0) {
-			this.sidebarContentEl.createDiv({ cls: "book-note-epub-empty", text: "未找到目录信息。" });
+			this.sidebarContentEl.createDiv({ cls: "book-note-epub-empty", text: t("epub.emptyToc") });
 			return;
 		}
 
@@ -779,7 +780,7 @@ private contextMenuEl: HTMLElement | null = null;
 				attr: {
 					type: "button",
 					title: COLOR_LABELS[color],
-					"aria-label": `${COLOR_LABELS[color]}画线`,
+					"aria-label": t("aria.colorHighlight", { color: COLOR_LABELS[color] }),
 				},
 			});
 			dot.style.background = EPUB_COLOR_MAP[color];
@@ -791,7 +792,7 @@ private contextMenuEl: HTMLElement | null = null;
 
 		const noteBtn = menu.createEl("button", {
 			cls: "book-note-epub-context-note-btn",
-			attr: { type: "button", title: "添加标注" },
+			attr: { type: "button", title: t("aria.addAnnotation") },
 			text: "\u{1F4DD}",
 		});
 		noteBtn.addEventListener("click", () => {
@@ -881,10 +882,10 @@ private contextMenuEl: HTMLElement | null = null;
 			this.renderAnnotationOnRendition(annotation);
 			this.renderSidebar();
 			this.refreshAnnotations();
-			new Notice(`已添加${COLOR_LABELS[color]}画线`);
+			new Notice(t("epub.highlightAdded", { color: COLOR_LABELS[color] }));
 		} catch (error) {
 			console.error("book-note: EPUB highlight creation failed", error);
-			new Notice("画线创建失败");
+			new Notice(t("epub.highlightCreateFailed"));
 		}
 	}
 
@@ -938,10 +939,10 @@ private contextMenuEl: HTMLElement | null = null;
 					this.renderAnnotationOnRendition(annotation);
 					this.renderSidebar();
 					this.refreshAnnotations();
-					new Notice("已添加标注");
+					new Notice(t("epub.noteAdded"));
 				} catch (error) {
 					console.error("book-note: EPUB comment creation failed", error);
-					new Notice("标注创建失败");
+					new Notice(t("epub.noteCreateFailed"));
 				}
 			},
 		).open();
@@ -1014,10 +1015,10 @@ private contextMenuEl: HTMLElement | null = null;
 			this.refreshRenditionAnnotations();
 			this.renderSidebar();
 			this.refreshAnnotations();
-			new Notice("标注已删除");
+			new Notice(t("epub.noteDeleted"));
 		} catch (error) {
 			console.error("book-note: EPUB annotation deletion failed", error);
-			new Notice("标注删除失败");
+			new Notice(t("epub.noteDeleteFailed"));
 		}
 	}
 
@@ -1121,17 +1122,17 @@ private contextMenuEl: HTMLElement | null = null;
 
 		const remainingFraction = 1 - this.currentPercent;
 		if (remainingFraction <= 0) {
-			return "已读完";
+			return t("epub.readDone");
 		}
 
 		const estimatedRemainingSeconds = (this.readingTimeSeconds / this.currentPercent) * remainingFraction;
 		const estimatedRemainingMinutes = Math.round(estimatedRemainingSeconds / 60);
 
 		if (estimatedRemainingMinutes < 1) {
-			return "剩余不到 1 分钟";
+			return t("epub.remainingLessThanMinute");
 		}
 
-		return `剩余约 ${estimatedRemainingMinutes} 分钟`;
+		return t("bookshelf.remaining", { minutes: estimatedRemainingMinutes });
 	}
 
 	/**
@@ -1835,11 +1836,11 @@ private contextMenuEl: HTMLElement | null = null;
 		if (Platform.isMobile) {
 			this.mobileTapEnabled = !this.mobileTapEnabled;
 			this.renderToolbar();
-			new Notice(this.mobileTapEnabled ? "点按翻页已开启" : "滑动翻页已开启");
+			new Notice(this.mobileTapEnabled ? t("epub.tapPageOn") : t("epub.swipePageOn"));
 		} else {
 			this.pcNavMode = this.pcNavMode === "keyboard" ? "wheel" : "keyboard";
 			this.renderToolbar();
-			new Notice(this.pcNavMode === "keyboard" ? "键盘翻页已开启" : "滚轮翻页已开启");
+			new Notice(this.pcNavMode === "keyboard" ? t("epub.keyboardPageOn") : t("epub.scrollPageOn"));
 		}
 	}
 
@@ -1972,7 +1973,7 @@ private contextMenuEl: HTMLElement | null = null;
 		const container = this.sidebarContentEl.createDiv({ cls: "book-note-epub-search-box" });
 		this.searchInputEl = container.createEl("input", {
 			cls: "book-note-epub-search-input",
-			attr: { type: "text", placeholder: "搜索全文…" },
+			attr: { type: "text", placeholder: t("aria.searchPlaceholder") },
 		}) as HTMLInputElement;
 		this.searchInputEl.addEventListener("keydown", (ev: KeyboardEvent) => {
 			ev.stopPropagation();
@@ -2013,7 +2014,7 @@ private contextMenuEl: HTMLElement | null = null;
 			}
 		}
 		if (results.length === 0) {
-			this.searchResultsEl.createDiv({ cls: "book-note-epub-search-empty", text: "未找到匹配" });
+			this.searchResultsEl.createDiv({ cls: "book-note-epub-search-empty", text: t("epub.searchEmpty") });
 			return;
 		}
 		for (const r of results) {
@@ -2546,7 +2547,7 @@ private contextMenuEl: HTMLElement | null = null;
 		const container = this.toolbarEl.createDiv({ cls: "book-note-epub-toolbar-search" });
 		const input = container.createEl("input", {
 			cls: "book-note-epub-toolbar-search-input",
-			attr: { type: "text", placeholder: "搜索正文…" },
+			attr: { type: "text", placeholder: t("aria.searchBody") },
 		}) as HTMLInputElement;
 		const results = container.createDiv({ cls: "book-note-epub-toolbar-search-results" });
 		input.addEventListener("keydown", (ev: KeyboardEvent) => { ev.stopPropagation(); }, { capture: true });
@@ -2570,7 +2571,7 @@ private contextMenuEl: HTMLElement | null = null;
 		const searchGen = (this.foliateView as any).search?.({ query: query.trim() });
 		if (!searchGen || typeof searchGen[Symbol.asyncIterator] !== 'function') {
 			// foliate 不支持 search，回退到当前 section
-			resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-empty", text: "搜索功能不支持" });
+			resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-empty", text: t("epub.searchUnsupported") });
 			return;
 		}
 
@@ -2578,13 +2579,13 @@ private contextMenuEl: HTMLElement | null = null;
 		let searching = true;
 
 		// 添加进度指示
-		const progressEl = resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-progress", text: "搜索中..." });
+		const progressEl = resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-progress", text: t("epub.searching") });
 
 		try {
 			for await (const result of searchGen) {
 				if (result === 'done') break;
 				if (result.progress !== undefined) {
-					progressEl.textContent = `搜索中 ${Math.round(result.progress * 100)}%`;
+					progressEl.textContent = t("epub.searchProgress", { percent: Math.round(result.progress * 100) });
 					continue;
 				}
 				if (result.subitems) {
@@ -2604,7 +2605,7 @@ private contextMenuEl: HTMLElement | null = null;
 		progressEl.remove();
 
 		if (hits.length === 0) {
-			resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-empty", text: "未找到匹配内容" });
+			resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-empty", text: t("epub.searchNoMatch") });
 			return;
 		}
 

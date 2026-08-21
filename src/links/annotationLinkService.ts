@@ -1,4 +1,5 @@
 import { App, Notice, TFile } from "obsidian";
+import { t } from "../i18n";
 
 import { resolveTextAnchor } from "../anchor/textAnchor";
 import { AnnotationStore, StoredAnnotationTarget } from "../storage/annotationStore";
@@ -24,7 +25,7 @@ export class AnnotationLinkService {
 
   async open(params: AnnotationLinkParams): Promise<boolean> {
     if (!params.file || !params.id) {
-      new Notice("Book Note链接无效");
+      new Notice(t("notice.invalidLink"));
       return false;
     }
 
@@ -34,7 +35,7 @@ export class AnnotationLinkService {
       if (candidates.length === 1) {
         target = candidates[0];
       } else if (candidates.length > 1) {
-        new Notice("找到多个同 ID 批注，已停止跳转以保护数据");
+        new Notice(t("notice.multipleSameId"));
         return false;
       }
     }
@@ -45,9 +46,9 @@ export class AnnotationLinkService {
         const leaf = this.app.workspace.getLeaf("tab");
         await leaf.openFile(file);
         this.app.workspace.revealLeaf(leaf);
-        new Notice("批注已删除或尚未同步");
+        new Notice(t("notice.annotationGone"));
       } else {
-        new Notice("找不到批注来源文件");
+        new Notice(t("notice.sourceFileMissing"));
       }
       return false;
     }
@@ -58,7 +59,7 @@ export class AnnotationLinkService {
   async openLegacyEpub(filePath: string, cfi: string): Promise<boolean> {
     const file = this.app.vault.getAbstractFileByPath(filePath);
     if (!(file instanceof TFile)) {
-      new Notice("找不到对应电子书文件");
+      new Notice(t("notice.epubSourceMissing"));
       return false;
     }
     return this.navigator.openEpub(file, { cfiRange: cfi, selectedText: "", chapter: "" }, "");
@@ -67,7 +68,7 @@ export class AnnotationLinkService {
   private async openTarget(target: StoredAnnotationTarget): Promise<boolean> {
     const file = this.app.vault.getAbstractFileByPath(target.filePath);
     if (!(file instanceof TFile)) {
-      new Notice("找不到批注来源文件");
+      new Notice(t("notice.sourceFileMissing"));
       return false;
     }
 
@@ -75,7 +76,7 @@ export class AnnotationLinkService {
       const source = await this.app.vault.cachedRead(file);
       const resolved = resolveTextAnchor(source, target.anchor as TextAnchor);
       if (resolved.orphaned) {
-        new Notice("原文已变化，无法可靠定位该批注");
+        new Notice(t("notice.originalChanged"));
         return false;
       }
       return this.navigator.openMarkdown(file, resolved.anchor, target.id);

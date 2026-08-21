@@ -6,6 +6,7 @@
  */
 
 import { ANNOTATION_COLORS, AnnotationColor, COLOR_LABELS } from "../storage/types";
+import { t } from "../i18n";
 
 interface SelectionToolbarOptions {
   onHighlight: (color: AnnotationColor) => void;
@@ -69,7 +70,7 @@ export class SelectionToolbar {
         cls: `book-note-toolbar-color book-note-toolbar-color--${color}`,
         attr: {
           type: "button",
-          "aria-label": `高亮 ${COLOR_LABELS[color]}`,
+          "aria-label": `t("selection.highlight", { color: COLOR_LABELS[color] })`,
           "data-book-note-color": color,
         },
       });
@@ -78,13 +79,13 @@ export class SelectionToolbar {
 
     this.element.createDiv({ cls: "book-note-toolbar-sep" });
 
-    const commentButton = this.iconButton("添加便签", NOTE_ICON);
+    const commentButton = this.iconButton(t("common.addNote"), NOTE_ICON);
     commentButton.addEventListener("click", () => this.options.onComment());
 
-    const copyButton = this.iconButton("复制", COPY_ICON);
+    const copyButton = this.iconButton(t("common.copy"), COPY_ICON);
     copyButton.addEventListener("click", () => this.options.onCopy());
 
-    const sidebarButton = this.iconButton("打开总览", OVERVIEW_ICON);
+    const sidebarButton = this.iconButton(t("common.openOverview"), OVERVIEW_ICON);
     sidebarButton.addEventListener("click", () => this.options.onOpenSidebar());
   }
 

@@ -6,6 +6,7 @@
  */
 
 import { App, Component, MarkdownRenderer, setIcon } from "obsidian";
+import { t } from "../i18n";
 
 import { AnnotationColor, COLOR_LABELS, CommentAnnotation, HighlightAnnotation } from "../storage/types";
 
@@ -49,10 +50,10 @@ export class AnnotationPopover {
     this.element.toggleClass("is-visible", true);
 
     const header = this.element.createDiv({ cls: "book-note-popover-header" });
-    header.createSpan({ cls: "book-note-popover-title", text: "批注" });
+    header.createSpan({ cls: "book-note-popover-title", text: t("popover.title") });
     const close = header.createEl("button", {
       cls: "book-note-icon-button",
-      attr: { type: "button", title: "关闭批注弹层" },
+      attr: { type: "button", title: t("aria.closePopover") },
     });
     setIcon(close, "x");
     close.addEventListener("click", () => this.hide());
@@ -93,11 +94,11 @@ export class AnnotationPopover {
 
     const meta = card.createDiv({ cls: "book-note-popover-meta" });
     meta.createSpan({ cls: "book-note-color-chip", text: COLOR_LABELS[item.color], attr: { "data-book-note-color": item.color } });
-    meta.createSpan({ text: item.kind === "comment" ? item.author ?? "读者" : "仅高亮" });
+    meta.createSpan({ text: item.kind === "comment" ? item.author ?? t("common.reader") : t("popover.onlyHighlight") });
 
     card.createDiv({ cls: "book-note-popover-quote", text: item.quote });
     if (!item.content) {
-      card.createDiv({ cls: "book-note-popover-empty", text: "暂无附加便签。" });
+      card.createDiv({ cls: "book-note-popover-empty", text: t("popover.emptyNote") });
       return;
     }
 

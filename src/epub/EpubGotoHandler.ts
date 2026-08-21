@@ -6,6 +6,7 @@
  */
 
 import { App, MarkdownPostProcessorContext, Notice, Plugin } from "obsidian";
+import { t } from "../i18n";
 
 const CALLOUT_TYPE = "book-note-epub";
 const CFI_COMMENT_RE = /<!--\s*book-note-epub-cfi:\s*(epubcfi\([\s\S]*?\))\s*-->/;
@@ -117,7 +118,7 @@ function wireGotoAnchor(
       void goto(target.file, target.cfi);
       return;
     }
-    new Notice("Unable to resolve source annotation");
+    new Notice(t("notice.unableResolve"));
   });
 }
 

@@ -6,6 +6,7 @@
  */
 
 import { App, Component, MarkdownRenderer, Notice, setIcon, TFile } from "obsidian";
+import { t } from "../i18n";
 
 import {
   AnnotationColor,
@@ -87,7 +88,7 @@ export class PdfAnnotationLayer {
   async createHighlight(color: AnnotationColor): Promise<boolean> {
     const snapshot = this.resolveSelection();
     if (!snapshot) {
-      new Notice("请先在 PDF 中选中文本。");
+      new Notice(t("pdf.selectTextFirst"));
       return true;
     }
 
@@ -112,7 +113,7 @@ export class PdfAnnotationLayer {
   ): Promise<boolean> {
     const snapshot = this.resolveSelection();
     if (!snapshot) {
-      new Notice("请先在 PDF 中选中文本。");
+      new Notice(t("pdf.selectTextFirst"));
       return true;
     }
 
@@ -462,8 +463,8 @@ export class PdfAnnotationLayer {
     this.hidePopover();
     this.popover = document.body.createDiv({ cls: "book-note-pdf-popover book-note-annotation-popover is-visible" });
     const header = this.popover.createDiv({ cls: "book-note-popover-header" });
-    header.createSpan({ cls: "book-note-popover-title", text: `PDF 第 ${annotation.anchor.pageNumber} 页` });
-    const close = header.createEl("button", { cls: "book-note-icon-button", attr: { type: "button", title: "关闭" } });
+    header.createSpan({ cls: "book-note-popover-title", text: `t("pdf.popoverTitle", { page: annotation.anchor.pageNumber })` });
+    const close = header.createEl("button", { cls: "book-note-icon-button", attr: { type: "button", title: t("common.close") } });
     setIcon(close, "x");
     close.addEventListener("click", () => this.hidePopover());
 

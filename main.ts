@@ -6,6 +6,7 @@
  */
 
 import { addIcon, Editor, MarkdownPostProcessorContext, MarkdownView, Modal, Notice, Plugin, TFile } from "obsidian";
+import { t } from "./src/i18n";
 
 import { createTextAnchor, relocateDocumentAnchors } from "./src/anchor/textAnchor";
 import { createHighlightExtension } from "./src/editor/highlightExtension";
@@ -235,12 +236,12 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   async gotoPdfPage(pageNumber: number): Promise<void> {
     const ok = await this.pdfViewerAdapter.goToPage(pageNumber, { flash: true, block: "center" });
     if (!ok) {
-      new Notice(`未找到第 ${pageNumber} 页`);
+      new Notice(t("notice.pageNotFound", { page: pageNumber }));
     }
   }
 
   private registerRibbonIcon(): void {
-    const icon = this.addRibbonIcon("highlighter", "打开Book Note", () => {
+    const icon = this.addRibbonIcon("highlighter", t("ribbon.open"), () => {
       void this.activateSidebar();
     });
     icon.addClass("book-note-ribbon-icon");
@@ -249,42 +250,42 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private registerCommands(): void {
     this.addCommand({
       id: "highlight-selection",
-      name: "高亮选中文本",
+      name: t("command.highlight"),
       hotkeys: [{ modifiers: ["Mod", "Shift"], key: "h" }],
       callback: () => this.createHighlight(this.settings.defaultHighlightColor),
     });
 
     this.addCommand({
       id: "add-sticky-note",
-      name: "为选中文本添加便签",
+      name: t("command.addNote"),
       hotkeys: [{ modifiers: ["Mod", "Alt"], key: "m" }],
       callback: () => this.createComment(),
     });
 
     this.addCommand({
       id: "open-annotation-sidebar",
-      name: "打开批注总览",
+      name: t("command.openSidebar"),
       callback: () => this.activateSidebar(),
     });
 
     this.addCommand({
       id: "open-epub-bookshelf",
-      name: "打开 EPUB 书架",
+      name: t("command.openBookshelf"),
       callback: () => this.activateBookshelf(),
     });
 
     // Phase 5 P3：PDF 目录
     this.addCommand({
       id: "show-pdf-outline",
-      name: "显示 PDF 目录",
+      name: t("command.showPdfOutline"),
       callback: async () => {
         if (!this.pdfLayer.isPdfActive()) {
-          new Notice("请先打开一个 PDF 文件");
+          new Notice(t("notice.openPdfFirst"));
           return;
         }
         const outline = await this.pdfLayer.getOutline();
         if (outline.length === 0) {
-          new Notice("该 PDF 没有目录");
+          new Notice(t("notice.pdfNoOutline"));
           return;
         }
         const lines = outline.map((item) => {
@@ -295,19 +296,19 @@ export default class OverlayAnnotationsPlugin extends Plugin {
             .join("\n");
           return `${item.title}${pageInfo}${children ? "\n" + children : ""}`;
         });
-        new Notice(`PDF 目录（${outline.length} 项）：\n${lines.slice(0, 8).join("\n")}`);
+        new Notice(t("notice.pdfOutline", { count: outline.length, lines: lines.slice(0, 8).join("\n") }));
       },
     });
 
     this.addCommand({
       id: "test-annotation-storage",
-      name: "测试Book Note存储",
+      name: t("command.testStorage"),
       callback: async () => {
         try {
           const path = await this.store.testWriteAccess();
-          new Notice(`Book Note存储可写：${path}`);
+          new Notice(t("notice.storageWritable", { path }));
         } catch {
-          new Notice("Book Note存储不可写，请检查 .obsidian-annotations 目录权限或同步状态。");
+          new Notice(t("notice.storageNotWritable"));
         }
       },
     });
@@ -389,7 +390,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     const snapshot = await this.resolveSelection();
 
     if (!snapshot) {
-      new Notice("请先选中文本。");
+      new Notice(t("notice.selectTextFirst"));
       return;
     }
 
@@ -430,7 +431,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
     const snapshot = await this.resolveSelection();
     if (!snapshot) {
-      new Notice("请先选中文本。");
+      new Notice(t("notice.selectTextFirst"));
       return;
     }
 
@@ -595,7 +596,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
   async copyAnnotationLink(filePath: string, annotationId: string): Promise<void> {
     await navigator.clipboard.writeText(this.annotationLinks.createUri(filePath, annotationId));
-    new Notice("已复制批注链接");
+    new Notice(t("notice.annotationLinkCopied"));
   }
 
   private async openMarkdownAtAnchor(file: TFile, anchor: TextAnchor, annotationId: string): Promise<boolean> {
@@ -628,7 +629,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       }
       await new Promise<void>((resolve) => window.setTimeout(resolve, 100));
     }
-    new Notice("PDF 阅读视图未能及时就绪");
+    new Notice(t("notice.pdfViewNotReady"));
     return false;
   }
 
@@ -654,7 +655,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   async openEpubAtCfi(filePath: string, cfi: string): Promise<void> {
     const file = this.app.vault.getAbstractFileByPath(filePath);
     if (!(file instanceof TFile) || !(SUPPORTED_BOOK_EXTENSIONS as readonly string[]).includes(file.extension.toLowerCase())) {
-      new Notice("无法找到对应的电子书文件");
+      new Notice(t("notice.epubFileNotFound"));
       return;
     }
 
@@ -679,7 +680,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       }
       await new Promise<void>((resolve) => window.setTimeout(resolve, 100));
     }
-    new Notice("电子书阅读视图未能及时就绪");
+    new Notice(t("notice.epubViewNotReady"));
     return false;
   }
 
@@ -687,7 +688,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     const text = window.getSelection()?.toString() || this.activeEditor()?.editor.getSelection() || "";
     if (text) {
       navigator.clipboard.writeText(text);
-      new Notice("Copied selection");
+      new Notice(t("notice.selectionCopied"));
     }
   }
 
@@ -989,30 +990,30 @@ class CommentModal extends Modal {
 
   onOpen(): void {
     this.contentEl.empty();
-    this.contentEl.createEl("h2", { text: "便签" });
+    this.contentEl.createEl("h2", { text: t("modal.sticky.title") });
 
     const titleRow = this.contentEl.createDiv({ cls: "book-note-modal-row" });
-    titleRow.createEl("label", { cls: "book-note-modal-label", text: "标签" });
+    titleRow.createEl("label", { cls: "book-note-modal-label", text: t("common.tag") });
     const tagSelect = titleRow.createEl("select", { cls: "book-note-modal-select" });
     const resolvedInitial = resolveAnnotationTag(this.tags, { tagId: this.initialTagId, title: this.initialTitle });
     const selectableTags = this.tags.filter((tag) => tag.enabled || tag.id === resolvedInitial?.id);
     for (const tag of selectableTags) {
-      const suffix = tag.enabled ? "" : "（已停用）";
+      const suffix = tag.enabled ? "" : t("modal.sticky.disabledSuffix");
       tagSelect.createEl("option", { text: `${tag.name}${suffix}`, attr: { value: tag.id } });
     }
     tagSelect.value = resolvedInitial?.id ?? selectableTags[0]?.id ?? "";
 
     const contentRow = this.contentEl.createDiv({ cls: "book-note-modal-row" });
-    contentRow.createEl("label", { cls: "book-note-modal-label", text: "笔记" });
+    contentRow.createEl("label", { cls: "book-note-modal-label", text: t("modal.sticky.note") });
     const input = contentRow.createEl("textarea", {
       cls: "book-note-modal-textarea",
-      attr: { rows: "8", placeholder: "写下你的想法..." },
+      attr: { rows: "8", placeholder: t("modal.sticky.placeholder") },
     });
     input.value = this.initialContent;
 
     const actions = this.contentEl.createDiv({ cls: "book-note-modal-actions" });
-    const cancel = actions.createEl("button", { text: "取消", cls: "book-note-modal-cancel", attr: { type: "button" } });
-    const save = actions.createEl("button", { text: "保存", cls: "book-note-modal-save", attr: { type: "button" } });
+    const cancel = actions.createEl("button", { text: t("common.cancel"), cls: "book-note-modal-cancel", attr: { type: "button" } });
+    const save = actions.createEl("button", { text: t("common.save"), cls: "book-note-modal-save", attr: { type: "button" } });
     const cancelValue = (): void => {
       this.value = null;
       this.close();

@@ -6,6 +6,7 @@
  */
 
 import { AnnotationTagDefinition, cloneDefaultAnnotationTags } from "../tags/tagDomain";
+import { t } from "../i18n";
 
 export type { AnnotationTagDefinition } from "../tags/tagDomain";
 
@@ -19,12 +20,12 @@ export const ANNOTATION_COLORS = [
 ] as const;
 
 export const COLOR_LABELS: Record<AnnotationColor, string> = {
-  yellow: "黄色",
-  green: "绿色",
-  blue: "蓝色",
-  pink: "粉色",
-  orange: "橙色",
-  purple: "紫色",
+  yellow: t("color.yellow"),
+  green: t("color.green"),
+  blue: t("color.blue"),
+  pink: t("color.pink"),
+  orange: t("color.orange"),
+  purple: t("color.purple"),
 };
 
 export type AnnotationColor = (typeof ANNOTATION_COLORS)[number];
@@ -301,18 +302,18 @@ export type EpubReadingTheme = "obsidian" | "white" | "warm" | "green" | "sepia"
 export type EpubFlowMode = "paginated" | "scrolled";
 
 export const EPUB_READING_THEMES: { id: EpubReadingTheme; label: string; background: string; text: string; swatch: string }[] = [
-  { id: "obsidian", label: "跟随 Obsidian", background: "", text: "", swatch: "linear-gradient(135deg, #ffffff 50%, #1e1e1e 50%)" },
-  { id: "white", label: "默认白", background: "#FFFFFF", text: "#333333", swatch: "#FFFFFF" },
-  { id: "warm", label: "暖光", background: "#FAF9DE", text: "#333333", swatch: "#FAF9DE" },
-  { id: "green", label: "护眼绿", background: "#E3EDCD", text: "#333333", swatch: "#E3EDCD" },
-  { id: "sepia", label: "羊皮纸", background: "#F4ECD8", text: "#5C4B37", swatch: "#F4ECD8" },
-  { id: "dark", label: "夜间", background: "#1C1C1E", text: "#A8A8A8", swatch: "#1C1C1E" },
+  { id: "obsidian", label: t("theme.follow"), background: "", text: "", swatch: "linear-gradient(135deg, #ffffff 50%, #1e1e1e 50%)" },
+  { id: "white", label: t("theme.white"), background: "#FFFFFF", text: "#333333", swatch: "#FFFFFF" },
+  { id: "warm", label: t("theme.warm"), background: "#FAF9DE", text: "#333333", swatch: "#FAF9DE" },
+  { id: "green", label: t("theme.green"), background: "#E3EDCD", text: "#333333", swatch: "#E3EDCD" },
+  { id: "sepia", label: t("theme.sepia"), background: "#F4ECD8", text: "#5C4B37", swatch: "#F4ECD8" },
+  { id: "dark", label: t("theme.dark"), background: "#1C1C1E", text: "#A8A8A8", swatch: "#1C1C1E" },
 ];
 
 export const EPUB_HIGHLIGHT_STYLES: { id: EpubHighlightStyle; label: string }[] = [
-  { id: "fill", label: "填充" },
-  { id: "underline", label: "下划线" },
-  { id: "wavy", label: "波浪线" },
+  { id: "fill", label: t("style.fill") },
+  { id: "underline", label: t("style.underline") },
+  { id: "wavy", label: t("style.wavy") },
 ];
 
 export const EPUB_COLOR_MAP: Record<AnnotationColor, string> = {

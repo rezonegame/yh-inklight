@@ -5,6 +5,7 @@
  */
 
 import { App, Modal, setIcon } from "obsidian";
+import { t } from "../i18n";
 import {
   AnnotationColor,
   ANNOTATION_COLORS,
@@ -48,7 +49,7 @@ export class EpubNoteModal extends Modal {
       noteType?: string;
     },
     onSubmit: (result: EpubNoteResult) => void,
-    titleText = "写下你的想法",
+    titleText = t("epubNote.title"),
   ) {
     super(app);
     this.selectedText = selectedText;
@@ -89,7 +90,7 @@ export class EpubNoteModal extends Modal {
 
     // 颜色选择行
     const colorRow = contentEl.createDiv({ cls: "book-note-epub-note-colors" });
-    colorRow.createEl("span", { cls: "book-note-epub-note-label", text: "画线颜色" });
+    colorRow.createEl("span", { cls: "book-note-epub-note-label", text: t("epubNote.color") });
     const dots = colorRow.createDiv({ cls: "book-note-epub-color-dots" });
     const dotEls: Record<string, HTMLElement> = {};
     for (const c of ANNOTATION_COLORS) {
@@ -110,7 +111,7 @@ export class EpubNoteModal extends Modal {
 
     // 高亮样式选择行
     const styleRow = contentEl.createDiv({ cls: "book-note-epub-note-styles" });
-    styleRow.createEl("span", { cls: "book-note-epub-note-label", text: "标注样式" });
+    styleRow.createEl("span", { cls: "book-note-epub-note-label", text: t("epubNote.style") });
     const styleChips = styleRow.createDiv({ cls: "book-note-epub-style-chips" });
     const styleEls: Record<string, HTMLElement> = {};
     for (const s of EPUB_HIGHLIGHT_STYLES) {
@@ -131,12 +132,12 @@ export class EpubNoteModal extends Modal {
 
     // 语义标签选择行
     const typeRow = contentEl.createDiv({ cls: "book-note-epub-note-type-row" });
-    typeRow.createEl("span", { cls: "book-note-epub-note-label", text: "标签" });
+    typeRow.createEl("span", { cls: "book-note-epub-note-label", text: t("common.tag") });
     const chips = typeRow.createDiv({ cls: "book-note-epub-note-type-chips" });
     const chipEls: Record<string, HTMLElement> = {};
     for (const tag of this.tags.filter((item) => item.enabled || item.id === this.tagId)) {
       const chip = chips.createDiv({ cls: "book-note-epub-note-type-chip" });
-      chip.title = tag.enabled ? tag.name : `${tag.name}（已停用）`;
+      chip.title = tag.enabled ? tag.name : `${tag.name}${t("modal.sticky.disabledSuffix")}`;
       chip.setAttribute("data-tag-id", tag.id);
       const icon = chip.createSpan({ cls: "book-note-epub-note-type-icon" });
       setIcon(icon, tag.icon);
@@ -154,7 +155,7 @@ export class EpubNoteModal extends Modal {
 
     // 文本输入区域
     const ta = contentEl.createEl("textarea", { cls: "book-note-epub-note-textarea" });
-    ta.placeholder = "在这里写下你的想法或联想…";
+    ta.placeholder = t("epubNote.placeholder");
     ta.value = this.note;
     ta.rows = 6;
     window.setTimeout(() => ta.focus(), 30);
@@ -162,11 +163,11 @@ export class EpubNoteModal extends Modal {
     // 按钮行
     const actions = contentEl.createDiv({ cls: "book-note-epub-note-actions" });
     const cancelBtn = actions.createEl("button", {
-      text: "取消",
+      text: t("common.cancel"),
       cls: "book-note-epub-note-cancel",
     });
     const saveBtn = actions.createEl("button", {
-      text: "保存",
+      text: t("common.save"),
       cls: "book-note-epub-note-save",
     });
     saveBtn.addClass("mod-cta");

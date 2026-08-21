@@ -6,6 +6,7 @@
  */
 
 import { Notice, PluginSettingTab, Setting, setIcon } from "obsidian";
+import { t } from "../i18n";
 
 import type OverlayAnnotationsPlugin from "../../main";
 import {
@@ -35,10 +36,10 @@ export class AnnotationSettingsTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "Book Note" });
+    containerEl.createEl("h2", { text: t("settings.header") });
 
     new Setting(containerEl)
-      .setName("默认高亮颜色")
+      .setName(t("settings.defaultColor"))
       .addDropdown((dropdown) => {
         for (const color of ANNOTATION_COLORS) {
           dropdown.addOption(color, COLOR_LABELS[color]);
@@ -50,7 +51,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("默认作者")
+      .setName(t("settings.defaultAuthor"))
       .addText((text) => {
         text.setValue(this.plugin.settings.defaultAuthor).onChange(async (value) => {
           this.plugin.settings.defaultAuthor = value.trim() || "读者";
@@ -59,7 +60,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("重命名时迁移批注")
+      .setName(t("settings.migrateOnRename"))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.migrateOnRename).onChange(async (value) => {
           this.plugin.settings.migrateOnRename = value;
@@ -74,10 +75,10 @@ export class AnnotationSettingsTab extends PluginSettingTab {
 
   private renderTagSettings(): void {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: "批注标签" });
+    containerEl.createEl("h3", { text: t("settings.tags.heading") });
     containerEl.createDiv({
       cls: "setting-item-description",
-      text: `标签用于分类笔记和想法。最多启用 ${MAX_ENABLED_ANNOTATION_TAGS} 个；修改名称会立即同步显示，不会批量改写批注文件。`,
+      text: t("settings.tags.desc", { max: MAX_ENABLED_ANNOTATION_TAGS }),
     });
 
     const section = containerEl.createDiv({ cls: "book-note-tag-settings" });
@@ -85,10 +86,10 @@ export class AnnotationSettingsTab extends PluginSettingTab {
     const error = section.createDiv({ cls: "book-note-tag-settings-error hidden" });
     const list = section.createDiv({ cls: "book-note-tag-settings-list" });
     const actions = section.createDiv({ cls: "book-note-tag-settings-actions" });
-    const add = actions.createEl("button", { text: "添加标签", attr: { type: "button" } });
-    const reset = actions.createEl("button", { attr: { type: "button", title: "恢复默认标签", "aria-label": "恢复默认标签" } });
+    const add = actions.createEl("button", { text: t("settings.tags.add"), attr: { type: "button" } });
+    const reset = actions.createEl("button", { attr: { type: "button", title: t("settings.tags.reset"), "aria-label": t("settings.tags.reset") } });
     setIcon(reset, "rotate-ccw");
-    const save = actions.createEl("button", { text: "保存标签", cls: "mod-cta", attr: { type: "button" } });
+    const save = actions.createEl("button", { text: t("settings.tags.save"), cls: "mod-cta", attr: { type: "button" } });
 
     const refreshValidation = (): void => {
       const validation = validateAnnotationTags(draft);
@@ -102,7 +103,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       list.empty();
       draft.forEach((tag, index) => {
         const row = list.createDiv({ cls: "book-note-tag-settings-row" });
-        const icon = row.createEl("select", { cls: "dropdown", attr: { "aria-label": `${tag.name} 图标` } });
+        const icon = row.createEl("select", { cls: "dropdown", attr: { "aria-label": `${t("aria.tagIcon", { name: tag.name })}` } });
         for (const option of TAG_ICON_OPTIONS) {
           icon.createEl("option", { text: option.label, value: option.id });
         }
@@ -112,7 +113,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
           refreshValidation();
         });
 
-        const name = row.createEl("input", { cls: "text", attr: { type: "text", maxlength: "20", "aria-label": "标签名称" } });
+        const name = row.createEl("input", { cls: "text", attr: { type: "text", maxlength: "20", "aria-label": t("aria.tagName") } });
         name.value = tag.name;
         name.addEventListener("input", () => {
           tag.name = name.value;
@@ -124,14 +125,14 @@ export class AnnotationSettingsTab extends PluginSettingTab {
           refreshValidation();
         });
 
-        const enabled = row.createEl("input", { attr: { type: "checkbox", "aria-label": `${tag.name} 已启用` } });
+        const enabled = row.createEl("input", { attr: { type: "checkbox", "aria-label": `${t("aria.tagEnabled", { name: tag.name })}` } });
         enabled.checked = tag.enabled;
         enabled.addEventListener("change", () => {
           tag.enabled = enabled.checked;
           refreshValidation();
         });
 
-        const up = row.createEl("button", { attr: { type: "button", title: "上移", "aria-label": "上移" } });
+        const up = row.createEl("button", { attr: { type: "button", title: t("common.moveUp"), "aria-label": t("common.moveUp") } });
         setIcon(up, "chevron-up");
         up.disabled = index === 0;
         up.addEventListener("click", () => {
@@ -140,7 +141,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
           refreshValidation();
         });
 
-        const down = row.createEl("button", { attr: { type: "button", title: "下移", "aria-label": "下移" } });
+        const down = row.createEl("button", { attr: { type: "button", title: t("common.moveDown"), "aria-label": t("common.moveDown") } });
         setIcon(down, "chevron-down");
         down.disabled = index === draft.length - 1;
         down.addEventListener("click", () => {
@@ -158,14 +159,14 @@ export class AnnotationSettingsTab extends PluginSettingTab {
     });
 
     reset.addEventListener("click", () => {
-      if (!window.confirm("恢复默认标签名称、图标和顺序？自定义标签会保留。")) {
+      if (!window.confirm(t("settings.tags.resetConfirm"))) {
         return;
       }
       const customTags = draft.filter((tag) => !tag.builtIn);
       const candidate = [...cloneDefaultAnnotationTags(), ...customTags];
       const validation = validateAnnotationTags(candidate);
       if (validation) {
-        new Notice(`无法恢复默认标签：${validation}`);
+        new Notice(t("notice.resetTagsFailed", { validation }));
         return;
       }
       draft = candidate;
@@ -182,7 +183,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       }
       this.plugin.settings.annotationTags = draft.map((tag) => ({ ...tag, name: normalizeTagLabel(tag.name) }));
       await this.plugin.saveSettings();
-      new Notice("批注标签已保存");
+      new Notice(t("settings.tags.saved"));
       this.display();
     });
 
@@ -193,11 +194,11 @@ export class AnnotationSettingsTab extends PluginSettingTab {
   /** EPUB 阅读相关设置：字号 / 主题 / 翻页 / 高亮样式 / 摘录目录 / 段落模式 / 脚注 / 回显 */
   private renderEpubSettings(): void {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: "EPUB 阅读" });
+    containerEl.createEl("h3", { text: t("settings.epub.heading") });
 
     new Setting(containerEl)
-      .setName("阅读字号")
-      .setDesc("EPUB 正文基础字号（px）。修改后重新打开电子书生效。")
+      .setName(t("settings.epub.fontSize.name"))
+      .setDesc(t("settings.epub.fontSize.desc"))
       .addSlider((slider) => {
         slider
           .setLimits(12, 28, 1)
@@ -210,8 +211,8 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("阅读主题")
-      .setDesc("EPUB 阅读区背景与文字配色。")
+      .setName(t("settings.epub.theme.name"))
+      .setDesc(t("settings.epub.theme.desc"))
       .addDropdown((dropdown) => {
         for (const theme of EPUB_READING_THEMES) {
           dropdown.addOption(theme.id, theme.label);
@@ -223,8 +224,8 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("翻页模式")
-      .setDesc("翻页为分页布局；滚动为连续滚动阅读。")
+      .setName(t("settings.epub.flow.name"))
+      .setDesc(t("settings.epub.flow.desc"))
       .addDropdown((dropdown) => {
         dropdown.addOption("paginated", "翻页");
         dropdown.addOption("scrolled", "滚动");
@@ -235,8 +236,8 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
-      .setName("高亮样式")
-      .setDesc("EPUB 文本标注的默认呈现样式。")
+      .setName(t("settings.epub.highlightStyle.name"))
+      .setDesc(t("settings.epub.highlightStyle.desc"))
       .addDropdown((dropdown) => {
         for (const style of EPUB_HIGHLIGHT_STYLES) {
           dropdown.addOption(style.id, style.label);
@@ -250,10 +251,10 @@ export class AnnotationSettingsTab extends PluginSettingTab {
 
   private renderPdfSettings(): void {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: "PDF 阅读" });
+    containerEl.createEl("h3", { text: t("settings.pdf.heading") });
     new Setting(containerEl)
-      .setName("记录 PDF 阅读进度")
-      .setDesc("保存当前页和阅读进度；关闭后不会删除已有进度。")
+      .setName(t("settings.pdf.progress.name"))
+      .setDesc(t("settings.pdf.progress.desc"))
       .addToggle((toggle) => {
         toggle.setValue(this.plugin.settings.pdfProgressTracking).onChange(async (value) => {
           this.plugin.settings.pdfProgressTracking = value;
