@@ -1,6 +1,6 @@
 # Book Note
 
-> Non-invasive reading annotation plugin for Obsidian. Annotate **Markdown, PDF, and EPUB** in one place — highlights, notes, and tags live in separate sidecar files, so your original documents are **never modified**.
+> Non-invasive reading annotation plugin for Obsidian. Annotate **PDF and EPUB** in one place — highlights, notes, and tags live in separate sidecar files, so your original documents are **never modified**.
 
 [中文文档](./README.zh.md)
 
@@ -13,10 +13,10 @@
 
 Most annotation tools mutate your source files. Book Note takes the opposite approach: every highlight, note, and reading-progress record is written to a sidecar JSON next to your vault's config, while the original document stays byte-for-byte intact. Rename, move, or delete a source file and the plugin migrates its annotations with it.
 
-It started as a Markdown/PDF highlighter and grew into a full reading workspace:
+It started as a Markdown/PDF highlighter and grew into a full reading workspace focused on **PDF and EPUB**:
 
 - **EPUB reading** powered by the [foliate-js](https://github.com/johnfactotz/foliate-js) engine
-- **One unified sidebar** that aggregates annotations across all three formats
+- **One unified sidebar** that aggregates annotations across PDF and EPUB
 - **Excerpt export** and **bidirectional deep links** (`obsidian://book-note`) that jump back to the exact highlight
 
 ---
@@ -33,17 +33,17 @@ It started as a Markdown/PDF highlighter and grew into a full reading workspace:
 
 ### Unified annotation sidebar
 
-- **One panel for all formats** — Markdown, PDF, and EPUB annotations converge in a single overview.
+- **One panel for all formats** — PDF and EPUB annotations converge in a single overview.
 - **Filter & search** — filter by color, type, or semantic tag; keyword-search annotation content.
 - **Semantic tags** — ships with *Insight*, *Question*, and *Reminder*; enable up to 5 tags, rename them, reorder, disable, and assign custom preset icons.
 - **Inline editing** — edit a thought or add a note right inside the panel.
-- **Jump back** — click a card to return to the original spot (Markdown offset / PDF page / EPUB CFI).
+- **Jump back** — click a card to return to the original spot (PDF page / EPUB CFI).
 - **Export** — Markdown summary, color-grouped export, or reading-notes layout.
 
 ### Unified export & bidirectional deep links
 
-- **Export annotations** — one "Export annotations" action at the bottom of the sidebar exports Markdown, PDF, and EPUB marks together.
-- **Unified deep links** — both excerpts and sidebar cards produce an `obsidian://book-note` link that returns to the exact Markdown, PDF, or EPUB annotation.
+- **Export annotations** — one "Export annotations" action at the bottom of the sidebar exports PDF and EPUB marks together.
+- **Unified deep links** — both excerpts and sidebar cards produce an `obsidian://book-note` link that returns to the exact PDF or EPUB annotation.
 - **Backward-compatible backlinks** — hidden anchor points from older EPUB/PDF exports keep working after upgrade.
 
 ### PDF annotations
@@ -52,11 +52,7 @@ It started as a Markdown/PDF highlighter and grew into a full reading workspace:
 - Selection detection with color coding.
 - All marks flow into the unified sidebar.
 
-### Markdown annotations
-
-- CodeMirror 6 editor-extension highlight layer.
-- Reading-view post-processor highlight layer.
-- Click a highlight to open its popover.
+> **Note:** Book Note annotates **PDF and EPUB** files only. Markdown files in your vault are not annotated by this plugin.
 
 ---
 
@@ -105,7 +101,7 @@ Configure under **Settings → Book Note**:
 
 | Command | Hotkey | Action |
 |---------|--------|--------|
-| Highlight selection | `Ctrl/Cmd+Shift+H` | Highlight the selected text (Markdown / PDF). |
+| Highlight selection | `Ctrl/Cmd+Shift+H` | Highlight the selected text (PDF; EPUB uses its in-reader toolbar). |
 | Add sticky note to selection | `Ctrl/Cmd+Alt+M` | Attach a thought/note to the selection. |
 | Open annotation overview | — | Open the Book Note sidebar. |
 | Open EPUB bookshelf | — | Browse e-books inside the vault. |
@@ -128,9 +124,8 @@ All annotation data lives in sidecar files under a configurable vault-relative d
 ```text
 .obsidian-annotations/          # default folder (configurable)
   index.json                   # index of all sidecars (basic info only)
-  notes__reading__book.md.json # Markdown annotations (JSON format)
-  notes__reading__book.md.md   # Markdown annotations (Markdown format)
-  papers__example.pdf.json     # PDF annotations
+  papers__example.pdf.json     # PDF annotations (JSON format)
+  papers__example.pdf.md       # PDF annotations (Markdown format, if enabled)
   books__novel.epub.json       # EPUB annotations (CFI anchors + reading progress)
 ```
 

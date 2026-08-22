@@ -13,6 +13,8 @@ interface SelectionToolbarOptions {
   onComment: () => void;
   onCopy: () => void;
   onOpenSidebar: () => void;
+  /** When provided, the toolbar only appears if this returns true. */
+  isEnabled?: () => boolean;
 }
 
 export class SelectionToolbar {
@@ -35,6 +37,11 @@ export class SelectionToolbar {
   }
 
   showForSelection(): void {
+    if (this.options.isEnabled && !this.options.isEnabled()) {
+      this.hide();
+      return;
+    }
+
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
       this.hide();

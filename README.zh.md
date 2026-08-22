@@ -1,6 +1,6 @@
 # Book Note（中文文档）
 
-> 一款非侵入式的 Obsidian 阅读批注插件。在 **Markdown / PDF / EPUB** 中统一做标注——高亮、笔记与标签都存放在独立的 sidecar 文件里，因此你的原始文档**绝不会被改动**。
+> 一款非侵入式的 Obsidian 阅读批注插件。在 **PDF / EPUB** 中统一做标注——高亮、笔记与标签都存放在独立的 sidecar 文件里，因此你的原始文档**绝不会被改动**。
 
 [English documentation](./README.md)
 
@@ -13,7 +13,7 @@
 
 多数批注工具会直接修改你的源文件。Book Note 反其道而行：每条高亮、笔记和阅读进度都写入 vault 配置旁侧的 sidecar JSON，原始文档保持逐字节不变。重命名、移动或删除源文件时，插件会自动迁移其批注。
 
-它从单一的「Markdown / PDF 批注」工具，演进为覆盖 **EPUB 全文阅读（foliate-js 引擎）+ 统一批注面板 + 摘录导出 + 双向溯源** 的综合阅读平台。
+它从单一的「Markdown / PDF 批注」工具，演进为专注 **PDF / EPUB** 的综合阅读平台——**EPUB 全文阅读（foliate-js 引擎）+ 统一批注面板 + 摘录导出 + 双向溯源**。
 
 ---
 
@@ -29,17 +29,17 @@
 
 ### 统一批注面板
 
-- **三格式统一**——Markdown / PDF / EPUB 批注汇入同一个总览面板。
+- **双格式统一**——PDF / EPUB 批注汇入同一个总览面板。
 - **筛选与搜索**——按颜色 / 类型 / 标签筛选，关键词搜索批注内容。
 - **语义标签**——默认提供「洞见 / 疑问 / 提醒」；最多启用 5 个标签，可改名、排序、停用、设置预设图标、恢复默认（名称会做空格 / 全半角 / 大小写归一化，并强制禁止重复）。
 - **行内编辑**——直接在面板编辑想法、添加笔记。
-- **跳转**——点卡片跳回原文对应位置（Markdown 偏移 / PDF 页码 / EPUB CFI）。
+- **跳转**——点卡片跳回原文对应位置（PDF 页码 / EPUB CFI）。
 - **导出**——Markdown 摘要 / 按颜色分组 / 阅读笔记等多种格式。
 
 ### 统一导出 + 双向溯源
 
-- **导出批注**——侧栏底部「导出批注」统一导出 Markdown / PDF / EPUB 标注。
-- **统一深链**——摘录和侧栏均可生成 `obsidian://book-note` 链接，点击后精确回到 Markdown、PDF 或 EPUB 批注。
+- **导出批注**——侧栏底部「导出批注」统一导出 PDF / EPUB 标注。
+- **统一深链**——摘录和侧栏均可生成 `obsidian://book-note` 链接，点击后精确回到 PDF 或 EPUB 批注。
 - **兼容回链**——保留旧 EPUB / PDF 导出中的隐藏定位锚点，升级后旧摘录仍可使用。
 
 ### PDF 批注
@@ -48,11 +48,7 @@
 - 选区检测 + 颜色标注。
 - 汇入统一批注面板。
 
-### Markdown 批注
-
-- CM6 编辑模式高亮扩展。
-- 阅读模式高亮后处理。
-- 点击高亮弹出便签。
+> **注意：** Book Note 仅对 **PDF 与 EPUB** 文件做批注，vault 内的 Markdown 文件不会被本插件标注。
 
 ---
 
@@ -101,7 +97,7 @@ Obsidian 默认隐藏未知扩展名。要让 `.epub` 显示在文件树中：
 
 | 命令 | 快捷键 | 功能 |
 |------|--------|------|
-| 高亮选中文本 | `Ctrl/Cmd+Shift+H` | Markdown / PDF 选区高亮。 |
+| 高亮选中文本 | `Ctrl/Cmd+Shift+H` | PDF 选区高亮（EPUB 使用其阅读器内工具栏）。 |
 | 为选中文本添加便签 | `Ctrl/Cmd+Alt+M` | 为选区添加想法。 |
 | 打开批注总览 | — | 打开 Book Note 侧栏。 |
 | 打开 EPUB 书架 | — | 浏览 vault 内电子书。 |
@@ -124,9 +120,8 @@ Obsidian 默认隐藏未知扩展名。要让 `.epub` 显示在文件树中：
 ```text
 .obsidian-annotations/          # 默认目录（可在设置中修改）
   index.json                   # 全部 sidecar 的索引（仅基本信息）
-  notes__reading__book.md.json # Markdown 批注（JSON 格式）
-  notes__reading__book.md.md   # Markdown 批注（Markdown 格式）
-  papers__example.pdf.json     # PDF 批注
+  papers__example.pdf.json     # PDF 批注（JSON 格式）
+  papers__example.pdf.md       # PDF 批注（Markdown 格式，若启用）
   books__novel.epub.json       # EPUB 批注（含 CFI 锚点和阅读进度）
 ```
 
