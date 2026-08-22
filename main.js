@@ -10703,6 +10703,49 @@ function resolveStoreDir(raw) {
   }
   return normalized;
 }
+function sidecarSource(filePath, mode, annotation) {
+  if (mode === "pdf" && "pageNumber" in annotation.anchor && typeof annotation.anchor.pageNumber === "number") {
+    return `${filePath} p.${annotation.anchor.pageNumber}`;
+  }
+  if (mode === "epub" && "chapter" in annotation.anchor && annotation.anchor.chapter?.trim()) {
+    return `${filePath} \xB7 ${annotation.anchor.chapter.trim()}`;
+  }
+  return filePath;
+}
+function sidecarCreatedAt(kind, annotation) {
+  if (kind === "md-comment" || kind === "pdf-comment") {
+    const comment = annotation;
+    return comment.updatedAt || comment.createdAt;
+  }
+  return annotation.createdAt;
+}
+function sidecarContent(kind, annotation) {
+  if (kind === "epub-comment") {
+    return annotation.note;
+  }
+  if (kind.endsWith("-comment")) {
+    return annotation.content;
+  }
+  return "";
+}
+function sidecarTagLabel(kind, annotation) {
+  if (kind.endsWith("-comment")) {
+    return annotation.tagLabelSnapshot;
+  }
+  return void 0;
+}
+function sidecarResolved(kind, annotation) {
+  if (kind.endsWith("-comment")) {
+    return annotation.resolved;
+  }
+  return false;
+}
+function sidecarReplies(kind, annotation) {
+  if (kind.endsWith("-comment")) {
+    return annotation.replies;
+  }
+  return [];
+}
 function serializeDocumentToMarkdown(document2) {
   const meta = {
     filePath: document2.filePath,
@@ -10752,10 +10795,24 @@ function serializeDocumentToMarkdown(document2) {
   lines.push(`canvasNodes: ${yamlValue(meta.canvasNodes)}`);
   lines.push("---");
   lines.push("");
-  const pushBlock = (mode, kind, value, title, content, resolved, replies) => {
-    const blockId = `bn-${mode}-${value.id}`;
-    const heading = (title || "Annotation").split(/\r?\n/)[0].trim().slice(0, 200) || "Annotation";
-    lines.push(`# ${heading} ^${blockId}`);
+  const pushBlock = (mode, kind, annotation) => {
+    const blockId = `bn-${mode}-${annotation.id}`;
+    const calloutType = mode === "epub" ? "book-note-epub" : mode === "pdf" ? "book-note-pdf" : "book-note-md";
+    const source = sidecarSource(document2.filePath, mode, annotation);
+    const createdAt = sidecarCreatedAt(kind, annotation);
+    const selectedText = annotation.anchor.selectedText;
+    const content = sidecarContent(kind, annotation);
+    const tagLabel = sidecarTagLabel(kind, annotation);
+    const resolved = sidecarResolved(kind, annotation);
+    const replies = sidecarReplies(kind, annotation);
+    lines.push(`> [!${calloutType}|${annotation.color}] ${source} - ${createdAt} ^${blockId}`);
+    for (const line of selectedText.split(/\r?\n/)) {
+      lines.push(`> ${line}`);
+    }
+    if (tagLabel) {
+      lines.push(">");
+      lines.push(`> \u6807\u7B7E\uFF1A${tagLabel}`);
+    }
     if (content.trim()) {
       lines.push(">");
       for (const line of content.split(/\r?\n/)) {
@@ -10772,26 +10829,28 @@ function serializeDocumentToMarkdown(document2) {
       lines.push(">");
       lines.push("> resolved");
     }
-    lines.push(`<span style="display:none" ${MD_ANNOTATION_ATTR}="${escapeHtmlAttribute(JSON.stringify({ kind, value }))}"></span>`);
+    lines.push(">");
+    lines.push(`> [\u8FD4\u56DE\u539F\u6587](${createAnnotationUri(document2.filePath, annotation.id)})`);
+    lines.push(`> <span style="display:none" ${MD_ANNOTATION_ATTR}="${escapeHtmlAttribute(JSON.stringify({ kind, value: annotation }))}"></span>`);
     lines.push("");
   };
   for (const highlight of document2.highlights) {
-    pushBlock("md", "md-highlight", highlight, highlight.anchor.selectedText, "", false, []);
+    pushBlock("md", "md-highlight", highlight);
   }
   for (const comment of document2.comments) {
-    pushBlock("md", "md-comment", comment, comment.anchor.selectedText, comment.content, comment.resolved, comment.replies);
+    pushBlock("md", "md-comment", comment);
   }
   for (const highlight of document2.pdfHighlights) {
-    pushBlock("pdf", "pdf-highlight", highlight, highlight.anchor.selectedText, "", false, []);
+    pushBlock("pdf", "pdf-highlight", highlight);
   }
   for (const comment of document2.pdfComments) {
-    pushBlock("pdf", "pdf-comment", comment, comment.anchor.selectedText, comment.content, comment.resolved, comment.replies);
+    pushBlock("pdf", "pdf-comment", comment);
   }
   for (const highlight of document2.epubHighlights) {
-    pushBlock("epub", "epub-highlight", highlight, highlight.anchor.selectedText, "", false, []);
+    pushBlock("epub", "epub-highlight", highlight);
   }
   for (const comment of document2.epubComments) {
-    pushBlock("epub", "epub-comment", comment, comment.anchor.selectedText, comment.note, comment.resolved, comment.replies);
+    pushBlock("epub", "epub-comment", comment);
   }
   return lines.join("\n");
 }

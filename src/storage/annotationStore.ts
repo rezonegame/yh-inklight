@@ -1097,6 +1097,110 @@ function resolveStoreDir(raw: string): string {
   return normalized;
 }
 
+function sidecarSource(
+  filePath: string,
+  mode: "md" | "pdf" | "epub",
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): string {
+  if (mode === "pdf" && "pageNumber" in annotation.anchor && typeof annotation.anchor.pageNumber === "number") {
+    return `${filePath} p.${annotation.anchor.pageNumber}`;
+  }
+  if (mode === "epub" && "chapter" in annotation.anchor && annotation.anchor.chapter?.trim()) {
+    return `${filePath} · ${annotation.anchor.chapter.trim()}`;
+  }
+  return filePath;
+}
+
+function sidecarCreatedAt(
+  kind: SerializedAnnotation["kind"],
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): string {
+  if (kind === "md-comment" || kind === "pdf-comment") {
+    const comment = annotation as CommentAnnotation | PdfCommentAnnotation;
+    return comment.updatedAt || comment.createdAt;
+  }
+  return annotation.createdAt;
+}
+
+function sidecarContent(
+  kind: SerializedAnnotation["kind"],
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): string {
+  if (kind === "epub-comment") {
+    return (annotation as EpubCommentAnnotation).note;
+  }
+  if (kind.endsWith("-comment")) {
+    return (annotation as CommentAnnotation | PdfCommentAnnotation).content;
+  }
+  return "";
+}
+
+function sidecarTagLabel(
+  kind: SerializedAnnotation["kind"],
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): string | undefined {
+  if (kind.endsWith("-comment")) {
+    return (annotation as CommentAnnotation | PdfCommentAnnotation | EpubCommentAnnotation).tagLabelSnapshot;
+  }
+  return undefined;
+}
+
+function sidecarResolved(
+  kind: SerializedAnnotation["kind"],
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): boolean {
+  if (kind.endsWith("-comment")) {
+    return (annotation as CommentAnnotation | PdfCommentAnnotation | EpubCommentAnnotation).resolved;
+  }
+  return false;
+}
+
+function sidecarReplies(
+  kind: SerializedAnnotation["kind"],
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): { createdAt: string; content: string }[] {
+  if (kind.endsWith("-comment")) {
+    return (annotation as CommentAnnotation | PdfCommentAnnotation | EpubCommentAnnotation).replies;
+  }
+  return [];
+}
+
 export function serializeDocumentToMarkdown(document: FileAnnotationDocument): string {
   const meta: DocMeta = {
     filePath: document.filePath,
@@ -1151,52 +1255,76 @@ export function serializeDocumentToMarkdown(document: FileAnnotationDocument): s
   const pushBlock = (
     mode: "md" | "pdf" | "epub",
     kind: SerializedAnnotation["kind"],
-    value: { id: string },
-    title: string,
-    content: string,
-    resolved: boolean,
-    replies: { createdAt: string; content: string }[],
+    annotation:
+      | HighlightAnnotation
+      | CommentAnnotation
+      | PdfHighlightAnnotation
+      | PdfCommentAnnotation
+      | EpubHighlightAnnotation
+      | EpubCommentAnnotation,
   ): void => {
-    const blockId = `bn-${mode}-${value.id}`;
-    const heading = (title || "Annotation").split(/\r?\n/)[0].trim().slice(0, 200) || "Annotation";
-    lines.push(`# ${heading} ^${blockId}`);
+    const blockId = `bn-${mode}-${annotation.id}`;
+    const calloutType = mode === "epub" ? "book-note-epub" : mode === "pdf" ? "book-note-pdf" : "book-note-md";
+    const source = sidecarSource(document.filePath, mode, annotation);
+    const createdAt = sidecarCreatedAt(kind, annotation);
+    const selectedText = annotation.anchor.selectedText;
+    const content = sidecarContent(kind, annotation);
+    const tagLabel = sidecarTagLabel(kind, annotation);
+    const resolved = sidecarResolved(kind, annotation);
+    const replies = sidecarReplies(kind, annotation);
+
+    lines.push(`> [!${calloutType}|${annotation.color}] ${source} - ${createdAt} ^${blockId}`);
+    for (const line of selectedText.split(/\r?\n/)) {
+      lines.push(`> ${line}`);
+    }
+
+    if (tagLabel) {
+      lines.push(">");
+      lines.push(`> 标签：${tagLabel}`);
+    }
+
     if (content.trim()) {
       lines.push(">");
       for (const line of content.split(/\r?\n/)) {
         lines.push(`> Note: ${line}`);
       }
     }
+
     if (replies.length) {
       lines.push(">");
       for (const reply of replies) {
         lines.push(`> reply ${reply.createdAt}: ${reply.content}`);
       }
     }
+
     if (resolved) {
       lines.push(">");
       lines.push("> resolved");
     }
-    lines.push(`<span style="display:none" ${MD_ANNOTATION_ATTR}="${escapeHtmlAttribute(JSON.stringify({ kind, value }))}"></span>`);
+
+    lines.push(">");
+    lines.push(`> [返回原文](${createAnnotationUri(document.filePath, annotation.id)})`);
+    lines.push(`> <span style="display:none" ${MD_ANNOTATION_ATTR}="${escapeHtmlAttribute(JSON.stringify({ kind, value: annotation }))}"></span>`);
     lines.push("");
   };
 
   for (const highlight of document.highlights) {
-    pushBlock("md", "md-highlight", highlight, highlight.anchor.selectedText, "", false, []);
+    pushBlock("md", "md-highlight", highlight);
   }
   for (const comment of document.comments) {
-    pushBlock("md", "md-comment", comment, comment.anchor.selectedText, comment.content, comment.resolved, comment.replies);
+    pushBlock("md", "md-comment", comment);
   }
   for (const highlight of document.pdfHighlights) {
-    pushBlock("pdf", "pdf-highlight", highlight, highlight.anchor.selectedText, "", false, []);
+    pushBlock("pdf", "pdf-highlight", highlight);
   }
   for (const comment of document.pdfComments) {
-    pushBlock("pdf", "pdf-comment", comment, comment.anchor.selectedText, comment.content, comment.resolved, comment.replies);
+    pushBlock("pdf", "pdf-comment", comment);
   }
   for (const highlight of document.epubHighlights) {
-    pushBlock("epub", "epub-highlight", highlight, highlight.anchor.selectedText, "", false, []);
+    pushBlock("epub", "epub-highlight", highlight);
   }
   for (const comment of document.epubComments) {
-    pushBlock("epub", "epub-comment", comment, comment.anchor.selectedText, comment.note, comment.resolved, comment.replies);
+    pushBlock("epub", "epub-comment", comment);
   }
 
   return lines.join("\n");

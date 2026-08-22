@@ -109,13 +109,13 @@ test("markdown sidecar: YAML frontmatter holds progress + metadata", () => {
   assert.ok(!md.includes("data-book-note-doc"), "old hidden doc span must be gone");
 });
 
-test("markdown sidecar: each annotation is its own level-1 heading", () => {
+test("markdown sidecar: each annotation is rendered as a callout block", () => {
   const doc = sampleDocument();
   const md = serializeDocumentToMarkdown(doc);
 
   // highlights(1)+comments(1)+pdfHighlights(1)+pdfComments(1)+epubHighlights(1)+epubComments(1) = 6
-  const realCount = (md.match(/^# .* \^bn-/gm) ?? []).length;
-  assert.equal(realCount, 6, "exactly six annotation headings with block ids");
+  const realCount = (md.match(/^> \[!book-note-(md|pdf|epub)\|[^\]]+\].* \^bn-/gm) ?? []).length;
+  assert.equal(realCount, 6, "exactly six callout headers with block ids");
 });
 
 test("markdown sidecar: full round-trip is lossless", () => {
