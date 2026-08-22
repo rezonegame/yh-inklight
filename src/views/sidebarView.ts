@@ -148,8 +148,10 @@ export class AnnotationSidebarView extends ItemView {
     const cards = this.filterCards(rawCards);
     const highlightCount = rawCards.filter((card) => card.kind === "highlight" && !card.orphaned).length;
     const noteCount = rawCards.filter((card) => card.note && !card.orphaned).length;
-    const scopeLabel = this.annotationScope === "all" ? `${documents.length} files` : "current file";
-    container.createDiv({ cls: "book-note-ov-count", text: `t("sidebar.count", { scope: scopeLabel, highlights: highlightCount, notes: noteCount })` });
+    const scopeLabel = this.annotationScope === "all"
+      ? t("sidebar.scope.all")
+      : t("sidebar.scope.current");
+    container.createDiv({ cls: "book-note-ov-count", text: t("sidebar.count", { scope: scopeLabel, highlights: highlightCount, notes: noteCount }) });
 
     const list = container.createDiv({ cls: "book-note-ov-list" });
     if (!cards.length) {
@@ -198,8 +200,10 @@ export class AnnotationSidebarView extends ItemView {
     if (countEl) {
       const highlightCount = rawCards.filter((card) => card.kind === "highlight" && !card.orphaned).length;
       const noteCount = rawCards.filter((card) => card.note && !card.orphaned).length;
-      const scopeLabel = this.annotationScope === "all" ? `${documents.length} files` : "current file";
-      countEl.textContent = `${scopeLabel} · ${highlightCount} highlights · ${noteCount} notes`;
+      const scopeLabel = this.annotationScope === "all"
+        ? t("sidebar.scope.all")
+        : t("sidebar.scope.current");
+      countEl.textContent = t("sidebar.count", { scope: scopeLabel, highlights: highlightCount, notes: noteCount });
     }
   }
 

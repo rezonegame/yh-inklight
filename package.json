@@ -1,6 +1,6 @@
 {
 	"name": "book-note",
-	"version": "0.27.2",
+	"version": "0.27.0",
 	"author": "hellokunzai",
 	"private": true,
 	"description": "Non-invasive Obsidian annotations for PDF and EPUB with a unified sidebar, semantic tags, deep links, and sidecar storage.",
