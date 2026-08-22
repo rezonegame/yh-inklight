@@ -87,7 +87,6 @@ function sampleDocument(): FileAnnotationDocument {
       },
     ],
     epubProgress: { cfi: "epubcfi(/6)", chapter: "Ch", percent: 50, lastRead: "x", readingTimeSeconds: 10 },
-    pdfProgress: { pageNumber: 2, totalPages: 9, percent: 22, lastRead: "x" },
     bookmarks: [{ id: "b1", type: "pdf-bookmark", label: 'bm "l"', position: "p", createdAt: "x" }],
     canvasBinding: { bookPath: "b", canvasPath: "c", autoCreate: true, layoutDirection: "horizontal" },
     canvasNodes: [{ annotationId: "n1", nodeId: "node1", position: { x: 1, y: 2 } }],
@@ -100,8 +99,13 @@ test("markdown sidecar: YAML frontmatter holds progress + metadata", () => {
 
   assert.ok(md.startsWith("---"), "file must start with YAML frontmatter delimiter");
   assert.ok(md.includes("\n---\n"), "frontmatter must close with a second delimiter");
-  assert.ok(md.includes("pdfProgress:"), "pdfProgress must live in frontmatter");
-  assert.ok(md.includes("epubProgress:"), "epubProgress must live in frontmatter");
+  assert.ok(md.includes("cfi:"), "cfi must live in frontmatter (flattened)");
+  assert.ok(md.includes("chapter:"), "chapter must live in frontmatter (flattened)");
+  assert.ok(md.includes("percent:"), "percent must live in frontmatter (flattened)");
+  assert.ok(md.includes("lastRead:"), "lastRead must live in frontmatter (flattened)");
+  assert.ok(md.includes("readingTimeSeconds:"), "readingTimeSeconds must live in frontmatter (flattened)");
+  assert.ok(!md.includes("pdfProgress:"), "nested pdfProgress object must be gone");
+  assert.ok(!md.includes("epubProgress:"), "nested epubProgress object must be gone");
   assert.ok(!md.includes("data-book-note-doc"), "old hidden doc span must be gone");
 });
 
@@ -123,8 +127,7 @@ test("markdown sidecar: full round-trip is lossless", () => {
   assert.equal(parsed.fileHash, doc.fileHash);
   assert.equal(parsed.lastModified, doc.lastModified);
 
-  assert.deepEqual(parsed.pdfProgress, doc.pdfProgress, "pdfProgress round-trips");
-  assert.deepEqual(parsed.epubProgress, doc.epubProgress, "epubProgress round-trips");
+  assert.deepEqual(parsed.epubProgress, doc.epubProgress, "epubProgress round-trips (unprefixed keys)");
   assert.deepEqual(parsed.bookmarks, doc.bookmarks, "bookmarks round-trip");
   assert.deepEqual(parsed.canvasBinding, doc.canvasBinding, "canvasBinding round-trips");
   assert.deepEqual(parsed.canvasNodes, doc.canvasNodes, "canvasNodes round-trip");
@@ -153,6 +156,48 @@ test("markdown sidecar: full round-trip is lossless", () => {
   assert.equal(parsed.epubComments.length, 1);
   assert.deepEqual(parsed.epubComments[0], doc.epubComments[0]);
   assert.equal(parsed.epubComments[0].note, 'epub note "n" & <i>');
+});
+
+test("markdown sidecar: PDF progress uses unprefixed keys", () => {
+  const doc: FileAnnotationDocument = {
+    ...sampleDocument(),
+    filePath: "Papers/example.pdf",
+    epubProgress: undefined,
+    pdfProgress: { pageNumber: 7, totalPages: 20, percent: 35, lastRead: "2026-08-22T01:00:00.000Z" },
+  };
+  const md = serializeDocumentToMarkdown(doc);
+
+  assert.ok(md.includes("pageNumber:"), "pageNumber must be unprefixed");
+  assert.ok(md.includes("totalPages:"), "totalPages must be unprefixed");
+  assert.ok(md.includes("percent:"), "percent must be unprefixed");
+  assert.ok(md.includes("lastRead:"), "lastRead must be unprefixed");
+  assert.ok(!md.includes("pdfPageNumber:"), "pdfPageNumber prefix must be gone");
+
+  const parsed = parseMarkdownDocument(md, doc.filePath);
+  assert.deepEqual(parsed.pdfProgress, doc.pdfProgress, "pdfProgress round-trips with unprefixed keys");
+});
+
+test("markdown sidecar: backward compatibility with prefixed keys", () => {
+  const md = `---
+filePath: 'legacy.pdf'
+fileHash: 'h'
+lastModified: '2026-01-01T00:00:00.000Z'
+pdfPageNumber: 1
+pdfTotalPages: 1
+pdfPercent: 1
+pdfLastRead: '2026-01-01T00:00:00.000Z'
+bookmarks: []
+canvasBinding: null
+canvasNodes: []
+---
+`;
+  const parsed = parseMarkdownDocument(md, "legacy.pdf");
+  assert.deepEqual(parsed.pdfProgress, {
+    pageNumber: 1,
+    totalPages: 1,
+    percent: 1,
+    lastRead: "2026-01-01T00:00:00.000Z",
+  });
 });
 
 test("markdown sidecar: missing frontmatter degrades gracefully", () => {

@@ -205,7 +205,7 @@ export class AnnotationStore {
     try {
       await this.ensureStoreDir();
       const serialized =
-        this.getFormat() === "md" ? serializeDocumentToMarkdown(normalized) : JSON.stringify(normalized, null, 2);
+        this.getFormat() === "md" ? serializeDocumentToMarkdown(normalized) : serializeDocumentToJson(normalized);
       await this.app.vault.adapter.write(sidecarPath, serialized);
       const persisted = await this.readDocumentOrThrow(sidecarPath);
       this.verifyPersistedDocument(normalized, persisted, sidecarPath);
@@ -694,7 +694,7 @@ export class AnnotationStore {
     if (format === "md") {
       return parseMarkdownDocument(raw, path);
     }
-    return JSON.parse(raw) as FileAnnotationDocument;
+    return parseJsonDocument(raw, path);
   }
 
   /** Rewrite every indexed sidecar to the current storage directory and format. */
@@ -720,7 +720,7 @@ export class AnnotationStore {
         const normalized = this.normalizeDocument(document, filePath);
         await this.ensureStoreDir();
         const serialized =
-          this.getFormat() === "md" ? serializeDocumentToMarkdown(normalized) : JSON.stringify(normalized, null, 2);
+          this.getFormat() === "md" ? serializeDocumentToMarkdown(normalized) : serializeDocumentToJson(normalized);
         await this.app.vault.adapter.write(newSidecar, serialized);
         if (newSidecar !== oldSidecar) {
           await this.deleteIfExists(oldSidecar);
@@ -1045,8 +1045,18 @@ interface DocMeta {
   filePath: string;
   fileHash: string;
   lastModified: string;
-  epubProgress: EpubReadingProgress | null;
-  pdfProgress: PdfReadingProgress | null;
+  // Reading progress is flattened to top-level keys (PDF or EPUB fields only,
+  // never both — a file is either a PDF or an EPUB). The sidecar file name
+  // preserves the original extension, so the format is unambiguous.
+  // Parsed back into nested PdfReadingProgress / EpubReadingProgress objects.
+  pageNumber?: number;
+  totalPages?: number;
+  percent?: number;
+  lastRead?: string;
+  cfi?: string;
+  chapter?: string;
+  readingTimeSeconds?: number;
+  estimatedRemainingMinutes?: number;
   bookmarks: ReadingBookmark[];
   canvasBinding: CanvasBinding | null;
   canvasNodes: CanvasExcerptNode[];
@@ -1057,8 +1067,6 @@ function emptyDocMeta(): DocMeta {
     filePath: "",
     fileHash: "",
     lastModified: new Date().toISOString(),
-    epubProgress: null,
-    pdfProgress: null,
     bookmarks: [],
     canvasBinding: null,
     canvasNodes: [],
@@ -1094,20 +1102,46 @@ export function serializeDocumentToMarkdown(document: FileAnnotationDocument): s
     filePath: document.filePath,
     fileHash: document.fileHash,
     lastModified: document.lastModified,
-    epubProgress: document.epubProgress ?? null,
-    pdfProgress: document.pdfProgress ?? null,
     bookmarks: document.bookmarks ?? [],
     canvasBinding: document.canvasBinding ?? null,
     canvasNodes: document.canvasNodes ?? [],
   };
+  if (document.pdfProgress) {
+    meta.pageNumber = document.pdfProgress.pageNumber;
+    meta.totalPages = document.pdfProgress.totalPages;
+    meta.percent = document.pdfProgress.percent;
+    meta.lastRead = document.pdfProgress.lastRead;
+  }
+  if (document.epubProgress) {
+    meta.cfi = document.epubProgress.cfi;
+    meta.chapter = document.epubProgress.chapter;
+    meta.percent = document.epubProgress.percent;
+    meta.lastRead = document.epubProgress.lastRead;
+    meta.readingTimeSeconds = document.epubProgress.readingTimeSeconds;
+    meta.estimatedRemainingMinutes = document.epubProgress.estimatedRemainingMinutes;
+  }
 
   const lines: string[] = [];
   lines.push("---");
   lines.push(`filePath: ${yamlValue(meta.filePath)}`);
   lines.push(`fileHash: ${yamlValue(meta.fileHash)}`);
   lines.push(`lastModified: ${yamlValue(meta.lastModified)}`);
-  lines.push(`pdfProgress: ${yamlValue(meta.pdfProgress)}`);
-  lines.push(`epubProgress: ${yamlValue(meta.epubProgress)}`);
+  if (meta.pageNumber !== undefined) {
+    lines.push(`pageNumber: ${yamlValue(meta.pageNumber)}`);
+    lines.push(`totalPages: ${yamlValue(meta.totalPages)}`);
+    lines.push(`percent: ${yamlValue(meta.percent)}`);
+    lines.push(`lastRead: ${yamlValue(meta.lastRead)}`);
+  }
+  if (meta.cfi !== undefined) {
+    lines.push(`cfi: ${yamlValue(meta.cfi)}`);
+    lines.push(`chapter: ${yamlValue(meta.chapter)}`);
+    lines.push(`percent: ${yamlValue(meta.percent)}`);
+    lines.push(`lastRead: ${yamlValue(meta.lastRead)}`);
+    lines.push(`readingTimeSeconds: ${yamlValue(meta.readingTimeSeconds)}`);
+    if (meta.estimatedRemainingMinutes !== undefined) {
+      lines.push(`estimatedRemainingMinutes: ${yamlValue(meta.estimatedRemainingMinutes)}`);
+    }
+  }
   lines.push(`bookmarks: ${yamlValue(meta.bookmarks)}`);
   lines.push(`canvasBinding: ${yamlValue(meta.canvasBinding)}`);
   lines.push(`canvasNodes: ${yamlValue(meta.canvasNodes)}`);
@@ -1181,8 +1215,27 @@ export function parseMarkdownDocument(raw: string, path: string): FileAnnotation
     pdfComments: [],
     epubHighlights: [],
     epubComments: [],
-    epubProgress: meta.epubProgress ?? undefined,
-    pdfProgress: meta.pdfProgress ?? undefined,
+    // cfi means EPUB; pageNumber means PDF. The two formats never coexist in one file.
+    epubProgress: meta.cfi !== undefined
+      ? {
+          cfi: meta.cfi,
+          chapter: meta.chapter ?? "",
+          percent: meta.percent ?? 0,
+          lastRead: meta.lastRead ?? "",
+          readingTimeSeconds: meta.readingTimeSeconds ?? 0,
+          ...(meta.estimatedRemainingMinutes !== undefined
+            ? { estimatedRemainingMinutes: meta.estimatedRemainingMinutes }
+            : {}),
+        }
+      : undefined,
+    pdfProgress: meta.pageNumber !== undefined
+      ? {
+          pageNumber: meta.pageNumber,
+          totalPages: meta.totalPages ?? 0,
+          percent: meta.percent ?? 0,
+          lastRead: meta.lastRead ?? "",
+        }
+      : undefined,
     bookmarks: meta.bookmarks ?? [],
     canvasBinding: meta.canvasBinding ?? undefined,
     canvasNodes: meta.canvasNodes ?? [],
@@ -1214,6 +1267,130 @@ export function parseMarkdownDocument(raw: string, path: string): FileAnnotation
   return document;
 }
 
+// ===== JSON sidecar storage (StorageFormat = "json") =====
+// Reading progress is flattened to top-level keys (no pdfProgress/epubProgress
+// nested objects) so the file is human-inspectable. Parsing reassembles the
+// nested objects and also tolerates legacy sidecars that still carry the old
+// nested form.
+
+export function serializeDocumentToJson(document: FileAnnotationDocument): string {
+  const flat: Record<string, unknown> = {
+    filePath: document.filePath,
+    fileHash: document.fileHash,
+    lastModified: document.lastModified,
+    highlights: document.highlights ?? [],
+    comments: document.comments ?? [],
+    pdfHighlights: document.pdfHighlights ?? [],
+    pdfComments: document.pdfComments ?? [],
+    epubHighlights: document.epubHighlights ?? [],
+    epubComments: document.epubComments ?? [],
+    bookmarks: document.bookmarks ?? [],
+    canvasBinding: document.canvasBinding ?? null,
+    canvasNodes: document.canvasNodes ?? [],
+  };
+  if (document.pdfProgress) {
+    flat.pageNumber = document.pdfProgress.pageNumber;
+    flat.totalPages = document.pdfProgress.totalPages;
+    flat.percent = document.pdfProgress.percent;
+    flat.lastRead = document.pdfProgress.lastRead;
+  }
+  if (document.epubProgress) {
+    flat.cfi = document.epubProgress.cfi;
+    flat.chapter = document.epubProgress.chapter;
+    flat.percent = document.epubProgress.percent;
+    flat.lastRead = document.epubProgress.lastRead;
+    flat.readingTimeSeconds = document.epubProgress.readingTimeSeconds;
+    flat.estimatedRemainingMinutes = document.epubProgress.estimatedRemainingMinutes;
+  }
+  return JSON.stringify(flat, null, 2);
+}
+
+export function parseJsonDocument(raw: string, path: string): FileAnnotationDocument {
+  const data = JSON.parse(raw) as Record<string, unknown>;
+  const asObject = (value: unknown): Record<string, unknown> | undefined =>
+    isObject(value) ? (value as Record<string, unknown>) : undefined;
+
+  // Legacy nested form (pre-0.24 sidecars) — kept for backward compatibility.
+  const legacyPdf = asObject(data.pdfProgress);
+  const legacyEpub = asObject(data.epubProgress);
+
+  const pickPdfPageNumber = typeof data.pageNumber === "number" ? data.pageNumber : typeof data.pdfPageNumber === "number" ? data.pdfPageNumber : undefined;
+  const pickPdfTotalPages = typeof data.totalPages === "number" ? data.totalPages : typeof data.pdfTotalPages === "number" ? data.pdfTotalPages : undefined;
+  const pickPdfPercent = typeof data.percent === "number" ? data.percent : typeof data.pdfPercent === "number" ? data.pdfPercent : undefined;
+  const pickPdfLastRead = typeof data.lastRead === "string" ? data.lastRead : typeof data.pdfLastRead === "string" ? data.pdfLastRead : undefined;
+
+  const pdfProgress: PdfReadingProgress | undefined =
+    typeof pickPdfPageNumber === "number"
+      ? {
+          pageNumber: pickPdfPageNumber,
+          totalPages: typeof pickPdfTotalPages === "number" ? pickPdfTotalPages : 0,
+          percent: typeof pickPdfPercent === "number" ? pickPdfPercent : 0,
+          lastRead: typeof pickPdfLastRead === "string" ? pickPdfLastRead : "",
+        }
+      : legacyPdf
+        ? {
+            pageNumber: Number(legacyPdf.pageNumber ?? 0),
+            totalPages: Number(legacyPdf.totalPages ?? 0),
+            percent: Number(legacyPdf.percent ?? 0),
+            lastRead: String(legacyPdf.lastRead ?? ""),
+          }
+        : undefined;
+
+  const pickEpubCfi = typeof data.cfi === "string" ? data.cfi : typeof data.epubCfi === "string" ? data.epubCfi : undefined;
+  const pickEpubChapter = typeof data.chapter === "string" ? data.chapter : typeof data.epubChapter === "string" ? data.epubChapter : undefined;
+  const pickEpubPercent = typeof data.percent === "number" ? data.percent : typeof data.epubPercent === "number" ? data.epubPercent : undefined;
+  const pickEpubLastRead = typeof data.lastRead === "string" ? data.lastRead : typeof data.epubLastRead === "string" ? data.epubLastRead : undefined;
+  const pickEpubReadingTimeSeconds = typeof data.readingTimeSeconds === "number" ? data.readingTimeSeconds : typeof data.epubReadingTimeSeconds === "number" ? data.epubReadingTimeSeconds : undefined;
+  const pickEpubEstimatedRemainingMinutes =
+    typeof data.estimatedRemainingMinutes === "number"
+      ? data.estimatedRemainingMinutes
+      : typeof data.epubEstimatedRemainingMinutes === "number"
+        ? data.epubEstimatedRemainingMinutes
+        : undefined;
+
+  const epubProgress: EpubReadingProgress | undefined =
+    typeof pickEpubCfi === "string"
+      ? {
+          cfi: pickEpubCfi,
+          chapter: typeof pickEpubChapter === "string" ? pickEpubChapter : "",
+          percent: typeof pickEpubPercent === "number" ? pickEpubPercent : 0,
+          lastRead: typeof pickEpubLastRead === "string" ? pickEpubLastRead : "",
+          readingTimeSeconds: typeof pickEpubReadingTimeSeconds === "number" ? pickEpubReadingTimeSeconds : 0,
+          ...(typeof pickEpubEstimatedRemainingMinutes === "number"
+            ? { estimatedRemainingMinutes: pickEpubEstimatedRemainingMinutes }
+            : {}),
+        }
+      : legacyEpub
+        ? {
+            cfi: String(legacyEpub.cfi ?? ""),
+            chapter: String(legacyEpub.chapter ?? ""),
+            percent: Number(legacyEpub.percent ?? 0),
+            lastRead: String(legacyEpub.lastRead ?? ""),
+            readingTimeSeconds: Number(legacyEpub.readingTimeSeconds ?? 0),
+            ...(typeof legacyEpub.estimatedRemainingMinutes === "number"
+              ? { estimatedRemainingMinutes: legacyEpub.estimatedRemainingMinutes }
+              : {}),
+          }
+        : undefined;
+
+  return {
+    filePath: typeof data.filePath === "string" ? data.filePath : path,
+    fileHash: typeof data.fileHash === "string" ? data.fileHash : "",
+    lastModified: typeof data.lastModified === "string" ? data.lastModified : new Date().toISOString(),
+    highlights: Array.isArray(data.highlights) ? (data.highlights as HighlightAnnotation[]) : [],
+    comments: Array.isArray(data.comments) ? (data.comments as CommentAnnotation[]) : [],
+    pdfHighlights: Array.isArray(data.pdfHighlights) ? (data.pdfHighlights as PdfHighlightAnnotation[]) : [],
+    pdfComments: Array.isArray(data.pdfComments) ? (data.pdfComments as PdfCommentAnnotation[]) : [],
+    epubHighlights: Array.isArray(data.epubHighlights) ? (data.epubHighlights as EpubHighlightAnnotation[]) : [],
+    epubComments: Array.isArray(data.epubComments) ? (data.epubComments as EpubCommentAnnotation[]) : [],
+    epubProgress,
+    pdfProgress,
+    bookmarks: Array.isArray(data.bookmarks) ? (data.bookmarks as ReadingBookmark[]) : [],
+    canvasBinding: asObject(data.canvasBinding) as CanvasBinding | undefined,
+    canvasNodes: Array.isArray(data.canvasNodes) ? (data.canvasNodes as CanvasExcerptNode[]) : [],
+  };
+}
+
 function parseFrontmatter(raw: string): DocMeta {
   const meta = emptyDocMeta();
   const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(raw);
@@ -1237,11 +1414,55 @@ function parseFrontmatter(raw: string): DocMeta {
       case "lastModified":
         meta.lastModified = typeof value === "string" ? value : new Date().toISOString();
         break;
-      case "pdfProgress":
-        meta.pdfProgress = isObject(value) ? (value as unknown as PdfReadingProgress) : null;
+      case "pageNumber":
+        if (meta.pageNumber === undefined) meta.pageNumber = typeof value === "number" ? value : Number(value);
         break;
-      case "epubProgress":
-        meta.epubProgress = isObject(value) ? (value as unknown as EpubReadingProgress) : null;
+      case "pdfPageNumber":
+        if (meta.pageNumber === undefined) meta.pageNumber = typeof value === "number" ? value : Number(value);
+        break;
+      case "totalPages":
+        if (meta.totalPages === undefined) meta.totalPages = typeof value === "number" ? value : Number(value);
+        break;
+      case "pdfTotalPages":
+        if (meta.totalPages === undefined) meta.totalPages = typeof value === "number" ? value : Number(value);
+        break;
+      case "percent":
+        if (meta.percent === undefined) meta.percent = typeof value === "number" ? value : Number(value);
+        break;
+      case "pdfPercent":
+      case "epubPercent":
+        if (meta.percent === undefined) meta.percent = typeof value === "number" ? value : Number(value);
+        break;
+      case "lastRead":
+        if (meta.lastRead === undefined) meta.lastRead = typeof value === "string" ? value : "";
+        break;
+      case "pdfLastRead":
+      case "epubLastRead":
+        if (meta.lastRead === undefined) meta.lastRead = typeof value === "string" ? value : "";
+        break;
+      case "cfi":
+        if (meta.cfi === undefined) meta.cfi = typeof value === "string" ? value : "";
+        break;
+      case "epubCfi":
+        if (meta.cfi === undefined) meta.cfi = typeof value === "string" ? value : "";
+        break;
+      case "chapter":
+        if (meta.chapter === undefined) meta.chapter = typeof value === "string" ? value : "";
+        break;
+      case "epubChapter":
+        if (meta.chapter === undefined) meta.chapter = typeof value === "string" ? value : "";
+        break;
+      case "readingTimeSeconds":
+        if (meta.readingTimeSeconds === undefined) meta.readingTimeSeconds = typeof value === "number" ? value : Number(value);
+        break;
+      case "epubReadingTimeSeconds":
+        if (meta.readingTimeSeconds === undefined) meta.readingTimeSeconds = typeof value === "number" ? value : Number(value);
+        break;
+      case "estimatedRemainingMinutes":
+        if (meta.estimatedRemainingMinutes === undefined) meta.estimatedRemainingMinutes = typeof value === "number" ? value : Number(value);
+        break;
+      case "epubEstimatedRemainingMinutes":
+        if (meta.estimatedRemainingMinutes === undefined) meta.estimatedRemainingMinutes = typeof value === "number" ? value : Number(value);
         break;
       case "bookmarks":
         meta.bookmarks = Array.isArray(value) ? (value as unknown as ReadingBookmark[]) : [];
