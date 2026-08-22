@@ -11,7 +11,7 @@
 
 ## Why Book Note
 
-Most annotation tools mutate your source files. Book Note takes the opposite approach: every highlight, note, and reading-progress record is written to a sidecar JSON next to your vault's config, while the original document stays byte-for-byte intact. Rename, move, or delete a source file and the plugin migrates its annotations with it.
+Most annotation tools mutate your source files. Book Note takes the opposite approach: every highlight, note, and reading-progress record is written to a sidecar Markdown file next to your vault's config, while the original document stays byte-for-byte intact. Rename, move, or delete a source file and the plugin migrates its annotations with it.
 
 It started as a Markdown/PDF highlighter and grew into a full reading workspace focused on **PDF and EPUB**:
 
@@ -116,28 +116,27 @@ Configure under **Settings → Book Note**:
 
 All annotation data lives in sidecar files. The **Sidecar location** setting (Settings → Storage) controls where they go:
 
-- **Specified folder** (default): sidecars collected under a configurable vault-relative directory (default `<vault>/.obsidian-annotations/`). Name = path segments joined by `-`, original filename + extension, then `.json`/`.md`.
-- **Next to source file**: each sidecar sits beside its source file as `<source>.annotations.json` / `<source>.annotations.md`.
+- **Specified folder** (default): sidecars collected under a configurable vault-relative directory (default `<vault>/booknote/`). Name = path segments joined by `-`, original filename + extension, then `.md`.
+- **Next to source file**: each sidecar sits beside its source file as `<source>.md`.
 
 The sidecar index (which file maps to which sidecar) is stored inside the plugin's own `data.json` — there is no separate `index.json` file.
 
-- One sidecar file per annotated file; choose **JSON** (compact) or **Markdown** (human-readable) storage in Settings → Storage. In Markdown format, metadata and reading progress live in YAML frontmatter and each annotation becomes its own heading.
+- One sidecar file per annotated file, stored as **Markdown** (human-readable). Metadata and reading progress live in YAML frontmatter and each annotation becomes its own heading.
 - Stores highlights, notes, reading progress, plus legacy fields kept for backward compatibility.
 - **Your original documents are never touched** — delete a sidecar file to erase that file's annotations.
-- Change the storage location or format in Settings → Storage; existing annotations are migrated automatically.
+- Change the storage location in Settings → Storage, then click **Migrate data** to move existing sidecars to the new location.
 
 ```text
 # Specified folder mode (default):
-.obsidian-annotations/          # default folder (configurable)
-  papers-example.pdf.json      # PDF annotations (JSON format)
-  papers-example.pdf.md        # PDF annotations (Markdown format, if enabled)
-  books-novel.epub.json        # EPUB annotations (CFI anchors + reading progress)
+booknote/                     # default folder (configurable)
+  papers-example.pdf.md         # PDF annotations (Markdown)
+  books-novel.epub.md           # EPUB annotations (CFI anchors + reading progress)
 
 # Next to source file mode:
 books/novel.epub                # your source EPUB
-books/novel.epub.annotations.json   # its sidecar, next to the source
+books/novel.epub.md             # its sidecar, next to the source
 papers/example.pdf              # your source PDF
-papers/example.pdf.annotations.md    # its sidecar, next to the source
+papers/example.pdf.md           # its sidecar, next to the source
 ```
 
 ### Deep links
@@ -157,7 +156,7 @@ Clicking a link opens the file and scrolls to the exact annotation.
 
 - **EPUB engine:** [foliate-js](https://github.com/johnfactotz/foliate-js) 1.0.1 — a single engine covering multiple formats natively.
 - **Rendering:** a `foliate-view` custom element embedded in an Obsidian leaf, with CSP / sandbox patches for the desktop runtime.
-- **Data layer:** sidecar JSON via `AnnotationStore`, unified into a `FileAnnotationDocument` model.
+- **Data layer:** sidecar Markdown files via `AnnotationStore`, unified into a `FileAnnotationDocument` model.
 - **Annotation sync:** `renderedAnnotationMeta` tracks the foliate highlight layer so add/remove operations refresh immediately.
 - **Non-invasive by design:** every annotation is an overlay; the source text is never rewritten.
 
