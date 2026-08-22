@@ -1,7 +1,7 @@
 {
 	"id": "book-note",
 	"name": "Book Note",
-	"version": "0.27.1",
+	"version": "0.27.2",
 	"minAppVersion": "1.4.0",
 	"description": "Non-invasive reading annotation plugin for PDF and EPUB. Highlights, notes, and tags are stored in separate sidecar files — your original documents are never modified.",
 	"author": "hellokunzai",
