@@ -32,9 +32,6 @@ export type AnnotationColor = (typeof ANNOTATION_COLORS)[number];
 export type AnnotationSortMode = "newest" | "oldest" | "document";
 export type AnnotationExportFormat = "summary" | "by-color" | "notes-only" | "reading-notes";
 
-/** Sidecar storage format for per-document annotation data. */
-export type StorageFormat = "json" | "md";
-
 /** Where per-document annotation sidecars are stored. */
 export type SidecarLocation = "sameFolder" | "specifiedFolder";
 
@@ -184,7 +181,6 @@ export interface AnnotationPluginSettings {
   migrateOnRename: boolean;
   annotationTags: AnnotationTagDefinition[];
   // --- 存储 ---
-  storageFormat: StorageFormat;
   storagePath: string;
   sidecarLocation: SidecarLocation;
   // --- 通用 ---
@@ -211,8 +207,7 @@ export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
   migrateOnRename: true,
   annotationTags: cloneDefaultAnnotationTags(),
   // 存储
-  storageFormat: "json",
-  storagePath: ".obsidian-annotations",
+  storagePath: "booknote",
   sidecarLocation: "specifiedFolder",
   // 通用
   showRibbonIcon: true,

@@ -31,13 +31,13 @@ class MemoryApp {
   vault = { adapter: new MemoryAdapter() };
 }
 
-function makeStore(location: SidecarLocation, baseDir = ".obsidian-annotations") {
+function makeStore(location: SidecarLocation, baseDir = "booknote") {
   const app = new MemoryApp() as unknown as ConstructorParameters<typeof AnnotationStore>[0];
   let saved: unknown = null;
   const store = new AnnotationStore(
     app,
     () => [],
-    () => ({ baseDir, format: "json", sidecarLocation: location }),
+    () => ({ baseDir, sidecarLocation: location }),
     async () => saved,
     async (data) => {
       saved = data;
@@ -49,13 +49,13 @@ function makeStore(location: SidecarLocation, baseDir = ".obsidian-annotations")
 test("sidecar path: specifiedFolder keeps baseDir and flat naming", async () => {
   const { store } = makeStore("specifiedFolder");
   const path = (store as unknown as { toSidecarPath: (f: string) => string }).toSidecarPath("books/未命名.pdf");
-  assert.equal(path, ".obsidian-annotations/books-未命名.pdf.json");
+  assert.equal(path, "booknote/books-未命名.pdf.md");
 });
 
-test("sidecar path: sameFolder puts sidecar next to source with .annotations suffix", async () => {
+test("sidecar path: sameFolder puts sidecar next to source as {source}.md", async () => {
   const { store } = makeStore("sameFolder");
   const path = (store as unknown as { toSidecarPath: (f: string) => string }).toSidecarPath("books/未命名.pdf");
-  assert.equal(path, "books/未命名.pdf.annotations.json");
+  assert.equal(path, "books/未命名.pdf.md");
 });
 
 test("index merges into plugin data.json via loadData/saveData", async () => {
@@ -69,7 +69,7 @@ test("index merges into plugin data.json via loadData/saveData", async () => {
     files: {
       "books/未命名.pdf": {
         filePath: "books/未命名.pdf",
-        sidecarPath: ".obsidian-annotations/books-未命名.pdf.json",
+        sidecarPath: "booknote/books-未命名.pdf.md",
         fileHash: "h",
         highlightCount: 0,
         commentCount: 0,
@@ -86,7 +86,7 @@ test("index merges into plugin data.json via loadData/saveData", async () => {
   assert.ok(saved && typeof saved === "object" && "files" in saved, "index saved as data.json payload");
   const written = saved as AnnotationIndex;
   assert.ok(written.files["books/未命名.pdf"], "index entry present");
-  assert.equal(written.files["books/未命名.pdf"].sidecarPath, ".obsidian-annotations/books-未命名.pdf.json");
+  assert.equal(written.files["books/未命名.pdf"].sidecarPath, "booknote/books-未命名.pdf.md");
 });
 
 test("initialize reads existing index from loadData (no index.json)", async () => {
@@ -95,7 +95,7 @@ test("initialize reads existing index from loadData (no index.json)", async () =
     files: {
       "a/b.epub": {
         filePath: "a/b.epub",
-        sidecarPath: "a/b.epub.annotations.json",
+        sidecarPath: "a/b.epub.md",
         fileHash: "h",
         highlightCount: 0,
         commentCount: 0,
@@ -111,7 +111,7 @@ test("initialize reads existing index from loadData (no index.json)", async () =
   const store = new AnnotationStore(
     app,
     () => [],
-    () => ({ baseDir: ".obsidian-annotations", format: "json", sidecarLocation: "sameFolder" }),
+    () => ({ baseDir: "booknote", sidecarLocation: "sameFolder" }),
     async () => saved,
     async (data) => {
       saved = data;
@@ -120,7 +120,7 @@ test("initialize reads existing index from loadData (no index.json)", async () =
   await store.initialize();
   // The index must be loaded from loadData, not from an index.json file.
   const loaded = (store as unknown as { index: AnnotationIndex }).index;
-  assert.equal(loaded.files["a/b.epub"]?.sidecarPath, "a/b.epub.annotations.json", "index loaded from data.json");
+  assert.equal(loaded.files["a/b.epub"]?.sidecarPath, "a/b.epub.md", "index loaded from data.json");
 });
 
 void EMPTY_INDEX;

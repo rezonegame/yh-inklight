@@ -249,7 +249,7 @@ function sidecarScene() {
     <g transform="translate(548 58)">
       <rect x="0" y="0" width="305" height="260" rx="20" fill="#fffbea" stroke="#f2c94c"/>
       <text x="24" y="50" font-family="Avenir Next, Helvetica, Arial, sans-serif" font-size="22" font-weight="850" fill="#111">sidecar JSON</text>
-      <text x="24" y="104" font-family="Menlo, Monaco, monospace" font-size="17" fill="#333">.obsidian-annotations/</text>
+      <text x="24" y="104" font-family="Menlo, Monaco, monospace" font-size="17" fill="#333">booknote/</text>
       <text x="24" y="146" font-family="Menlo, Monaco, monospace" font-size="17" fill="#333">highlights[]</text>
       <text x="24" y="188" font-family="Menlo, Monaco, monospace" font-size="17" fill="#333">comments[]</text>
     </g>

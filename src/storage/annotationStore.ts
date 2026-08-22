@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 obsidian App/Vault/Adapter 的文件读写能力，依赖 storage/types 的 sidecar JSON 合约
- * [OUTPUT]: 对外提供 AnnotationStore，负责 Markdown/PDF 的 .obsidian-annotations sidecar 文件、索引、缓存与导出
+ * [OUTPUT]: 对外提供 AnnotationStore，负责 Markdown/PDF 的 booknote sidecar 文件、索引、缓存与导出
  * [POS]: storage 模块的唯一持久化入口，隔离原始 Markdown 与注释数据
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -31,11 +31,10 @@ import {
   PdfReadingProgress,
   ReadingBookmark,
   SidecarLocation,
-  StorageFormat,
   TextAnchor,
 } from "./types";
 
-const DEFAULT_STORE_DIR = ".obsidian-annotations";
+const DEFAULT_STORE_DIR = "booknote";
 
 interface ExportDocumentSource {
   filePath: string;
@@ -82,7 +81,6 @@ export class AnnotationStoreWriteError extends Error {
 
 export interface StorageConfig {
   baseDir: string;
-  format: StorageFormat;
   sidecarLocation: SidecarLocation;
 }
 
@@ -98,7 +96,6 @@ export class AnnotationStore {
     private readonly getAnnotationTags: () => AnnotationTagDefinition[] = () => [],
     private readonly getStorageConfig: () => StorageConfig = () => ({
       baseDir: DEFAULT_STORE_DIR,
-      format: "json",
       sidecarLocation: "specifiedFolder",
     }),
     private readonly loadData: () => Promise<unknown> = async () => null,
@@ -110,10 +107,9 @@ export class AnnotationStore {
   }
 
   getStorageConfigResolved(): StorageConfig {
-    const cfg = this.getStorageConfig?.() ?? { baseDir: DEFAULT_STORE_DIR, format: "json", sidecarLocation: "specifiedFolder" };
+    const cfg = this.getStorageConfig?.() ?? { baseDir: DEFAULT_STORE_DIR, sidecarLocation: "specifiedFolder" };
     return {
       baseDir: resolveStoreDir(cfg.baseDir),
-      format: cfg.format === "md" ? "md" : "json",
       sidecarLocation: cfg.sidecarLocation === "sameFolder" ? "sameFolder" : "specifiedFolder",
     };
   }
@@ -124,10 +120,6 @@ export class AnnotationStore {
 
   private getSidecarLocation(): SidecarLocation {
     return this.getStorageConfigResolved().sidecarLocation;
-  }
-
-  private getFormat(): StorageFormat {
-    return this.getStorageConfigResolved().format;
   }
 
   async initialize(): Promise<void> {
@@ -216,8 +208,7 @@ export class AnnotationStore {
 
     try {
       await this.ensureStoreDir();
-      const serialized =
-        this.getFormat() === "md" ? serializeDocumentToMarkdown(normalized) : serializeDocumentToJson(normalized);
+      const serialized = serializeDocumentToMarkdown(normalized);
       await this.app.vault.adapter.write(sidecarPath, serialized);
       const persisted = await this.readDocumentOrThrow(sidecarPath);
       this.verifyPersistedDocument(normalized, persisted, sidecarPath);
@@ -547,23 +538,19 @@ export class AnnotationStore {
    * Build a sidecar path from the source file path.
    *
    * - specifiedFolder: `{baseDir}/{path-segments}-{filename}.{ext}.{sidecarExt}`
-   *   e.g. `books/未命名.pdf` -> `.obsidian-annotations/books-未命名.pdf.json`
-   * - sameFolder: `{dir}/{filename}.{ext}.annotations.{sidecarExt}`
-   *   e.g. `books/未命名.pdf` -> `books/未命名.pdf.annotations.json`
+   *   e.g. `books/未命名.pdf` -> `booknote/books-未命名.pdf.md`
+   * - sameFolder: `{dir}/{filename}.{ext}.{sidecarExt}`
+   *   e.g. `books/未命名.pdf` -> `books/未命名.pdf.md`
    */
   toSidecarPath(filePath: string): string {
     const normalized = this.normalizeVaultPath(filePath);
-    const sidecarExt = this.sidecarExtension();
+    const sidecarExt = "md";
     if (this.getSidecarLocation() === "sameFolder") {
-      return normalizePath(`${normalized}.annotations.${sidecarExt}`);
+      return normalizePath(`${normalized}.${sidecarExt}`);
     }
     const parts = normalized.split("/").filter((part) => part.length > 0);
     const safeName = parts.join("-");
     return normalizePath(`${this.getBaseDir()}/${safeName}.${sidecarExt}`);
-  }
-
-  private sidecarExtension(): string {
-    return this.getFormat() === "md" ? "md" : "json";
   }
 
   private async createEmptyDocument(file: TFile): Promise<FileAnnotationDocument> {
@@ -709,14 +696,10 @@ export class AnnotationStore {
   }
 
   private parseDocument(raw: string, path: string): FileAnnotationDocument {
-    const format: StorageFormat = path.toLowerCase().endsWith(".md") ? "md" : "json";
-    if (format === "md") {
-      return parseMarkdownDocument(raw, path);
-    }
-    return parseJsonDocument(raw, path);
+    return parseMarkdownDocument(raw, path);
   }
 
-  /** Rewrite every indexed sidecar to the current storage directory and format. */
+  /** Move every indexed sidecar to the path derived from the current storage config. */
   async migrateAll(): Promise<{ migrated: number; failed: number }> {
     const result = { migrated: 0, failed: 0 };
     const filePaths = Object.keys(this.index.files);
@@ -725,12 +708,11 @@ export class AnnotationStore {
       const entry = this.index.files[filePath];
       const oldSidecar = entry.sidecarPath;
       const newSidecar = this.toSidecarPath(filePath);
-      const oldFormat: StorageFormat = oldSidecar.toLowerCase().endsWith(".md") ? "md" : "json";
 
       if (!(await this.app.vault.adapter.exists(oldSidecar))) {
         continue;
       }
-      if (oldSidecar === newSidecar && oldFormat === this.getFormat()) {
+      if (oldSidecar === newSidecar) {
         continue;
       }
 
@@ -738,8 +720,7 @@ export class AnnotationStore {
         const document = await this.readDocumentOrThrow(oldSidecar);
         const normalized = this.normalizeDocument(document, filePath);
         await this.ensureStoreDir();
-        const serialized =
-          this.getFormat() === "md" ? serializeDocumentToMarkdown(normalized) : serializeDocumentToJson(normalized);
+        const serialized = serializeDocumentToMarkdown(normalized);
         await this.app.vault.adapter.write(newSidecar, serialized);
         if (newSidecar !== oldSidecar) {
           await this.deleteIfExists(oldSidecar);
@@ -1048,7 +1029,7 @@ function entrySource(entry: ExportEntry): string {
   return entry.sourcePath;
 }
 
-// ===== Markdown sidecar storage (StorageFormat = "md") =====
+// ===== Markdown sidecar storage =====
 // Document-level metadata (including reading progress) is stored in YAML
 // frontmatter. Each annotation is a level-1 heading; the machine-readable data
 // lives in a hidden span (data-book-note) so the file round-trips losslessly.
@@ -1286,129 +1267,6 @@ export function parseMarkdownDocument(raw: string, path: string): FileAnnotation
   return document;
 }
 
-// ===== JSON sidecar storage (StorageFormat = "json") =====
-// Reading progress is flattened to top-level keys (no pdfProgress/epubProgress
-// nested objects) so the file is human-inspectable. Parsing reassembles the
-// nested objects and also tolerates legacy sidecars that still carry the old
-// nested form.
-
-export function serializeDocumentToJson(document: FileAnnotationDocument): string {
-  const flat: Record<string, unknown> = {
-    filePath: document.filePath,
-    fileHash: document.fileHash,
-    lastModified: document.lastModified,
-    highlights: document.highlights ?? [],
-    comments: document.comments ?? [],
-    pdfHighlights: document.pdfHighlights ?? [],
-    pdfComments: document.pdfComments ?? [],
-    epubHighlights: document.epubHighlights ?? [],
-    epubComments: document.epubComments ?? [],
-    bookmarks: document.bookmarks ?? [],
-    canvasBinding: document.canvasBinding ?? null,
-    canvasNodes: document.canvasNodes ?? [],
-  };
-  if (document.pdfProgress) {
-    flat.pageNumber = document.pdfProgress.pageNumber;
-    flat.totalPages = document.pdfProgress.totalPages;
-    flat.percent = document.pdfProgress.percent;
-    flat.lastRead = document.pdfProgress.lastRead;
-  }
-  if (document.epubProgress) {
-    flat.cfi = document.epubProgress.cfi;
-    flat.chapter = document.epubProgress.chapter;
-    flat.percent = document.epubProgress.percent;
-    flat.lastRead = document.epubProgress.lastRead;
-    flat.readingTimeSeconds = document.epubProgress.readingTimeSeconds;
-    flat.estimatedRemainingMinutes = document.epubProgress.estimatedRemainingMinutes;
-  }
-  return JSON.stringify(flat, null, 2);
-}
-
-export function parseJsonDocument(raw: string, path: string): FileAnnotationDocument {
-  const data = JSON.parse(raw) as Record<string, unknown>;
-  const asObject = (value: unknown): Record<string, unknown> | undefined =>
-    isObject(value) ? (value as Record<string, unknown>) : undefined;
-
-  // Legacy nested form (pre-0.24 sidecars) — kept for backward compatibility.
-  const legacyPdf = asObject(data.pdfProgress);
-  const legacyEpub = asObject(data.epubProgress);
-
-  const pickPdfPageNumber = typeof data.pageNumber === "number" ? data.pageNumber : typeof data.pdfPageNumber === "number" ? data.pdfPageNumber : undefined;
-  const pickPdfTotalPages = typeof data.totalPages === "number" ? data.totalPages : typeof data.pdfTotalPages === "number" ? data.pdfTotalPages : undefined;
-  const pickPdfPercent = typeof data.percent === "number" ? data.percent : typeof data.pdfPercent === "number" ? data.pdfPercent : undefined;
-  const pickPdfLastRead = typeof data.lastRead === "string" ? data.lastRead : typeof data.pdfLastRead === "string" ? data.pdfLastRead : undefined;
-
-  const pdfProgress: PdfReadingProgress | undefined =
-    typeof pickPdfPageNumber === "number"
-      ? {
-          pageNumber: pickPdfPageNumber,
-          totalPages: typeof pickPdfTotalPages === "number" ? pickPdfTotalPages : 0,
-          percent: typeof pickPdfPercent === "number" ? pickPdfPercent : 0,
-          lastRead: typeof pickPdfLastRead === "string" ? pickPdfLastRead : "",
-        }
-      : legacyPdf
-        ? {
-            pageNumber: Number(legacyPdf.pageNumber ?? 0),
-            totalPages: Number(legacyPdf.totalPages ?? 0),
-            percent: Number(legacyPdf.percent ?? 0),
-            lastRead: String(legacyPdf.lastRead ?? ""),
-          }
-        : undefined;
-
-  const pickEpubCfi = typeof data.cfi === "string" ? data.cfi : typeof data.epubCfi === "string" ? data.epubCfi : undefined;
-  const pickEpubChapter = typeof data.chapter === "string" ? data.chapter : typeof data.epubChapter === "string" ? data.epubChapter : undefined;
-  const pickEpubPercent = typeof data.percent === "number" ? data.percent : typeof data.epubPercent === "number" ? data.epubPercent : undefined;
-  const pickEpubLastRead = typeof data.lastRead === "string" ? data.lastRead : typeof data.epubLastRead === "string" ? data.epubLastRead : undefined;
-  const pickEpubReadingTimeSeconds = typeof data.readingTimeSeconds === "number" ? data.readingTimeSeconds : typeof data.epubReadingTimeSeconds === "number" ? data.epubReadingTimeSeconds : undefined;
-  const pickEpubEstimatedRemainingMinutes =
-    typeof data.estimatedRemainingMinutes === "number"
-      ? data.estimatedRemainingMinutes
-      : typeof data.epubEstimatedRemainingMinutes === "number"
-        ? data.epubEstimatedRemainingMinutes
-        : undefined;
-
-  const epubProgress: EpubReadingProgress | undefined =
-    typeof pickEpubCfi === "string"
-      ? {
-          cfi: pickEpubCfi,
-          chapter: typeof pickEpubChapter === "string" ? pickEpubChapter : "",
-          percent: typeof pickEpubPercent === "number" ? pickEpubPercent : 0,
-          lastRead: typeof pickEpubLastRead === "string" ? pickEpubLastRead : "",
-          readingTimeSeconds: typeof pickEpubReadingTimeSeconds === "number" ? pickEpubReadingTimeSeconds : 0,
-          ...(typeof pickEpubEstimatedRemainingMinutes === "number"
-            ? { estimatedRemainingMinutes: pickEpubEstimatedRemainingMinutes }
-            : {}),
-        }
-      : legacyEpub
-        ? {
-            cfi: String(legacyEpub.cfi ?? ""),
-            chapter: String(legacyEpub.chapter ?? ""),
-            percent: Number(legacyEpub.percent ?? 0),
-            lastRead: String(legacyEpub.lastRead ?? ""),
-            readingTimeSeconds: Number(legacyEpub.readingTimeSeconds ?? 0),
-            ...(typeof legacyEpub.estimatedRemainingMinutes === "number"
-              ? { estimatedRemainingMinutes: legacyEpub.estimatedRemainingMinutes }
-              : {}),
-          }
-        : undefined;
-
-  return {
-    filePath: typeof data.filePath === "string" ? data.filePath : path,
-    fileHash: typeof data.fileHash === "string" ? data.fileHash : "",
-    lastModified: typeof data.lastModified === "string" ? data.lastModified : new Date().toISOString(),
-    highlights: Array.isArray(data.highlights) ? (data.highlights as HighlightAnnotation[]) : [],
-    comments: Array.isArray(data.comments) ? (data.comments as CommentAnnotation[]) : [],
-    pdfHighlights: Array.isArray(data.pdfHighlights) ? (data.pdfHighlights as PdfHighlightAnnotation[]) : [],
-    pdfComments: Array.isArray(data.pdfComments) ? (data.pdfComments as PdfCommentAnnotation[]) : [],
-    epubHighlights: Array.isArray(data.epubHighlights) ? (data.epubHighlights as EpubHighlightAnnotation[]) : [],
-    epubComments: Array.isArray(data.epubComments) ? (data.epubComments as EpubCommentAnnotation[]) : [],
-    epubProgress,
-    pdfProgress,
-    bookmarks: Array.isArray(data.bookmarks) ? (data.bookmarks as ReadingBookmark[]) : [],
-    canvasBinding: asObject(data.canvasBinding) as CanvasBinding | undefined,
-    canvasNodes: Array.isArray(data.canvasNodes) ? (data.canvasNodes as CanvasExcerptNode[]) : [],
-  };
-}
 
 function parseFrontmatter(raw: string): DocMeta {
   const meta = emptyDocMeta();

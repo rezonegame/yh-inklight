@@ -7822,20 +7822,16 @@ var en = {
   "settings.pdf.progress.name": "Track PDF reading progress",
   "settings.pdf.progress.desc": "Saves current page and progress; existing progress is kept after closing.",
   "settings.storage.heading": "Storage",
-  "settings.storageFormat.name": "Annotation storage format",
-  "settings.storageFormat.desc": "How annotation data is stored per source file. Markdown stores metadata and reading progress in YAML frontmatter and renders each annotation as a heading; JSON is more compact.",
-  "settings.storageFormat.json": "JSON (compact)",
-  "settings.storageFormat.md": "Markdown (readable)",
   "settings.storagePath.name": "Storage folder (vault-relative)",
-  "settings.storagePath.desc": "Folder inside the vault for sidecar files. Leave empty for the default .obsidian-annotations directory. Only vault-relative paths are allowed.",
-  "settings.storagePath.placeholder": "e.g. .obsidian-annotations",
+  "settings.storagePath.desc": "Folder inside the vault for sidecar files. Leave empty for the default booknote directory. Only vault-relative paths are allowed.",
+  "settings.storagePath.placeholder": "e.g. booknote",
   "settings.sidecarLocation.name": "Sidecar location",
   "settings.sidecarLocation.desc": "Where annotation sidecars are stored. 'Next to source' keeps each sidecar beside its source file; 'Specified folder' collects them under the storage folder above.",
   "settings.sidecarLocation.specifiedFolder": "Specified folder",
   "settings.sidecarLocation.sameFolder": "Next to source file",
   "settings.storage.test": "Test write access",
-  "settings.storage.migrate": "Migrate existing annotations",
-  "settings.storage.migrate.desc": "Rewrite all existing annotation sidecars to the current folder and format. Runs automatically when you change the format or folder above.",
+  "settings.storage.migrate": "Migrate data",
+  "settings.storage.migrate.desc": "Move existing annotation sidecars to the current folder. Click the button on the right to run.",
   // Sidebar
   "sidebar.emptyHint": "Open a Markdown or PDF file to inspect annotations.",
   "sidebar.noMatch": "No matching annotations.",
@@ -7958,7 +7954,7 @@ var en = {
   "notice.storageTestFailed": "Book Note storage test failed: {{path}}",
   "notice.cannotRead": "Book Note cannot read {{path}}; writing stopped to protect annotation data.",
   "notice.storageWritable": "Book Note storage is writable: {{path}}",
-  "notice.storageNotWritable": "Book Note storage is not writable. Check the .obsidian-annotations directory permissions or sync status.",
+  "notice.storageNotWritable": "Book Note storage is not writable. Check the booknote directory permissions or sync status.",
   "notice.storageMigrated": "Migrated {{count}} annotation file(s) to the new storage.",
   "notice.storageMigratePartial": "Migrated {{migrated}} file(s); {{failed}} failed.",
   "notice.storageMigrateFailed": "Failed to migrate annotations: {{error}}",
@@ -8068,20 +8064,16 @@ var zh = {
   "settings.pdf.progress.name": "\u8BB0\u5F55 PDF \u9605\u8BFB\u8FDB\u5EA6",
   "settings.pdf.progress.desc": "\u4FDD\u5B58\u5F53\u524D\u9875\u548C\u9605\u8BFB\u8FDB\u5EA6\uFF1B\u5173\u95ED\u540E\u4E0D\u4F1A\u5220\u9664\u5DF2\u6709\u8FDB\u5EA6\u3002",
   "settings.storage.heading": "\u5B58\u50A8",
-  "settings.storageFormat.name": "\u6279\u6CE8\u5B58\u50A8\u683C\u5F0F",
-  "settings.storageFormat.desc": "\u6BCF\u4E2A\u6E90\u6587\u4EF6\u6279\u6CE8\u6570\u636E\u7684\u5B58\u50A8\u65B9\u5F0F\u3002Markdown \u5C06\u5143\u6570\u636E\u548C\u9605\u8BFB\u8FDB\u5EA6\u5B58\u5165 YAML frontmatter\uFF0C\u6BCF\u6761\u6279\u6CE8\u4F5C\u4E3A\u4E00\u4E2A\u6807\u9898\uFF1BJSON \u66F4\u7D27\u51D1\u3002",
-  "settings.storageFormat.json": "JSON\uFF08\u7D27\u51D1\uFF09",
-  "settings.storageFormat.md": "Markdown\uFF08\u53EF\u8BFB\uFF09",
   "settings.storagePath.name": "\u5B58\u50A8\u76EE\u5F55\uFF08Vault \u76F8\u5BF9\u8DEF\u5F84\uFF09",
-  "settings.storagePath.desc": "Vault \u5185\u7528\u4E8E\u5B58\u653E sidecar \u6587\u4EF6\u7684\u76EE\u5F55\uFF0C\u7559\u7A7A\u4F7F\u7528\u9ED8\u8BA4 .obsidian-annotations\u3002\u4EC5\u5141\u8BB8 Vault \u5185\u76F8\u5BF9\u8DEF\u5F84\u3002",
-  "settings.storagePath.placeholder": "\u4F8B\u5982 .obsidian-annotations",
+  "settings.storagePath.desc": "Vault \u5185\u7528\u4E8E\u5B58\u653E sidecar \u6587\u4EF6\u7684\u76EE\u5F55\uFF0C\u7559\u7A7A\u4F7F\u7528\u9ED8\u8BA4 booknote\u3002\u4EC5\u5141\u8BB8 Vault \u5185\u76F8\u5BF9\u8DEF\u5F84\u3002",
+  "settings.storagePath.placeholder": "\u4F8B\u5982 booknote",
   "settings.sidecarLocation.name": "\u6279\u6CE8\u6587\u4EF6\u4F4D\u7F6E",
   "settings.sidecarLocation.desc": "\u6279\u6CE8 sidecar \u7684\u5B58\u653E\u4F4D\u7F6E\u3002\u300C\u4E0E\u6E90\u6587\u4EF6\u540C\u76EE\u5F55\u300D\u4F1A\u628A sidecar \u653E\u5728\u6E90\u6587\u4EF6\u65C1\u8FB9\uFF1B\u300C\u6307\u5B9A\u76EE\u5F55\u300D\u5219\u7EDF\u4E00\u6536\u96C6\u5230\u4E0A\u65B9\u7684\u5B58\u50A8\u76EE\u5F55\u4E0B\u3002",
   "settings.sidecarLocation.specifiedFolder": "\u6307\u5B9A\u76EE\u5F55",
   "settings.sidecarLocation.sameFolder": "\u4E0E\u6E90\u6587\u4EF6\u540C\u76EE\u5F55",
   "settings.storage.test": "\u6D4B\u8BD5\u5199\u5165",
-  "settings.storage.migrate": "\u8FC1\u79FB\u5DF2\u6709\u6279\u6CE8",
-  "settings.storage.migrate.desc": "\u5C06\u6240\u6709\u5DF2\u6709\u6279\u6CE8 sidecar \u91CD\u5199\u5230\u5F53\u524D\u76EE\u5F55\u4E0E\u683C\u5F0F\u3002\u4FEE\u6539\u4E0A\u65B9\u7684\u683C\u5F0F\u6216\u76EE\u5F55\u65F6\u4F1A\u81EA\u52A8\u6267\u884C\u3002",
+  "settings.storage.migrate": "\u8FC1\u79FB\u6570\u636E",
+  "settings.storage.migrate.desc": "\u5C06\u5DF2\u6709\u6279\u6CE8 sidecar \u79FB\u52A8\u5230\u5F53\u524D\u76EE\u5F55\u3002\u70B9\u51FB\u53F3\u4FA7\u6309\u94AE\u6267\u884C\u3002",
   // Sidebar
   "sidebar.emptyHint": "\u6253\u5F00 Markdown \u6216 PDF \u6587\u4EF6\u4EE5\u67E5\u770B\u6279\u6CE8\u3002",
   "sidebar.noMatch": "\u6CA1\u6709\u5339\u914D\u7684\u6279\u6CE8\u3002",
@@ -8204,7 +8196,7 @@ var zh = {
   "notice.storageTestFailed": "Book Note\u5B58\u50A8\u6D4B\u8BD5\u5931\u8D25\uFF1A{{path}}",
   "notice.cannotRead": "Book Note\u65E0\u6CD5\u8BFB\u53D6 {{path}}\uFF0C\u5DF2\u505C\u6B62\u5199\u5165\u4EE5\u4FDD\u62A4\u6279\u6CE8\u6570\u636E\u3002",
   "notice.storageWritable": "Book Note\u5B58\u50A8\u53EF\u5199\uFF1A{{path}}",
-  "notice.storageNotWritable": "Book Note\u5B58\u50A8\u4E0D\u53EF\u5199\uFF0C\u8BF7\u68C0\u67E5 .obsidian-annotations \u76EE\u5F55\u6743\u9650\u6216\u540C\u6B65\u72B6\u6001\u3002",
+  "notice.storageNotWritable": "Book Note\u5B58\u50A8\u4E0D\u53EF\u5199\uFF0C\u8BF7\u68C0\u67E5 booknote \u76EE\u5F55\u6743\u9650\u6216\u540C\u6B65\u72B6\u6001\u3002",
   "notice.storageMigrated": "\u5DF2\u5C06 {{count}} \u4E2A\u6279\u6CE8\u6587\u4EF6\u8FC1\u79FB\u81F3\u65B0\u5B58\u50A8\u3002",
   "notice.storageMigratePartial": "\u5DF2\u8FC1\u79FB {{migrated}} \u4E2A\u6587\u4EF6\uFF0C{{failed}} \u4E2A\u5931\u8D25\u3002",
   "notice.storageMigrateFailed": "\u6279\u6CE8\u8FC1\u79FB\u5931\u8D25\uFF1A{{error}}",
@@ -8652,8 +8644,7 @@ var DEFAULT_SETTINGS = {
   migrateOnRename: true,
   annotationTags: cloneDefaultAnnotationTags(),
   // 存储
-  storageFormat: "json",
-  storagePath: ".obsidian-annotations",
+  storagePath: "booknote",
   sidecarLocation: "specifiedFolder",
   // 通用
   showRibbonIcon: true,
@@ -9672,33 +9663,23 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
   renderStorageSettings() {
     const { containerEl } = this;
     containerEl.createEl("h3", { text: t("settings.storage.heading") });
-    new import_obsidian5.Setting(containerEl).setName(t("settings.storageFormat.name")).setDesc(t("settings.storageFormat.desc")).addDropdown((dropdown) => {
-      dropdown.addOption("json", t("settings.storageFormat.json"));
-      dropdown.addOption("md", t("settings.storageFormat.md"));
-      dropdown.setValue(this.plugin.settings.storageFormat).onChange(async (value) => {
-        const oldConfig = this.plugin.store.getStorageConfigResolved();
-        this.plugin.settings.storageFormat = value;
-        await this.plugin.saveSettings();
-        await this.migrateIfStorageChanged(oldConfig);
-      });
-    });
     new import_obsidian5.Setting(containerEl).setName(t("settings.sidecarLocation.name")).setDesc(t("settings.sidecarLocation.desc")).addDropdown((dropdown) => {
       dropdown.addOption("specifiedFolder", t("settings.sidecarLocation.specifiedFolder"));
       dropdown.addOption("sameFolder", t("settings.sidecarLocation.sameFolder"));
       dropdown.setValue(this.plugin.settings.sidecarLocation).onChange(async (value) => {
-        const oldConfig = this.plugin.store.getStorageConfigResolved();
         this.plugin.settings.sidecarLocation = value;
         await this.plugin.saveSettings();
         this.refreshStorageSettings();
-        await this.migrateIfStorageChanged(oldConfig);
+      });
+    }).addButton((button) => {
+      button.setButtonText(t("settings.storage.migrate")).onClick(() => {
+        void this.migrateAndNotify();
       });
     });
     this.storagePathSetting = new import_obsidian5.Setting(containerEl).setName(t("settings.storagePath.name")).setDesc(t("settings.storagePath.desc")).addText((text) => {
       text.setPlaceholder(t("settings.storagePath.placeholder")).setValue(this.plugin.settings.storagePath).onChange(async (value) => {
-        const oldConfig = this.plugin.store.getStorageConfigResolved();
         this.plugin.settings.storagePath = value.trim();
         await this.plugin.saveSettings();
-        await this.migrateIfStorageChanged(oldConfig);
       });
     }).addButton((button) => {
       button.setButtonText(t("settings.storage.test")).onClick(async () => {
@@ -9711,24 +9692,12 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
       });
     });
     this.refreshStorageSettings();
-    new import_obsidian5.Setting(containerEl).setName(t("settings.storage.migrate")).setDesc(t("settings.storage.migrate.desc")).addButton((button) => {
-      button.setButtonText(t("settings.storage.migrate")).onClick(() => {
-        void this.migrateAndNotify();
-      });
-    });
   }
   refreshStorageSettings() {
     if (!this.storagePathSetting) {
       return;
     }
     this.storagePathSetting.settingEl.toggleClass("book-note-hidden", this.plugin.settings.sidecarLocation === "sameFolder");
-  }
-  async migrateIfStorageChanged(oldConfig) {
-    const newConfig = this.plugin.store.getStorageConfigResolved();
-    if (oldConfig.format === newConfig.format && oldConfig.baseDir === newConfig.baseDir && oldConfig.sidecarLocation === newConfig.sidecarLocation) {
-      return;
-    }
-    await this.migrateAndNotify();
   }
   async migrateAndNotify() {
     try {
@@ -9900,7 +9869,7 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
 
 // src/storage/annotationStore.ts
 var import_obsidian6 = require("obsidian");
-var DEFAULT_STORE_DIR = ".obsidian-annotations";
+var DEFAULT_STORE_DIR = "booknote";
 var AnnotationStoreReadError = class extends Error {
   constructor(path, originalError) {
     super(`Failed to read annotation sidecar JSON: ${path}`);
@@ -9920,7 +9889,6 @@ var AnnotationStoreWriteError = class extends Error {
 var AnnotationStore = class {
   constructor(app, getAnnotationTags = () => [], getStorageConfig = () => ({
     baseDir: DEFAULT_STORE_DIR,
-    format: "json",
     sidecarLocation: "specifiedFolder"
   }), loadData = async () => null, saveData = async () => {
   }) {
@@ -9939,10 +9907,9 @@ var AnnotationStore = class {
     return this.changeVersion;
   }
   getStorageConfigResolved() {
-    const cfg = this.getStorageConfig?.() ?? { baseDir: DEFAULT_STORE_DIR, format: "json", sidecarLocation: "specifiedFolder" };
+    const cfg = this.getStorageConfig?.() ?? { baseDir: DEFAULT_STORE_DIR, sidecarLocation: "specifiedFolder" };
     return {
       baseDir: resolveStoreDir(cfg.baseDir),
-      format: cfg.format === "md" ? "md" : "json",
       sidecarLocation: cfg.sidecarLocation === "sameFolder" ? "sameFolder" : "specifiedFolder"
     };
   }
@@ -9951,9 +9918,6 @@ var AnnotationStore = class {
   }
   getSidecarLocation() {
     return this.getStorageConfigResolved().sidecarLocation;
-  }
-  getFormat() {
-    return this.getStorageConfigResolved().format;
   }
   async initialize() {
     const stored = await this.loadData();
@@ -10025,7 +9989,7 @@ var AnnotationStore = class {
     const normalized = this.normalizeDocument(document2, filePath);
     try {
       await this.ensureStoreDir();
-      const serialized = this.getFormat() === "md" ? serializeDocumentToMarkdown(normalized) : serializeDocumentToJson(normalized);
+      const serialized = serializeDocumentToMarkdown(normalized);
       await this.app.vault.adapter.write(sidecarPath, serialized);
       const persisted = await this.readDocumentOrThrow(sidecarPath);
       this.verifyPersistedDocument(normalized, persisted, sidecarPath);
@@ -10303,22 +10267,19 @@ var AnnotationStore = class {
    * Build a sidecar path from the source file path.
    *
    * - specifiedFolder: `{baseDir}/{path-segments}-{filename}.{ext}.{sidecarExt}`
-   *   e.g. `books/未命名.pdf` -> `.obsidian-annotations/books-未命名.pdf.json`
-   * - sameFolder: `{dir}/{filename}.{ext}.annotations.{sidecarExt}`
-   *   e.g. `books/未命名.pdf` -> `books/未命名.pdf.annotations.json`
+   *   e.g. `books/未命名.pdf` -> `booknote/books-未命名.pdf.md`
+   * - sameFolder: `{dir}/{filename}.{ext}.{sidecarExt}`
+   *   e.g. `books/未命名.pdf` -> `books/未命名.pdf.md`
    */
   toSidecarPath(filePath) {
     const normalized = this.normalizeVaultPath(filePath);
-    const sidecarExt = this.sidecarExtension();
+    const sidecarExt = "md";
     if (this.getSidecarLocation() === "sameFolder") {
-      return (0, import_obsidian6.normalizePath)(`${normalized}.annotations.${sidecarExt}`);
+      return (0, import_obsidian6.normalizePath)(`${normalized}.${sidecarExt}`);
     }
     const parts = normalized.split("/").filter((part) => part.length > 0);
     const safeName = parts.join("-");
     return (0, import_obsidian6.normalizePath)(`${this.getBaseDir()}/${safeName}.${sidecarExt}`);
-  }
-  sidecarExtension() {
-    return this.getFormat() === "md" ? "md" : "json";
   }
   async createEmptyDocument(file) {
     return {
@@ -10436,13 +10397,9 @@ var AnnotationStore = class {
     }
   }
   parseDocument(raw, path) {
-    const format = path.toLowerCase().endsWith(".md") ? "md" : "json";
-    if (format === "md") {
-      return parseMarkdownDocument(raw, path);
-    }
-    return parseJsonDocument(raw, path);
+    return parseMarkdownDocument(raw, path);
   }
-  /** Rewrite every indexed sidecar to the current storage directory and format. */
+  /** Move every indexed sidecar to the path derived from the current storage config. */
   async migrateAll() {
     const result = { migrated: 0, failed: 0 };
     const filePaths = Object.keys(this.index.files);
@@ -10450,18 +10407,17 @@ var AnnotationStore = class {
       const entry = this.index.files[filePath];
       const oldSidecar = entry.sidecarPath;
       const newSidecar = this.toSidecarPath(filePath);
-      const oldFormat = oldSidecar.toLowerCase().endsWith(".md") ? "md" : "json";
       if (!await this.app.vault.adapter.exists(oldSidecar)) {
         continue;
       }
-      if (oldSidecar === newSidecar && oldFormat === this.getFormat()) {
+      if (oldSidecar === newSidecar) {
         continue;
       }
       try {
         const document2 = await this.readDocumentOrThrow(oldSidecar);
         const normalized = this.normalizeDocument(document2, filePath);
         await this.ensureStoreDir();
-        const serialized = this.getFormat() === "md" ? serializeDocumentToMarkdown(normalized) : serializeDocumentToJson(normalized);
+        const serialized = serializeDocumentToMarkdown(normalized);
         await this.app.vault.adapter.write(newSidecar, serialized);
         if (newSidecar !== oldSidecar) {
           await this.deleteIfExists(oldSidecar);
@@ -10894,95 +10850,6 @@ function parseMarkdownDocument(raw, path) {
     }
   }
   return document2;
-}
-function serializeDocumentToJson(document2) {
-  const flat = {
-    filePath: document2.filePath,
-    fileHash: document2.fileHash,
-    lastModified: document2.lastModified,
-    highlights: document2.highlights ?? [],
-    comments: document2.comments ?? [],
-    pdfHighlights: document2.pdfHighlights ?? [],
-    pdfComments: document2.pdfComments ?? [],
-    epubHighlights: document2.epubHighlights ?? [],
-    epubComments: document2.epubComments ?? [],
-    bookmarks: document2.bookmarks ?? [],
-    canvasBinding: document2.canvasBinding ?? null,
-    canvasNodes: document2.canvasNodes ?? []
-  };
-  if (document2.pdfProgress) {
-    flat.pageNumber = document2.pdfProgress.pageNumber;
-    flat.totalPages = document2.pdfProgress.totalPages;
-    flat.percent = document2.pdfProgress.percent;
-    flat.lastRead = document2.pdfProgress.lastRead;
-  }
-  if (document2.epubProgress) {
-    flat.cfi = document2.epubProgress.cfi;
-    flat.chapter = document2.epubProgress.chapter;
-    flat.percent = document2.epubProgress.percent;
-    flat.lastRead = document2.epubProgress.lastRead;
-    flat.readingTimeSeconds = document2.epubProgress.readingTimeSeconds;
-    flat.estimatedRemainingMinutes = document2.epubProgress.estimatedRemainingMinutes;
-  }
-  return JSON.stringify(flat, null, 2);
-}
-function parseJsonDocument(raw, path) {
-  const data = JSON.parse(raw);
-  const asObject = (value) => isObject(value) ? value : void 0;
-  const legacyPdf = asObject(data.pdfProgress);
-  const legacyEpub = asObject(data.epubProgress);
-  const pickPdfPageNumber = typeof data.pageNumber === "number" ? data.pageNumber : typeof data.pdfPageNumber === "number" ? data.pdfPageNumber : void 0;
-  const pickPdfTotalPages = typeof data.totalPages === "number" ? data.totalPages : typeof data.pdfTotalPages === "number" ? data.pdfTotalPages : void 0;
-  const pickPdfPercent = typeof data.percent === "number" ? data.percent : typeof data.pdfPercent === "number" ? data.pdfPercent : void 0;
-  const pickPdfLastRead = typeof data.lastRead === "string" ? data.lastRead : typeof data.pdfLastRead === "string" ? data.pdfLastRead : void 0;
-  const pdfProgress = typeof pickPdfPageNumber === "number" ? {
-    pageNumber: pickPdfPageNumber,
-    totalPages: typeof pickPdfTotalPages === "number" ? pickPdfTotalPages : 0,
-    percent: typeof pickPdfPercent === "number" ? pickPdfPercent : 0,
-    lastRead: typeof pickPdfLastRead === "string" ? pickPdfLastRead : ""
-  } : legacyPdf ? {
-    pageNumber: Number(legacyPdf.pageNumber ?? 0),
-    totalPages: Number(legacyPdf.totalPages ?? 0),
-    percent: Number(legacyPdf.percent ?? 0),
-    lastRead: String(legacyPdf.lastRead ?? "")
-  } : void 0;
-  const pickEpubCfi = typeof data.cfi === "string" ? data.cfi : typeof data.epubCfi === "string" ? data.epubCfi : void 0;
-  const pickEpubChapter = typeof data.chapter === "string" ? data.chapter : typeof data.epubChapter === "string" ? data.epubChapter : void 0;
-  const pickEpubPercent = typeof data.percent === "number" ? data.percent : typeof data.epubPercent === "number" ? data.epubPercent : void 0;
-  const pickEpubLastRead = typeof data.lastRead === "string" ? data.lastRead : typeof data.epubLastRead === "string" ? data.epubLastRead : void 0;
-  const pickEpubReadingTimeSeconds = typeof data.readingTimeSeconds === "number" ? data.readingTimeSeconds : typeof data.epubReadingTimeSeconds === "number" ? data.epubReadingTimeSeconds : void 0;
-  const pickEpubEstimatedRemainingMinutes = typeof data.estimatedRemainingMinutes === "number" ? data.estimatedRemainingMinutes : typeof data.epubEstimatedRemainingMinutes === "number" ? data.epubEstimatedRemainingMinutes : void 0;
-  const epubProgress = typeof pickEpubCfi === "string" ? {
-    cfi: pickEpubCfi,
-    chapter: typeof pickEpubChapter === "string" ? pickEpubChapter : "",
-    percent: typeof pickEpubPercent === "number" ? pickEpubPercent : 0,
-    lastRead: typeof pickEpubLastRead === "string" ? pickEpubLastRead : "",
-    readingTimeSeconds: typeof pickEpubReadingTimeSeconds === "number" ? pickEpubReadingTimeSeconds : 0,
-    ...typeof pickEpubEstimatedRemainingMinutes === "number" ? { estimatedRemainingMinutes: pickEpubEstimatedRemainingMinutes } : {}
-  } : legacyEpub ? {
-    cfi: String(legacyEpub.cfi ?? ""),
-    chapter: String(legacyEpub.chapter ?? ""),
-    percent: Number(legacyEpub.percent ?? 0),
-    lastRead: String(legacyEpub.lastRead ?? ""),
-    readingTimeSeconds: Number(legacyEpub.readingTimeSeconds ?? 0),
-    ...typeof legacyEpub.estimatedRemainingMinutes === "number" ? { estimatedRemainingMinutes: legacyEpub.estimatedRemainingMinutes } : {}
-  } : void 0;
-  return {
-    filePath: typeof data.filePath === "string" ? data.filePath : path,
-    fileHash: typeof data.fileHash === "string" ? data.fileHash : "",
-    lastModified: typeof data.lastModified === "string" ? data.lastModified : (/* @__PURE__ */ new Date()).toISOString(),
-    highlights: Array.isArray(data.highlights) ? data.highlights : [],
-    comments: Array.isArray(data.comments) ? data.comments : [],
-    pdfHighlights: Array.isArray(data.pdfHighlights) ? data.pdfHighlights : [],
-    pdfComments: Array.isArray(data.pdfComments) ? data.pdfComments : [],
-    epubHighlights: Array.isArray(data.epubHighlights) ? data.epubHighlights : [],
-    epubComments: Array.isArray(data.epubComments) ? data.epubComments : [],
-    epubProgress,
-    pdfProgress,
-    bookmarks: Array.isArray(data.bookmarks) ? data.bookmarks : [],
-    canvasBinding: asObject(data.canvasBinding),
-    canvasNodes: Array.isArray(data.canvasNodes) ? data.canvasNodes : []
-  };
 }
 function parseFrontmatter(raw) {
   const meta = emptyDocMeta();
@@ -15183,7 +15050,6 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
       () => this.settings.annotationTags,
       () => ({
         baseDir: this.settings.storagePath,
-        format: this.settings.storageFormat,
         sidecarLocation: this.settings.sidecarLocation
       }),
       () => this.loadData(),

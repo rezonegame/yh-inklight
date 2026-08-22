@@ -19,7 +19,6 @@ import {
   EpubHighlightStyle,
   EpubReadingTheme,
   SidecarLocation,
-  StorageFormat,
 } from "../storage/types";
 import {
   cloneDefaultAnnotationTags,
@@ -94,31 +93,20 @@ export class AnnotationSettingsTab extends PluginSettingTab {
     containerEl.createEl("h3", { text: t("settings.storage.heading") });
 
     new Setting(containerEl)
-      .setName(t("settings.storageFormat.name"))
-      .setDesc(t("settings.storageFormat.desc"))
-      .addDropdown((dropdown) => {
-        dropdown.addOption("json", t("settings.storageFormat.json"));
-        dropdown.addOption("md", t("settings.storageFormat.md"));
-        dropdown.setValue(this.plugin.settings.storageFormat).onChange(async (value) => {
-          const oldConfig = this.plugin.store.getStorageConfigResolved();
-          this.plugin.settings.storageFormat = value as StorageFormat;
-          await this.plugin.saveSettings();
-          await this.migrateIfStorageChanged(oldConfig);
-        });
-      });
-
-    new Setting(containerEl)
       .setName(t("settings.sidecarLocation.name"))
       .setDesc(t("settings.sidecarLocation.desc"))
       .addDropdown((dropdown) => {
         dropdown.addOption("specifiedFolder", t("settings.sidecarLocation.specifiedFolder"));
         dropdown.addOption("sameFolder", t("settings.sidecarLocation.sameFolder"));
         dropdown.setValue(this.plugin.settings.sidecarLocation).onChange(async (value) => {
-          const oldConfig = this.plugin.store.getStorageConfigResolved();
           this.plugin.settings.sidecarLocation = value as SidecarLocation;
           await this.plugin.saveSettings();
           this.refreshStorageSettings();
-          await this.migrateIfStorageChanged(oldConfig);
+        });
+      })
+      .addButton((button) => {
+        button.setButtonText(t("settings.storage.migrate")).onClick(() => {
+          void this.migrateAndNotify();
         });
       });
 
@@ -127,10 +115,8 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       .setDesc(t("settings.storagePath.desc"))
       .addText((text) => {
         text.setPlaceholder(t("settings.storagePath.placeholder")).setValue(this.plugin.settings.storagePath).onChange(async (value) => {
-          const oldConfig = this.plugin.store.getStorageConfigResolved();
           this.plugin.settings.storagePath = value.trim();
           await this.plugin.saveSettings();
-          await this.migrateIfStorageChanged(oldConfig);
         });
       })
       .addButton((button) => {
@@ -144,15 +130,6 @@ export class AnnotationSettingsTab extends PluginSettingTab {
         });
       });
     this.refreshStorageSettings();
-
-    new Setting(containerEl)
-      .setName(t("settings.storage.migrate"))
-      .setDesc(t("settings.storage.migrate.desc"))
-      .addButton((button) => {
-        button.setButtonText(t("settings.storage.migrate")).onClick(() => {
-          void this.migrateAndNotify();
-        });
-      });
   }
 
   private refreshStorageSettings(): void {
@@ -160,18 +137,6 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       return;
     }
     this.storagePathSetting.settingEl.toggleClass("book-note-hidden", this.plugin.settings.sidecarLocation === "sameFolder");
-  }
-
-  private async migrateIfStorageChanged(oldConfig: { baseDir: string; format: StorageFormat; sidecarLocation: SidecarLocation }): Promise<void> {
-    const newConfig = this.plugin.store.getStorageConfigResolved();
-    if (
-      oldConfig.format === newConfig.format &&
-      oldConfig.baseDir === newConfig.baseDir &&
-      oldConfig.sidecarLocation === newConfig.sidecarLocation
-    ) {
-      return;
-    }
-    await this.migrateAndNotify();
   }
 
   private async migrateAndNotify(): Promise<void> {

@@ -18,7 +18,7 @@ Use this checklist before submitting Book Note to `obsidianmd/obsidian-releases`
 - [ ] Confirm there is no `eval()` or `new Function()`.
 - [ ] Confirm there are no external network requests.
 - [ ] Confirm all vault writes go through Obsidian `app.vault` or `app.vault.adapter`.
-- [ ] Confirm annotations are stored under a configurable vault-relative directory (default `.obsidian-annotations/`), never outside the vault.
+- [ ] Confirm annotations are stored under a configurable vault-relative directory (default `booknote/`), never outside the vault.
 - [ ] Confirm original Markdown and PDF files are not modified during highlight or note creation.
 
 ## CSS and UI
