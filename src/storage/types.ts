@@ -35,6 +35,9 @@ export type AnnotationExportFormat = "summary" | "by-color" | "notes-only" | "re
 /** Sidecar storage format for per-document annotation data. */
 export type StorageFormat = "json" | "md";
 
+/** Where per-document annotation sidecars are stored. */
+export type SidecarLocation = "sameFolder" | "specifiedFolder";
+
 export interface TextAnchor {
   startOffset: number;
   endOffset: number;
@@ -183,6 +186,7 @@ export interface AnnotationPluginSettings {
   // --- 存储 ---
   storageFormat: StorageFormat;
   storagePath: string;
+  sidecarLocation: SidecarLocation;
   // --- 通用 ---
   showRibbonIcon: boolean;
   // --- EPUB 阅读 ---
@@ -209,6 +213,7 @@ export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
   // 存储
   storageFormat: "json",
   storagePath: ".obsidian-annotations",
+  sidecarLocation: "specifiedFolder",
   // 通用
   showRibbonIcon: true,
   // EPUB

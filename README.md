@@ -114,19 +114,30 @@ Configure under **Settings → Book Note**:
 
 ## Data storage
 
-All annotation data lives in sidecar files under a configurable vault-relative directory (default `<vault>/.obsidian-annotations/`):
+All annotation data lives in sidecar files. The **Sidecar location** setting (Settings → Storage) controls where they go:
+
+- **Specified folder** (default): sidecars collected under a configurable vault-relative directory (default `<vault>/.obsidian-annotations/`). Name = path segments joined by `-`, original filename + extension, then `.json`/`.md`.
+- **Next to source file**: each sidecar sits beside its source file as `<source>.annotations.json` / `<source>.annotations.md`.
+
+The sidecar index (which file maps to which sidecar) is stored inside the plugin's own `data.json` — there is no separate `index.json` file.
 
 - One sidecar file per annotated file; choose **JSON** (compact) or **Markdown** (human-readable) storage in Settings → Storage. In Markdown format, metadata and reading progress live in YAML frontmatter and each annotation becomes its own heading.
 - Stores highlights, notes, reading progress, plus legacy fields kept for backward compatibility.
 - **Your original documents are never touched** — delete a sidecar file to erase that file's annotations.
-- Change the storage folder or format in Settings → Storage; existing annotations are migrated automatically.
+- Change the storage location or format in Settings → Storage; existing annotations are migrated automatically.
 
 ```text
+# Specified folder mode (default):
 .obsidian-annotations/          # default folder (configurable)
-  index.json                   # index of all sidecars (basic info only)
-  papers-example.pdf.json      # PDF annotations (JSON format). Name = path segments joined by "-", original filename + extension, then .json/.md
+  papers-example.pdf.json      # PDF annotations (JSON format)
   papers-example.pdf.md        # PDF annotations (Markdown format, if enabled)
   books-novel.epub.json        # EPUB annotations (CFI anchors + reading progress)
+
+# Next to source file mode:
+books/novel.epub                # your source EPUB
+books/novel.epub.annotations.json   # its sidecar, next to the source
+papers/example.pdf              # your source PDF
+papers/example.pdf.annotations.md    # its sidecar, next to the source
 ```
 
 ### Deep links

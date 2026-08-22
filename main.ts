@@ -79,7 +79,13 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     this.store = new AnnotationStore(
       this.app,
       () => this.settings.annotationTags,
-      () => ({ baseDir: this.settings.storagePath, format: this.settings.storageFormat }),
+      () => ({
+        baseDir: this.settings.storagePath,
+        format: this.settings.storageFormat,
+        sidecarLocation: this.settings.sidecarLocation,
+      }),
+      () => this.loadData() as Promise<unknown>,
+      (data) => this.saveData(data),
     );
     await this.store.initialize();
 

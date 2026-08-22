@@ -7829,6 +7829,10 @@ var en = {
   "settings.storagePath.name": "Storage folder (vault-relative)",
   "settings.storagePath.desc": "Folder inside the vault for sidecar files. Leave empty for the default .obsidian-annotations directory. Only vault-relative paths are allowed.",
   "settings.storagePath.placeholder": "e.g. .obsidian-annotations",
+  "settings.sidecarLocation.name": "Sidecar location",
+  "settings.sidecarLocation.desc": "Where annotation sidecars are stored. 'Next to source' keeps each sidecar beside its source file; 'Specified folder' collects them under the storage folder above.",
+  "settings.sidecarLocation.specifiedFolder": "Specified folder",
+  "settings.sidecarLocation.sameFolder": "Next to source file",
   "settings.storage.test": "Test write access",
   "settings.storage.migrate": "Migrate existing annotations",
   "settings.storage.migrate.desc": "Rewrite all existing annotation sidecars to the current folder and format. Runs automatically when you change the format or folder above.",
@@ -8071,6 +8075,10 @@ var zh = {
   "settings.storagePath.name": "\u5B58\u50A8\u76EE\u5F55\uFF08Vault \u76F8\u5BF9\u8DEF\u5F84\uFF09",
   "settings.storagePath.desc": "Vault \u5185\u7528\u4E8E\u5B58\u653E sidecar \u6587\u4EF6\u7684\u76EE\u5F55\uFF0C\u7559\u7A7A\u4F7F\u7528\u9ED8\u8BA4 .obsidian-annotations\u3002\u4EC5\u5141\u8BB8 Vault \u5185\u76F8\u5BF9\u8DEF\u5F84\u3002",
   "settings.storagePath.placeholder": "\u4F8B\u5982 .obsidian-annotations",
+  "settings.sidecarLocation.name": "\u6279\u6CE8\u6587\u4EF6\u4F4D\u7F6E",
+  "settings.sidecarLocation.desc": "\u6279\u6CE8 sidecar \u7684\u5B58\u653E\u4F4D\u7F6E\u3002\u300C\u4E0E\u6E90\u6587\u4EF6\u540C\u76EE\u5F55\u300D\u4F1A\u628A sidecar \u653E\u5728\u6E90\u6587\u4EF6\u65C1\u8FB9\uFF1B\u300C\u6307\u5B9A\u76EE\u5F55\u300D\u5219\u7EDF\u4E00\u6536\u96C6\u5230\u4E0A\u65B9\u7684\u5B58\u50A8\u76EE\u5F55\u4E0B\u3002",
+  "settings.sidecarLocation.specifiedFolder": "\u6307\u5B9A\u76EE\u5F55",
+  "settings.sidecarLocation.sameFolder": "\u4E0E\u6E90\u6587\u4EF6\u540C\u76EE\u5F55",
   "settings.storage.test": "\u6D4B\u8BD5\u5199\u5165",
   "settings.storage.migrate": "\u8FC1\u79FB\u5DF2\u6709\u6279\u6CE8",
   "settings.storage.migrate.desc": "\u5C06\u6240\u6709\u5DF2\u6709\u6279\u6CE8 sidecar \u91CD\u5199\u5230\u5F53\u524D\u76EE\u5F55\u4E0E\u683C\u5F0F\u3002\u4FEE\u6539\u4E0A\u65B9\u7684\u683C\u5F0F\u6216\u76EE\u5F55\u65F6\u4F1A\u81EA\u52A8\u6267\u884C\u3002",
@@ -8646,6 +8654,7 @@ var DEFAULT_SETTINGS = {
   // 存储
   storageFormat: "json",
   storagePath: ".obsidian-annotations",
+  sidecarLocation: "specifiedFolder",
   // 通用
   showRibbonIcon: true,
   // EPUB
@@ -9621,6 +9630,7 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
   constructor(plugin) {
     super(plugin.app, plugin);
     this.plugin = plugin;
+    this.storagePathSetting = null;
   }
   display() {
     const { containerEl } = this;
@@ -9672,7 +9682,18 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
         await this.migrateIfStorageChanged(oldConfig);
       });
     });
-    new import_obsidian5.Setting(containerEl).setName(t("settings.storagePath.name")).setDesc(t("settings.storagePath.desc")).addText((text) => {
+    new import_obsidian5.Setting(containerEl).setName(t("settings.sidecarLocation.name")).setDesc(t("settings.sidecarLocation.desc")).addDropdown((dropdown) => {
+      dropdown.addOption("specifiedFolder", t("settings.sidecarLocation.specifiedFolder"));
+      dropdown.addOption("sameFolder", t("settings.sidecarLocation.sameFolder"));
+      dropdown.setValue(this.plugin.settings.sidecarLocation).onChange(async (value) => {
+        const oldConfig = this.plugin.store.getStorageConfigResolved();
+        this.plugin.settings.sidecarLocation = value;
+        await this.plugin.saveSettings();
+        this.refreshStorageSettings();
+        await this.migrateIfStorageChanged(oldConfig);
+      });
+    });
+    this.storagePathSetting = new import_obsidian5.Setting(containerEl).setName(t("settings.storagePath.name")).setDesc(t("settings.storagePath.desc")).addText((text) => {
       text.setPlaceholder(t("settings.storagePath.placeholder")).setValue(this.plugin.settings.storagePath).onChange(async (value) => {
         const oldConfig = this.plugin.store.getStorageConfigResolved();
         this.plugin.settings.storagePath = value.trim();
@@ -9689,15 +9710,22 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
         }
       });
     });
+    this.refreshStorageSettings();
     new import_obsidian5.Setting(containerEl).setName(t("settings.storage.migrate")).setDesc(t("settings.storage.migrate.desc")).addButton((button) => {
       button.setButtonText(t("settings.storage.migrate")).onClick(() => {
         void this.migrateAndNotify();
       });
     });
   }
+  refreshStorageSettings() {
+    if (!this.storagePathSetting) {
+      return;
+    }
+    this.storagePathSetting.settingEl.toggleClass("book-note-hidden", this.plugin.settings.sidecarLocation === "sameFolder");
+  }
   async migrateIfStorageChanged(oldConfig) {
     const newConfig = this.plugin.store.getStorageConfigResolved();
-    if (oldConfig.format === newConfig.format && oldConfig.baseDir === newConfig.baseDir) {
+    if (oldConfig.format === newConfig.format && oldConfig.baseDir === newConfig.baseDir && oldConfig.sidecarLocation === newConfig.sidecarLocation) {
       return;
     }
     await this.migrateAndNotify();
@@ -9890,10 +9918,17 @@ var AnnotationStoreWriteError = class extends Error {
   }
 };
 var AnnotationStore = class {
-  constructor(app, getAnnotationTags = () => [], getStorageConfig = () => ({ baseDir: DEFAULT_STORE_DIR, format: "json" })) {
+  constructor(app, getAnnotationTags = () => [], getStorageConfig = () => ({
+    baseDir: DEFAULT_STORE_DIR,
+    format: "json",
+    sidecarLocation: "specifiedFolder"
+  }), loadData = async () => null, saveData = async () => {
+  }) {
     this.app = app;
     this.getAnnotationTags = getAnnotationTags;
     this.getStorageConfig = getStorageConfig;
+    this.loadData = loadData;
+    this.saveData = saveData;
     this.documents = /* @__PURE__ */ new Map();
     this.documentWrites = /* @__PURE__ */ new Map();
     this.indexWriteTail = Promise.resolve();
@@ -9904,21 +9939,25 @@ var AnnotationStore = class {
     return this.changeVersion;
   }
   getStorageConfigResolved() {
-    const cfg = this.getStorageConfig?.() ?? { baseDir: DEFAULT_STORE_DIR, format: "json" };
-    return { baseDir: resolveStoreDir(cfg.baseDir), format: cfg.format === "md" ? "md" : "json" };
+    const cfg = this.getStorageConfig?.() ?? { baseDir: DEFAULT_STORE_DIR, format: "json", sidecarLocation: "specifiedFolder" };
+    return {
+      baseDir: resolveStoreDir(cfg.baseDir),
+      format: cfg.format === "md" ? "md" : "json",
+      sidecarLocation: cfg.sidecarLocation === "sameFolder" ? "sameFolder" : "specifiedFolder"
+    };
   }
   getBaseDir() {
     return this.getStorageConfigResolved().baseDir;
   }
+  getSidecarLocation() {
+    return this.getStorageConfigResolved().sidecarLocation;
+  }
   getFormat() {
     return this.getStorageConfigResolved().format;
   }
-  getIndexPath() {
-    return (0, import_obsidian6.normalizePath)(`${this.getBaseDir()}/index.json`);
-  }
   async initialize() {
-    await this.ensureStoreDir();
-    this.index = await this.readJson(this.getIndexPath(), EMPTY_INDEX, { allowCorruptFallback: true });
+    const stored = await this.loadData();
+    this.index = stored && typeof stored === "object" && "files" in stored ? stored : EMPTY_INDEX;
   }
   getCachedDocument(filePath) {
     return this.documents.get(this.toCacheKey(filePath)) ?? null;
@@ -10237,8 +10276,8 @@ var AnnotationStore = class {
     return this.app.vault.create(targetPath, lines.join("\n"));
   }
   async testWriteAccess() {
-    await this.ensureStoreDir();
-    const testPath = (0, import_obsidian6.normalizePath)(`${this.getBaseDir()}/.write-test.json`);
+    const testDir = this.getSidecarLocation() === "sameFolder" ? "" : this.getBaseDir();
+    const testPath = (0, import_obsidian6.normalizePath)(`${testDir}/.write-test.json`);
     const payload = JSON.stringify({ ok: true, timestamp: (/* @__PURE__ */ new Date()).toISOString() }, null, 2);
     try {
       await this.app.vault.adapter.write(testPath, payload);
@@ -10261,17 +10300,22 @@ var AnnotationStore = class {
     return this.hashBytes(bytes);
   }
   /**
-   * Build a human-readable sidecar path from the source file path:
-   * `{baseDir}/{path-segments}-{filename}.{ext}.{sidecarExt}`
-   * e.g. `books/未命名.pdf` -> `.obsidian-annotations/books-未命名.pdf.json`
-   * Path separators are collapsed to "-", and the original extension is kept to
-   * avoid collisions between same-named files of different types.
+   * Build a sidecar path from the source file path.
+   *
+   * - specifiedFolder: `{baseDir}/{path-segments}-{filename}.{ext}.{sidecarExt}`
+   *   e.g. `books/未命名.pdf` -> `.obsidian-annotations/books-未命名.pdf.json`
+   * - sameFolder: `{dir}/{filename}.{ext}.annotations.{sidecarExt}`
+   *   e.g. `books/未命名.pdf` -> `books/未命名.pdf.annotations.json`
    */
   toSidecarPath(filePath) {
     const normalized = this.normalizeVaultPath(filePath);
+    const sidecarExt = this.sidecarExtension();
+    if (this.getSidecarLocation() === "sameFolder") {
+      return (0, import_obsidian6.normalizePath)(`${normalized}.annotations.${sidecarExt}`);
+    }
     const parts = normalized.split("/").filter((part) => part.length > 0);
     const safeName = parts.join("-");
-    return (0, import_obsidian6.normalizePath)(`${this.getBaseDir()}/${safeName}.${this.sidecarExtension()}`);
+    return (0, import_obsidian6.normalizePath)(`${this.getBaseDir()}/${safeName}.${sidecarExt}`);
   }
   sidecarExtension() {
     return this.getFormat() === "md" ? "md" : "json";
@@ -10324,6 +10368,9 @@ var AnnotationStore = class {
     };
   }
   async ensureStoreDir() {
+    if (this.getSidecarLocation() === "sameFolder") {
+      return;
+    }
     await this.ensureDir(this.getBaseDir());
   }
   async ensureDir(path) {
@@ -10341,8 +10388,7 @@ var AnnotationStore = class {
     }
   }
   async writeIndex(nextIndex = this.index) {
-    await this.ensureStoreDir();
-    await this.app.vault.adapter.write(this.getIndexPath(), JSON.stringify(nextIndex, null, 2));
+    await this.saveData(nextIndex);
   }
   verifyPersistedDocument(expected, persisted, sidecarPath) {
     const normalizedPersisted = this.normalizeDocument(persisted, expected.filePath);
@@ -15135,7 +15181,13 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
     this.store = new AnnotationStore(
       this.app,
       () => this.settings.annotationTags,
-      () => ({ baseDir: this.settings.storagePath, format: this.settings.storageFormat })
+      () => ({
+        baseDir: this.settings.storagePath,
+        format: this.settings.storageFormat,
+        sidecarLocation: this.settings.sidecarLocation
+      }),
+      () => this.loadData(),
+      (data) => this.saveData(data)
     );
     await this.store.initialize();
     this.registerView(ANNOTATION_SIDEBAR_VIEW, (leaf) => new AnnotationSidebarView(leaf, this));

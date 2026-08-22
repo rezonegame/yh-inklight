@@ -110,19 +110,30 @@ Obsidian 默认隐藏未知扩展名。要让 `.epub` 显示在文件树中：
 
 ## 数据存储
 
-所有批注数据存放在一个可由设置配置的 Vault 内相对目录（默认 `<vault>/.obsidian-annotations/`）的 sidecar 文件中：
+所有批注数据都放在 sidecar 文件中。「设置 → 存储」中的 **批注文件位置** 选项决定其存放位置：
+
+- **指定目录**（默认）：sidecar 统一收集到一个可由设置配置的 Vault 内相对目录（默认 `<vault>/.obsidian-annotations/`）。命名 = 路径段用 `-` 连接 + 原文件名及扩展名 + `.json`/`.md`。
+- **与源文件同目录**：每个 sidecar 紧跟在源文件旁边，命名为 `<源文件>.annotations.json` / `<源文件>.annotations.md`。
+
+sidecar 索引（哪个文件对应哪个 sidecar）存放在插件自身的 `data.json` 中，不再有独立的 `index.json` 文件。
 
 - 每个被批注的文件对应一个 sidecar 文件；可在「设置 → 存储」中选择 **JSON（紧凑）** 或 **Markdown（可读）** 存储格式。Markdown 格式下，元数据和阅读进度写入 YAML frontmatter，每条批注就是一个独立标题。
 - 包含：高亮、笔记、阅读进度，以及为兼容旧版保留的历史字段。
 - **原始文档零修改**，删除某个 sidecar 即可清除该文件的批注。
-- 在「设置 → 存储」中修改存储目录或格式时，已有批注会自动迁移。
+- 在「设置 → 存储」中修改存储位置或格式时，已有批注会自动迁移。
 
 ```text
+# 指定目录模式（默认）：
 .obsidian-annotations/          # 默认目录（可在设置中修改）
-  index.json                   # 全部 sidecar 的索引（仅基本信息）
-  papers-example.pdf.json      # PDF 批注（JSON 格式）。命名 = 路径段用"-"连接 + 原文件名及扩展名 + .json/.md
+  papers-example.pdf.json      # PDF 批注（JSON 格式）
   papers-example.pdf.md        # PDF 批注（Markdown 格式，若启用）
   books-novel.epub.json        # EPUB 批注（含 CFI 锚点和阅读进度）
+
+# 与源文件同目录模式：
+books/novel.epub                # 你的 EPUB 源文件
+books/novel.epub.annotations.json   # 它的 sidecar，紧跟源文件
+papers/example.pdf              # 你的 PDF 源文件
+papers/example.pdf.annotations.md    # 它的 sidecar，紧跟源文件
 ```
 
 ### 深链

@@ -30,6 +30,7 @@ import {
   PdfHighlightAnnotation,
   PdfReadingProgress,
   ReadingBookmark,
+  SidecarLocation,
   StorageFormat,
   TextAnchor,
 } from "./types";
@@ -82,6 +83,7 @@ export class AnnotationStoreWriteError extends Error {
 export interface StorageConfig {
   baseDir: string;
   format: StorageFormat;
+  sidecarLocation: SidecarLocation;
 }
 
 export class AnnotationStore {
@@ -94,7 +96,13 @@ export class AnnotationStore {
   constructor(
     private readonly app: App,
     private readonly getAnnotationTags: () => AnnotationTagDefinition[] = () => [],
-    private readonly getStorageConfig: () => StorageConfig = () => ({ baseDir: DEFAULT_STORE_DIR, format: "json" }),
+    private readonly getStorageConfig: () => StorageConfig = () => ({
+      baseDir: DEFAULT_STORE_DIR,
+      format: "json",
+      sidecarLocation: "specifiedFolder",
+    }),
+    private readonly loadData: () => Promise<unknown> = async () => null,
+    private readonly saveData: (data: unknown) => Promise<void> = async () => {},
   ) {}
 
   get version(): number {
@@ -102,25 +110,29 @@ export class AnnotationStore {
   }
 
   getStorageConfigResolved(): StorageConfig {
-    const cfg = this.getStorageConfig?.() ?? { baseDir: DEFAULT_STORE_DIR, format: "json" };
-    return { baseDir: resolveStoreDir(cfg.baseDir), format: cfg.format === "md" ? "md" : "json" };
+    const cfg = this.getStorageConfig?.() ?? { baseDir: DEFAULT_STORE_DIR, format: "json", sidecarLocation: "specifiedFolder" };
+    return {
+      baseDir: resolveStoreDir(cfg.baseDir),
+      format: cfg.format === "md" ? "md" : "json",
+      sidecarLocation: cfg.sidecarLocation === "sameFolder" ? "sameFolder" : "specifiedFolder",
+    };
   }
 
   private getBaseDir(): string {
     return this.getStorageConfigResolved().baseDir;
   }
 
+  private getSidecarLocation(): SidecarLocation {
+    return this.getStorageConfigResolved().sidecarLocation;
+  }
+
   private getFormat(): StorageFormat {
     return this.getStorageConfigResolved().format;
   }
 
-  private getIndexPath(): string {
-    return normalizePath(`${this.getBaseDir()}/index.json`);
-  }
-
   async initialize(): Promise<void> {
-    await this.ensureStoreDir();
-    this.index = await this.readJson<AnnotationIndex>(this.getIndexPath(), EMPTY_INDEX, { allowCorruptFallback: true });
+    const stored = await this.loadData();
+    this.index = stored && typeof stored === "object" && "files" in stored ? (stored as AnnotationIndex) : EMPTY_INDEX;
   }
 
   getCachedDocument(filePath: string): FileAnnotationDocument | null {
@@ -503,8 +515,8 @@ export class AnnotationStore {
   }
 
   async testWriteAccess(): Promise<string> {
-    await this.ensureStoreDir();
-    const testPath = normalizePath(`${this.getBaseDir()}/.write-test.json`);
+    const testDir = this.getSidecarLocation() === "sameFolder" ? "" : this.getBaseDir();
+    const testPath = normalizePath(`${testDir}/.write-test.json`);
     const payload = JSON.stringify({ ok: true, timestamp: new Date().toISOString() }, null, 2);
 
     try {
@@ -532,17 +544,22 @@ export class AnnotationStore {
   }
 
   /**
-   * Build a human-readable sidecar path from the source file path:
-   * `{baseDir}/{path-segments}-{filename}.{ext}.{sidecarExt}`
-   * e.g. `books/未命名.pdf` -> `.obsidian-annotations/books-未命名.pdf.json`
-   * Path separators are collapsed to "-", and the original extension is kept to
-   * avoid collisions between same-named files of different types.
+   * Build a sidecar path from the source file path.
+   *
+   * - specifiedFolder: `{baseDir}/{path-segments}-{filename}.{ext}.{sidecarExt}`
+   *   e.g. `books/未命名.pdf` -> `.obsidian-annotations/books-未命名.pdf.json`
+   * - sameFolder: `{dir}/{filename}.{ext}.annotations.{sidecarExt}`
+   *   e.g. `books/未命名.pdf` -> `books/未命名.pdf.annotations.json`
    */
   toSidecarPath(filePath: string): string {
     const normalized = this.normalizeVaultPath(filePath);
+    const sidecarExt = this.sidecarExtension();
+    if (this.getSidecarLocation() === "sameFolder") {
+      return normalizePath(`${normalized}.annotations.${sidecarExt}`);
+    }
     const parts = normalized.split("/").filter((part) => part.length > 0);
     const safeName = parts.join("-");
-    return normalizePath(`${this.getBaseDir()}/${safeName}.${this.sidecarExtension()}`);
+    return normalizePath(`${this.getBaseDir()}/${safeName}.${sidecarExt}`);
   }
 
   private sidecarExtension(): string {
@@ -600,6 +617,9 @@ export class AnnotationStore {
   }
 
   private async ensureStoreDir(): Promise<void> {
+    if (this.getSidecarLocation() === "sameFolder") {
+      return;
+    }
     await this.ensureDir(this.getBaseDir());
   }
 
@@ -619,8 +639,7 @@ export class AnnotationStore {
   }
 
   private async writeIndex(nextIndex: AnnotationIndex = this.index): Promise<void> {
-    await this.ensureStoreDir();
-    await this.app.vault.adapter.write(this.getIndexPath(), JSON.stringify(nextIndex, null, 2));
+    await this.saveData(nextIndex);
   }
 
   private verifyPersistedDocument(expected: FileAnnotationDocument, persisted: FileAnnotationDocument, sidecarPath: string): void {
