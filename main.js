@@ -9873,8 +9873,6 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
 // src/storage/annotationStore.ts
 var import_obsidian6 = require("obsidian");
 var DEFAULT_STORE_DIR = ".obsidian-annotations";
-var MAX_LEGACY_SIDECAR_NAME_LENGTH = 180;
-var MAX_COMPACT_SIDECAR_PREFIX_LENGTH = 96;
 var AnnotationStoreReadError = class extends Error {
   constructor(path, originalError) {
     super(`Failed to read annotation sidecar JSON: ${path}`);
@@ -10151,7 +10149,7 @@ var AnnotationStore = class {
       }
       try {
         const content = await this.app.vault.read(excerptFile);
-        const updated = content.split(oldPath).join(newPath).split(encodeURIComponent(oldPath)).join(encodeURIComponent(newPath));
+        const updated = content.split(oldPath).join(newPath);
         const newName = candidate.replace(oldBase.split(/[\\/]/).pop(), newBase.split(/[\\/]/).pop());
         const targetPath = (0, import_obsidian6.normalizePath)(`${newParent}/${newName}`);
         if (updated !== content) {
@@ -10262,27 +10260,21 @@ var AnnotationStore = class {
     const bytes = await this.app.vault.readBinary(file);
     return this.hashBytes(bytes);
   }
+  /**
+   * Build a human-readable sidecar path from the source file path:
+   * `{baseDir}/{path-segments}-{filename}.{ext}.{sidecarExt}`
+   * e.g. `books/未命名.pdf` -> `.obsidian-annotations/books-未命名.pdf.json`
+   * Path separators are collapsed to "-", and the original extension is kept to
+   * avoid collisions between same-named files of different types.
+   */
   toSidecarPath(filePath) {
-    const legacyPath = this.toLegacySidecarPath(filePath);
-    const legacyName = legacyPath.split("/").pop() ?? "";
-    if (legacyName.length <= MAX_LEGACY_SIDECAR_NAME_LENGTH) {
-      return legacyPath;
-    }
-    return this.toCompactSidecarPath(filePath);
+    const normalized = this.normalizeVaultPath(filePath);
+    const parts = normalized.split("/").filter((part) => part.length > 0);
+    const safeName = parts.join("-");
+    return (0, import_obsidian6.normalizePath)(`${this.getBaseDir()}/${safeName}.${this.sidecarExtension()}`);
   }
   sidecarExtension() {
     return this.getFormat() === "md" ? "md" : "json";
-  }
-  toLegacySidecarPath(filePath) {
-    const safeName = this.normalizeVaultPath(filePath).toLowerCase().split(/[\\/]/).map((part) => encodeURIComponent(part)).join("__");
-    return (0, import_obsidian6.normalizePath)(`${this.getBaseDir()}/${safeName}.${this.sidecarExtension()}`);
-  }
-  toCompactSidecarPath(filePath) {
-    const normalizedPath = this.normalizeVaultPath(filePath).toLowerCase();
-    const fileName = normalizedPath.split(/[\\/]/).pop() ?? "annotation";
-    const encodedName = encodeURIComponent(fileName).replace(/%/g, "_").replace(/[^a-z0-9._-]/g, "_");
-    const prefix = encodedName.slice(0, MAX_COMPACT_SIDECAR_PREFIX_LENGTH).replace(/[._-]+$/g, "") || "annotation";
-    return (0, import_obsidian6.normalizePath)(`${this.getBaseDir()}/${prefix}--${hashPath(normalizedPath)}.${this.sidecarExtension()}`);
   }
   async createEmptyDocument(file) {
     return {
@@ -10336,8 +10328,16 @@ var AnnotationStore = class {
   }
   async ensureDir(path) {
     const normalizedPath = (0, import_obsidian6.normalizePath)(path);
-    if (!await this.app.vault.adapter.exists(normalizedPath)) {
-      await this.app.vault.adapter.mkdir(normalizedPath);
+    if (await this.app.vault.adapter.exists(normalizedPath)) {
+      return;
+    }
+    const segments = normalizedPath.split("/").filter((segment) => segment.length > 0);
+    let current = "";
+    for (const segment of segments) {
+      current = current ? `${current}/${segment}` : segment;
+      if (!await this.app.vault.adapter.exists(current)) {
+        await this.app.vault.adapter.mkdir(current);
+      }
     }
   }
   async writeIndex(nextIndex = this.index) {
@@ -10481,14 +10481,6 @@ var AnnotationStore = class {
     return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
   }
 };
-function hashPath(value) {
-  let hash = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
-}
 function buildExportLines(title, sources, format, tags) {
   const entries = sources.flatMap((source) => collectExportEntries(source, tags));
   const lines = [`# ${title}`, "", `Exported: ${(/* @__PURE__ */ new Date()).toISOString()}`, ""];

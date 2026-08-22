@@ -35,8 +35,6 @@ import {
 } from "./types";
 
 const DEFAULT_STORE_DIR = ".obsidian-annotations";
-const MAX_LEGACY_SIDECAR_NAME_LENGTH = 180;
-const MAX_COMPACT_SIDECAR_PREFIX_LENGTH = 96;
 
 interface ExportDocumentSource {
   filePath: string;
@@ -400,9 +398,7 @@ export class AnnotationStore {
       try {
         const content = await this.app.vault.read(excerptFile);
         // 替换内容中所有旧路径引用（标题、wikilink、hidden anchor）
-        const updated = content
-          .split(oldPath).join(newPath)
-          .split(encodeURIComponent(oldPath)).join(encodeURIComponent(newPath));
+        const updated = content.split(oldPath).join(newPath);
         const newName = candidate.replace(oldBase.split(/[\\/]/).pop()!, newBase.split(/[\\/]/).pop()!);
         const targetPath = normalizePath(`${newParent}/${newName}`);
         if (updated !== content) {
@@ -535,35 +531,22 @@ export class AnnotationStore {
     return this.hashBytes(bytes);
   }
 
+  /**
+   * Build a human-readable sidecar path from the source file path:
+   * `{baseDir}/{path-segments}-{filename}.{ext}.{sidecarExt}`
+   * e.g. `books/未命名.pdf` -> `.obsidian-annotations/books-未命名.pdf.json`
+   * Path separators are collapsed to "-", and the original extension is kept to
+   * avoid collisions between same-named files of different types.
+   */
   toSidecarPath(filePath: string): string {
-    const legacyPath = this.toLegacySidecarPath(filePath);
-    const legacyName = legacyPath.split("/").pop() ?? "";
-    if (legacyName.length <= MAX_LEGACY_SIDECAR_NAME_LENGTH) {
-      return legacyPath;
-    }
-
-    return this.toCompactSidecarPath(filePath);
+    const normalized = this.normalizeVaultPath(filePath);
+    const parts = normalized.split("/").filter((part) => part.length > 0);
+    const safeName = parts.join("-");
+    return normalizePath(`${this.getBaseDir()}/${safeName}.${this.sidecarExtension()}`);
   }
 
   private sidecarExtension(): string {
     return this.getFormat() === "md" ? "md" : "json";
-  }
-
-  private toLegacySidecarPath(filePath: string): string {
-    const safeName = this.normalizeVaultPath(filePath)
-      .toLowerCase()
-      .split(/[\\/]/)
-      .map((part) => encodeURIComponent(part))
-      .join("__");
-    return normalizePath(`${this.getBaseDir()}/${safeName}.${this.sidecarExtension()}`);
-  }
-
-  private toCompactSidecarPath(filePath: string): string {
-    const normalizedPath = this.normalizeVaultPath(filePath).toLowerCase();
-    const fileName = normalizedPath.split(/[\\/]/).pop() ?? "annotation";
-    const encodedName = encodeURIComponent(fileName).replace(/%/g, "_").replace(/[^a-z0-9._-]/g, "_");
-    const prefix = encodedName.slice(0, MAX_COMPACT_SIDECAR_PREFIX_LENGTH).replace(/[._-]+$/g, "") || "annotation";
-    return normalizePath(`${this.getBaseDir()}/${prefix}--${hashPath(normalizedPath)}.${this.sidecarExtension()}`);
   }
 
   private async createEmptyDocument(file: TFile): Promise<FileAnnotationDocument> {
@@ -622,8 +605,16 @@ export class AnnotationStore {
 
   private async ensureDir(path: string): Promise<void> {
     const normalizedPath = normalizePath(path);
-    if (!(await this.app.vault.adapter.exists(normalizedPath))) {
-      await this.app.vault.adapter.mkdir(normalizedPath);
+    if (await this.app.vault.adapter.exists(normalizedPath)) {
+      return;
+    }
+    const segments = normalizedPath.split("/").filter((segment) => segment.length > 0);
+    let current = "";
+    for (const segment of segments) {
+      current = current ? `${current}/${segment}` : segment;
+      if (!(await this.app.vault.adapter.exists(current))) {
+        await this.app.vault.adapter.mkdir(current);
+      }
     }
   }
 
@@ -809,15 +800,6 @@ export class AnnotationStore {
       .map((byte) => byte.toString(16).padStart(2, "0"))
       .join("");
   }
-}
-
-function hashPath(value: string): string {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 function buildExportLines(

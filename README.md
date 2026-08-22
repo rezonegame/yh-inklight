@@ -124,9 +124,9 @@ All annotation data lives in sidecar files under a configurable vault-relative d
 ```text
 .obsidian-annotations/          # default folder (configurable)
   index.json                   # index of all sidecars (basic info only)
-  papers__example.pdf.json     # PDF annotations (JSON format)
-  papers__example.pdf.md       # PDF annotations (Markdown format, if enabled)
-  books__novel.epub.json       # EPUB annotations (CFI anchors + reading progress)
+  papers-example.pdf.json      # PDF annotations (JSON format). Name = path segments joined by "-", original filename + extension, then .json/.md
+  papers-example.pdf.md        # PDF annotations (Markdown format, if enabled)
+  books-novel.epub.json        # EPUB annotations (CFI anchors + reading progress)
 ```
 
 ### Deep links

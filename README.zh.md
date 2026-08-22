@@ -120,9 +120,9 @@ Obsidian 默认隐藏未知扩展名。要让 `.epub` 显示在文件树中：
 ```text
 .obsidian-annotations/          # 默认目录（可在设置中修改）
   index.json                   # 全部 sidecar 的索引（仅基本信息）
-  papers__example.pdf.json     # PDF 批注（JSON 格式）
-  papers__example.pdf.md       # PDF 批注（Markdown 格式，若启用）
-  books__novel.epub.json       # EPUB 批注（含 CFI 锚点和阅读进度）
+  papers-example.pdf.json      # PDF 批注（JSON 格式）。命名 = 路径段用"-"连接 + 原文件名及扩展名 + .json/.md
+  papers-example.pdf.md        # PDF 批注（Markdown 格式，若启用）
+  books-novel.epub.json        # EPUB 批注（含 CFI 锚点和阅读进度）
 ```
 
 ### 深链
