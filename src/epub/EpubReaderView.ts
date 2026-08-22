@@ -67,6 +67,9 @@ const CONTEXT_MENU_DISMISS_MS = 300;
 /** foliate iframe 内选区稳定后再同步，参考 weave 的 SelectionToolbar 同步节奏 */
 const SELECTION_SYNC_RETRY_DELAY_MS = 120;
 
+/** 滚动到章节边界后，需要再滑动多少距离才跨章（像素） */
+const SCROLL_OVERRUN_THRESHOLD = 40;
+
 // ---- 辅助类型 ----
 
 /** 阅读时间追踪器状态快照 */
@@ -191,6 +194,10 @@ private contextMenuEl: HTMLElement | null = null;
 	private scrolledNavigating = false;
 	/** 最近一次跨章导航方向，冷却期内阻止反方向触发（防止来回跳） */
 	private scrolledNavDirection: "next" | "prev" | null = null;
+	/** 滚动到底部后，用户继续向下滑动的累积距离 */
+	private scrollOverrunNext = 0;
+	/** 滚动到顶部后，用户继续向上滑动的累积距离 */
+	private scrollOverrunPrev = 0;
 
 	/** PC 端翻页模式：键盘翻页 / 滚轮翻页（互斥，默认键盘） */
 	private pcNavMode: "keyboard" | "wheel" = "wheel";
@@ -1556,14 +1563,13 @@ private contextMenuEl: HTMLElement | null = null;
 	/**
 	 * 监听 paginator 的 scroll/touchmove/wheel 事件，在滚动模式下驱动跨章翻页。
 	 *
-	 * 三路信号互补：
-	 * - scroll：scrollTop 变化时触发（用户滚动**到**边界）
-	 * - touchmove：触摸滑动时触发，即使 scrollTop 不变（用户**已在**边界继续滑）
-	 * - wheel：桌面端滚轮，即使 scrollTop 不变（用户**已在**边界继续滚）
+	 * 交互语义：滚动到章节边界后，不会立即跨章；用户需要在边界处再滑动一段距离，
+	 * 累积超过阈值后才触发 next/prev。这样可以避免正常滚到边界时意外跳章。
 	 *
-	 * 核心问题：scroll 事件只在 scrollTop 变化时触发。用户已在边界时继续滑动，
-	 * scrollTop 不变，无 scroll 事件，handler 不触发——用户必须反方向滑一下再滑
-	 * 回来才能翻页。touchmove/wheel 事件不依赖 scrollTop 变化，弥补此盲区。
+	 * 三路信号：
+	 * - scroll：仅用于在离开边界时清零 overrun，本身不触发跨章。
+	 * - wheel：桌面端滚轮，在边界处累积 deltaY，超过阈值后跨章。
+	 * - touchmove：触摸滑动，在边界处累积手指位移，超过阈值后跨章。
 	 *
 	 * foliate #scrollPrev 在 start > 0 时只章内滚动到 0，需第二次 prev() 才跨章。
 	 * handler 中用 async 两步调用处理此逻辑。
@@ -1573,11 +1579,13 @@ private contextMenuEl: HTMLElement | null = null;
 	private attachPaginatorScrollListener(): void {
 		if (!this.foliateView?.renderer) return;
 
-		// 清理旧监听
+		// 清理旧监听并复位 overrun 状态
 		if (this.paginatorScrollCleanup) {
 			this.paginatorScrollCleanup();
 			this.paginatorScrollCleanup = null;
 		}
+		this.scrollOverrunNext = 0;
+		this.scrollOverrunPrev = 0;
 
 		const renderer = this.foliateView.renderer as unknown as HTMLElement;
 
@@ -1622,6 +1630,8 @@ private contextMenuEl: HTMLElement | null = null;
 
 			this.scrolledNavigating = true;
 			this.scrolledNavDirection = direction;
+			this.scrollOverrunNext = 0;
+			this.scrollOverrunPrev = 0;
 
 			const fn = direction === "next" ? nextFn : prevFn;
 			void (async () => {
@@ -1639,30 +1649,50 @@ private contextMenuEl: HTMLElement | null = null;
 			})();
 		};
 
-		// 1. scroll 事件：scrollTop 变化时触发（滚动到边界）
+		/** 离开边界时清零 overrun */
+		const resetOverrunIfLeftBoundary = (bounds: { atBottom: boolean; atTop: boolean } | null) => {
+			if (!bounds) return;
+			if (!bounds.atBottom) this.scrollOverrunNext = 0;
+			if (!bounds.atTop) this.scrollOverrunPrev = 0;
+		};
+
+		// 1. scroll 事件：scrollTop 变化时触发，仅用于在离开边界时复位 overrun
 		const scrollHandler = () => {
 			if (this.currentFlowMode !== "scrolled") return;
 			if (this.scrolledNavigating) return;
-			const bounds = getBounds();
-			if (!bounds || (!bounds.atBottom && !bounds.atTop)) return;
-			if (bounds.atBottom) navigate("next");
-			else if (bounds.atTop) navigate("prev");
+			resetOverrunIfLeftBoundary(getBounds());
 		};
 
-		// 2. wheel 事件：桌面端滚轮，即使 scrollTop 不变也触发（已在边界）
+		// 2. wheel 事件：桌面端滚轮，在边界处累积 deltaY，超过阈值后跨章
 		const wheelHandler = (e: WheelEvent) => {
 			if (this.currentFlowMode !== "scrolled") return;
 			if (this.scrolledNavigating) return;
 			const bounds = getBounds();
-			if (!bounds || (!bounds.atBottom && !bounds.atTop)) return;
-			if (bounds.atBottom && e.deltaY > 0) navigate("next");
-			else if (bounds.atTop && e.deltaY < 0) navigate("prev");
+			if (!bounds || (!bounds.atBottom && !bounds.atTop)) {
+				this.scrollOverrunNext = 0;
+				this.scrollOverrunPrev = 0;
+				return;
+			}
+
+			if (bounds.atBottom && e.deltaY > 0) {
+				this.scrollOverrunNext += e.deltaY;
+				if (this.scrollOverrunNext >= SCROLL_OVERRUN_THRESHOLD) {
+					navigate("next");
+				}
+			} else if (bounds.atTop && e.deltaY < 0) {
+				this.scrollOverrunPrev += Math.abs(e.deltaY);
+				if (this.scrollOverrunPrev >= SCROLL_OVERRUN_THRESHOLD) {
+					navigate("prev");
+				}
+			} else {
+				resetOverrunIfLeftBoundary(bounds);
+			}
 		};
 
-		// 3. touchmove 事件：触摸滑动，即使 scrollTop 不变也触发（已在边界）
+		// 3. touchmove 事件：触摸滑动，在边界处累积手指位移，超过阈值后跨章
 		let touchStartY = 0;
+		let lastTouchY = 0;
 		let touchActive = false;
-		const TOUCH_THRESHOLD = 15;
 
 		const touchStartHandler = (e: TouchEvent) => {
 			if (e.touches.length !== 1) {
@@ -1670,6 +1700,7 @@ private contextMenuEl: HTMLElement | null = null;
 				return;
 			}
 			touchStartY = e.touches[0].clientY;
+			lastTouchY = touchStartY;
 			touchActive = true;
 		};
 		const touchMoveHandler = (e: TouchEvent) => {
@@ -1677,17 +1708,30 @@ private contextMenuEl: HTMLElement | null = null;
 			if (this.currentFlowMode !== "scrolled") return;
 			if (this.scrolledNavigating) return;
 			const bounds = getBounds();
-			if (!bounds || (!bounds.atBottom && !bounds.atTop)) return;
+			if (!bounds || (!bounds.atBottom && !bounds.atTop)) {
+				this.scrollOverrunNext = 0;
+				this.scrollOverrunPrev = 0;
+				return;
+			}
 
 			const currentY = e.touches[0].clientY;
-			const delta = touchStartY - currentY; // 正=手指上移=向下滚动=下一章
+			const delta = lastTouchY - currentY; // 正=手指上移=向下滚动=下一章
+			lastTouchY = currentY;
 
-			if (bounds.atBottom && delta > TOUCH_THRESHOLD) {
-				touchActive = false; // 防止同一次触摸重复触发
-				navigate("next");
-			} else if (bounds.atTop && delta < -TOUCH_THRESHOLD) {
-				touchActive = false;
-				navigate("prev");
+			if (bounds.atBottom && delta > 0) {
+				this.scrollOverrunNext += delta;
+				if (this.scrollOverrunNext >= SCROLL_OVERRUN_THRESHOLD) {
+					touchActive = false;
+					navigate("next");
+				}
+			} else if (bounds.atTop && delta < 0) {
+				this.scrollOverrunPrev += Math.abs(delta);
+				if (this.scrollOverrunPrev >= SCROLL_OVERRUN_THRESHOLD) {
+					touchActive = false;
+					navigate("prev");
+				}
+			} else {
+				resetOverrunIfLeftBoundary(bounds);
 			}
 		};
 

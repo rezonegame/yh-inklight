@@ -12672,6 +12672,7 @@ var READING_TIME_FLUSH_INTERVAL_MS = 6e4;
 var WHEEL_DEBOUNCE_MS = 400;
 var PROGRESS_SAVE_DEBOUNCE_MS = 2e3;
 var SELECTION_SYNC_RETRY_DELAY_MS = 120;
+var SCROLL_OVERRUN_THRESHOLD = 40;
 var EpubReaderView = class extends import_obsidian11.FileView {
   // ================================================================
   // 构造 & 生命周期
@@ -12722,6 +12723,10 @@ var EpubReaderView = class extends import_obsidian11.FileView {
     this.scrolledNavigating = false;
     /** 最近一次跨章导航方向，冷却期内阻止反方向触发（防止来回跳） */
     this.scrolledNavDirection = null;
+    /** 滚动到底部后，用户继续向下滑动的累积距离 */
+    this.scrollOverrunNext = 0;
+    /** 滚动到顶部后，用户继续向上滑动的累积距离 */
+    this.scrollOverrunPrev = 0;
     /** PC 端翻页模式：键盘翻页 / 滚轮翻页（互斥，默认键盘） */
     this.pcNavMode = "wheel";
     /** 移动端点按翻页开关（true=点按翻页，false=滑动翻页） */
@@ -13899,14 +13904,13 @@ var EpubReaderView = class extends import_obsidian11.FileView {
   /**
    * 监听 paginator 的 scroll/touchmove/wheel 事件，在滚动模式下驱动跨章翻页。
    *
-   * 三路信号互补：
-   * - scroll：scrollTop 变化时触发（用户滚动**到**边界）
-   * - touchmove：触摸滑动时触发，即使 scrollTop 不变（用户**已在**边界继续滑）
-   * - wheel：桌面端滚轮，即使 scrollTop 不变（用户**已在**边界继续滚）
+   * 交互语义：滚动到章节边界后，不会立即跨章；用户需要在边界处再滑动一段距离，
+   * 累积超过阈值后才触发 next/prev。这样可以避免正常滚到边界时意外跳章。
    *
-   * 核心问题：scroll 事件只在 scrollTop 变化时触发。用户已在边界时继续滑动，
-   * scrollTop 不变，无 scroll 事件，handler 不触发——用户必须反方向滑一下再滑
-   * 回来才能翻页。touchmove/wheel 事件不依赖 scrollTop 变化，弥补此盲区。
+   * 三路信号：
+   * - scroll：仅用于在离开边界时清零 overrun，本身不触发跨章。
+   * - wheel：桌面端滚轮，在边界处累积 deltaY，超过阈值后跨章。
+   * - touchmove：触摸滑动，在边界处累积手指位移，超过阈值后跨章。
    *
    * foliate #scrollPrev 在 start > 0 时只章内滚动到 0，需第二次 prev() 才跨章。
    * handler 中用 async 两步调用处理此逻辑。
@@ -13919,6 +13923,8 @@ var EpubReaderView = class extends import_obsidian11.FileView {
       this.paginatorScrollCleanup();
       this.paginatorScrollCleanup = null;
     }
+    this.scrollOverrunNext = 0;
+    this.scrollOverrunPrev = 0;
     const renderer = this.foliateView.renderer;
     const view = this.foliateView;
     const prevFn = view.prev ?? view.goLeft;
@@ -13949,6 +13955,8 @@ var EpubReaderView = class extends import_obsidian11.FileView {
       }
       this.scrolledNavigating = true;
       this.scrolledNavDirection = direction;
+      this.scrollOverrunNext = 0;
+      this.scrollOverrunPrev = 0;
       const fn = direction === "next" ? nextFn : prevFn;
       void (async () => {
         const sectionBefore = this.currentSectionIndex;
@@ -13962,31 +13970,49 @@ var EpubReaderView = class extends import_obsidian11.FileView {
         }, 300);
       })();
     };
+    const resetOverrunIfLeftBoundary = (bounds) => {
+      if (!bounds) return;
+      if (!bounds.atBottom) this.scrollOverrunNext = 0;
+      if (!bounds.atTop) this.scrollOverrunPrev = 0;
+    };
     const scrollHandler = () => {
       if (this.currentFlowMode !== "scrolled") return;
       if (this.scrolledNavigating) return;
-      const bounds = getBounds();
-      if (!bounds || !bounds.atBottom && !bounds.atTop) return;
-      if (bounds.atBottom) navigate("next");
-      else if (bounds.atTop) navigate("prev");
+      resetOverrunIfLeftBoundary(getBounds());
     };
     const wheelHandler = (e3) => {
       if (this.currentFlowMode !== "scrolled") return;
       if (this.scrolledNavigating) return;
       const bounds = getBounds();
-      if (!bounds || !bounds.atBottom && !bounds.atTop) return;
-      if (bounds.atBottom && e3.deltaY > 0) navigate("next");
-      else if (bounds.atTop && e3.deltaY < 0) navigate("prev");
+      if (!bounds || !bounds.atBottom && !bounds.atTop) {
+        this.scrollOverrunNext = 0;
+        this.scrollOverrunPrev = 0;
+        return;
+      }
+      if (bounds.atBottom && e3.deltaY > 0) {
+        this.scrollOverrunNext += e3.deltaY;
+        if (this.scrollOverrunNext >= SCROLL_OVERRUN_THRESHOLD) {
+          navigate("next");
+        }
+      } else if (bounds.atTop && e3.deltaY < 0) {
+        this.scrollOverrunPrev += Math.abs(e3.deltaY);
+        if (this.scrollOverrunPrev >= SCROLL_OVERRUN_THRESHOLD) {
+          navigate("prev");
+        }
+      } else {
+        resetOverrunIfLeftBoundary(bounds);
+      }
     };
     let touchStartY = 0;
+    let lastTouchY = 0;
     let touchActive = false;
-    const TOUCH_THRESHOLD = 15;
     const touchStartHandler = (e3) => {
       if (e3.touches.length !== 1) {
         touchActive = false;
         return;
       }
       touchStartY = e3.touches[0].clientY;
+      lastTouchY = touchStartY;
       touchActive = true;
     };
     const touchMoveHandler = (e3) => {
@@ -13994,15 +14020,28 @@ var EpubReaderView = class extends import_obsidian11.FileView {
       if (this.currentFlowMode !== "scrolled") return;
       if (this.scrolledNavigating) return;
       const bounds = getBounds();
-      if (!bounds || !bounds.atBottom && !bounds.atTop) return;
+      if (!bounds || !bounds.atBottom && !bounds.atTop) {
+        this.scrollOverrunNext = 0;
+        this.scrollOverrunPrev = 0;
+        return;
+      }
       const currentY = e3.touches[0].clientY;
-      const delta = touchStartY - currentY;
-      if (bounds.atBottom && delta > TOUCH_THRESHOLD) {
-        touchActive = false;
-        navigate("next");
-      } else if (bounds.atTop && delta < -TOUCH_THRESHOLD) {
-        touchActive = false;
-        navigate("prev");
+      const delta = lastTouchY - currentY;
+      lastTouchY = currentY;
+      if (bounds.atBottom && delta > 0) {
+        this.scrollOverrunNext += delta;
+        if (this.scrollOverrunNext >= SCROLL_OVERRUN_THRESHOLD) {
+          touchActive = false;
+          navigate("next");
+        }
+      } else if (bounds.atTop && delta < 0) {
+        this.scrollOverrunPrev += Math.abs(delta);
+        if (this.scrollOverrunPrev >= SCROLL_OVERRUN_THRESHOLD) {
+          touchActive = false;
+          navigate("prev");
+        }
+      } else {
+        resetOverrunIfLeftBoundary(bounds);
       }
     };
     renderer.addEventListener("scroll", scrollHandler);
