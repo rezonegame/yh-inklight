@@ -272,6 +272,15 @@ const en: Dict = {
   "sort.document": "Document order",
   "sort.newest": "Newest first",
   "sort.oldest": "Oldest first",
+
+  // Storage / export format headings
+  "storage.section.highlight": "Highlights",
+  "storage.section.note": "Notes",
+  "storage.backToSource": "Back to source",
+  "storage.noteLabel": "Note",
+  "storage.tagLabel": "Tag",
+  "storage.noNotesFound": "No notes found.",
+  "storage.notesOnlyHeading": "Notes",
 };
 
 const zh: Dict = {
@@ -535,6 +544,15 @@ const zh: Dict = {
   "sort.document": "文档顺序",
   "sort.newest": "最新优先",
   "sort.oldest": "最早优先",
+
+  // Storage / export format headings
+  "storage.section.highlight": "高亮",
+  "storage.section.note": "笔记",
+  "storage.backToSource": "返回原文",
+  "storage.noteLabel": "笔记",
+  "storage.tagLabel": "标签",
+  "storage.noNotesFound": "未找到笔记。",
+  "storage.notesOnlyHeading": "笔记",
 };
 
 const strings: Dict = isZh ? zh : en;

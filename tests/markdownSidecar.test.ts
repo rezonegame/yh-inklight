@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { serializeDocumentToMarkdown, parseMarkdownDocument } from "../src/storage/annotationStore";
+import { t } from "../src/i18n";
 import type { FileAnnotationDocument } from "../src/storage/types";
 
 function sampleDocument(): FileAnnotationDocument {
@@ -116,6 +117,22 @@ test("markdown sidecar: each annotation is rendered as a callout block", () => {
   // highlights(1)+comments(1)+pdfHighlights(1)+pdfComments(1)+epubHighlights(1)+epubComments(1) = 6
   const realCount = (md.match(/^> \[!book-note-(md|pdf|epub)\|[^\]]+\].* \^bn-/gm) ?? []).length;
   assert.equal(realCount, 6, "exactly six callout headers with block ids");
+});
+
+test("markdown sidecar: annotations are grouped under 高亮/笔记 with chapter/page subheadings", () => {
+  const doc = sampleDocument();
+  const md = serializeDocumentToMarkdown(doc);
+
+  assert.ok(md.includes(`# ${t("storage.section.highlight")}`), "highlights section must exist");
+  assert.ok(md.includes(`# ${t("storage.section.note")}`), "notes section must exist");
+
+  // EPUB chapter from sample document
+  assert.ok(md.includes("## Ch 1 <x>"), "epub highlight chapter subheading must exist");
+  assert.ok(md.includes("## Ch 2"), "epub note chapter subheading must exist");
+
+  // PDF page from sample document
+  assert.ok(md.includes("## p.3"), "pdf highlight page subheading must exist");
+  assert.ok(md.includes("## p.4"), "pdf note page subheading must exist");
 });
 
 test("markdown sidecar: full round-trip is lossless", () => {

@@ -952,19 +952,47 @@ function renderByColor(entries: ExportEntry[]): string[] {
 function renderNotesOnly(entries: ExportEntry[]): string[] {
   const notes = entries.filter((entry) => entry.kind === "note" && entry.content.trim());
   if (!notes.length) {
-    return ["No notes found.", ""];
+    return [t("storage.noNotesFound"), ""];
   }
-  return ["## Notes", "", ...notes.flatMap((entry) => renderAnnotationBlock(entry))];
+  return [`## ${t("storage.notesOnlyHeading")}`, "", ...notes.flatMap((entry) => renderAnnotationBlock(entry))];
 }
 
 function renderReadingNotes(entries: ExportEntry[]): string[] {
-  return [
-    "## Reading Notes",
-    "",
-    ...entries.flatMap((entry) => {
-      return [`### ${entrySource(entry)}`, "", ...renderAnnotationBlock(entry)];
-    }),
-  ];
+  const highlights = entries.filter((entry) => entry.kind === "highlight");
+  const notes = entries.filter((entry) => entry.kind === "note");
+  const lines: string[] = [];
+
+  function renderSection(title: string, sectionEntries: ExportEntry[]): void {
+    if (!sectionEntries.length) {
+      return;
+    }
+    lines.push(`## ${title}`);
+    lines.push("");
+
+    const groups = new Map<string | undefined, ExportEntry[]>();
+    for (const entry of sectionEntries) {
+      const heading = entryGroupHeading(entry);
+      if (!groups.has(heading)) {
+        groups.set(heading, []);
+      }
+      groups.get(heading)!.push(entry);
+    }
+
+    for (const [heading, groupEntries] of groups) {
+      if (heading) {
+        lines.push(`### ${heading}`);
+        lines.push("");
+      }
+      for (const entry of groupEntries) {
+        lines.push(...renderAnnotationBlock(entry));
+      }
+    }
+  }
+
+  renderSection(t("storage.section.highlight"), highlights);
+  renderSection(t("storage.section.note"), notes);
+
+  return lines;
 }
 
 function renderAnnotationBlock(entry: ExportEntry): string[] {
@@ -979,18 +1007,18 @@ function renderAnnotationBlock(entry: ExportEntry): string[] {
 
   if (entry.tagName) {
     lines.push(">");
-    lines.push(`> 标签：${entry.tagName}`);
+    lines.push(`> ${t("storage.tagLabel")}：${entry.tagName}`);
   }
 
   if (entry.content.trim()) {
     lines.push(">");
     for (const line of entry.content.split(/\r?\n/)) {
-      lines.push(`> Note: ${line}`);
+      lines.push(`> ${t("storage.noteLabel")}: ${line}`);
     }
   }
 
   lines.push(">");
-  lines.push(`> [返回原文](${createAnnotationUri(entry.sourcePath, entry.id)})`);
+  lines.push(`> [${t("storage.backToSource")}](${createAnnotationUri(entry.sourcePath, entry.id)})`);
   const anchor = hiddenAnchor(entry);
   if (anchor) {
     lines.push(anchor);
@@ -1029,10 +1057,21 @@ function entrySource(entry: ExportEntry): string {
   return entry.sourcePath;
 }
 
+function entryGroupHeading(entry: ExportEntry): string | undefined {
+  if (entry.pageNumber) {
+    return `p.${entry.pageNumber}`;
+  }
+  if (entry.mode === "epub" && entry.chapter?.trim()) {
+    return entry.chapter.trim();
+  }
+  return undefined;
+}
+
 // ===== Markdown sidecar storage =====
 // Document-level metadata (including reading progress) is stored in YAML
-// frontmatter. Each annotation is a level-1 heading; the machine-readable data
-// lives in a hidden span (data-book-note) so the file round-trips losslessly.
+// frontmatter. Annotations are grouped under # 高亮 / # 笔记 sections and
+// further under ## chapter/page subheadings. Machine-readable data lives in a
+// hidden span (data-book-note) so the file round-trips losslessly.
 
 const MD_ANNOTATION_ATTR = "data-book-note";
 
@@ -1201,6 +1240,29 @@ function sidecarReplies(
   return [];
 }
 
+function sidecarGroupHeading(
+  mode: "md" | "pdf" | "epub",
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): string | undefined {
+  if (mode === "pdf" && "pageNumber" in annotation.anchor && typeof annotation.anchor.pageNumber === "number") {
+    return `p.${annotation.anchor.pageNumber}`;
+  }
+  if (mode === "epub" && "chapter" in annotation.anchor && annotation.anchor.chapter?.trim()) {
+    return annotation.anchor.chapter.trim();
+  }
+  return undefined;
+}
+
+function sidecarSectionTitle(kind: SerializedAnnotation["kind"]): string {
+  return kind.endsWith("-highlight") ? t("storage.section.highlight") : t("storage.section.note");
+}
+
 export function serializeDocumentToMarkdown(document: FileAnnotationDocument): string {
   const meta: DocMeta = {
     filePath: document.filePath,
@@ -1280,13 +1342,13 @@ export function serializeDocumentToMarkdown(document: FileAnnotationDocument): s
 
     if (tagLabel) {
       lines.push(">");
-      lines.push(`> 标签：${tagLabel}`);
+      lines.push(`> ${t("storage.tagLabel")}：${tagLabel}`);
     }
 
     if (content.trim()) {
       lines.push(">");
       for (const line of content.split(/\r?\n/)) {
-        lines.push(`> Note: ${line}`);
+        lines.push(`> ${t("storage.noteLabel")}: ${line}`);
       }
     }
 
@@ -1303,29 +1365,64 @@ export function serializeDocumentToMarkdown(document: FileAnnotationDocument): s
     }
 
     lines.push(">");
-    lines.push(`> [返回原文](${createAnnotationUri(document.filePath, annotation.id)})`);
+    lines.push(`> [${t("storage.backToSource")}](${createAnnotationUri(document.filePath, annotation.id)})`);
     lines.push(`> <span style="display:none" ${MD_ANNOTATION_ATTR}="${escapeHtmlAttribute(JSON.stringify({ kind, value: annotation }))}"></span>`);
     lines.push("");
   };
 
-  for (const highlight of document.highlights) {
-    pushBlock("md", "md-highlight", highlight);
+  type SidecarItem = {
+    mode: "md" | "pdf" | "epub";
+    kind: SerializedAnnotation["kind"];
+    annotation:
+      | HighlightAnnotation
+      | CommentAnnotation
+      | PdfHighlightAnnotation
+      | PdfCommentAnnotation
+      | EpubHighlightAnnotation
+      | EpubCommentAnnotation;
+  };
+
+  const items: SidecarItem[] = [
+    ...document.highlights.map((a): SidecarItem => ({ mode: "md", kind: "md-highlight", annotation: a })),
+    ...document.comments.map((a): SidecarItem => ({ mode: "md", kind: "md-comment", annotation: a })),
+    ...document.pdfHighlights.map((a): SidecarItem => ({ mode: "pdf", kind: "pdf-highlight", annotation: a })),
+    ...document.pdfComments.map((a): SidecarItem => ({ mode: "pdf", kind: "pdf-comment", annotation: a })),
+    ...document.epubHighlights.map((a): SidecarItem => ({ mode: "epub", kind: "epub-highlight", annotation: a })),
+    ...document.epubComments.map((a): SidecarItem => ({ mode: "epub", kind: "epub-comment", annotation: a })),
+  ];
+
+  const highlights = items.filter((i) => i.kind.endsWith("-highlight"));
+  const notes = items.filter((i) => i.kind.endsWith("-comment"));
+
+  function renderSection(title: string, sectionItems: SidecarItem[]): void {
+    if (!sectionItems.length) {
+      return;
+    }
+    lines.push(`# ${title}`);
+    lines.push("");
+
+    const groups = new Map<string | undefined, SidecarItem[]>();
+    for (const item of sectionItems) {
+      const heading = sidecarGroupHeading(item.mode, item.annotation);
+      if (!groups.has(heading)) {
+        groups.set(heading, []);
+      }
+      groups.get(heading)!.push(item);
+    }
+
+    for (const [heading, groupItems] of groups) {
+      if (heading) {
+        lines.push(`## ${heading}`);
+        lines.push("");
+      }
+      for (const item of groupItems) {
+        pushBlock(item.mode, item.kind, item.annotation);
+      }
+    }
   }
-  for (const comment of document.comments) {
-    pushBlock("md", "md-comment", comment);
-  }
-  for (const highlight of document.pdfHighlights) {
-    pushBlock("pdf", "pdf-highlight", highlight);
-  }
-  for (const comment of document.pdfComments) {
-    pushBlock("pdf", "pdf-comment", comment);
-  }
-  for (const highlight of document.epubHighlights) {
-    pushBlock("epub", "epub-highlight", highlight);
-  }
-  for (const comment of document.epubComments) {
-    pushBlock("epub", "epub-comment", comment);
-  }
+
+  renderSection(t("storage.section.highlight"), highlights);
+  renderSection(t("storage.section.note"), notes);
 
   return lines.join("\n");
 }

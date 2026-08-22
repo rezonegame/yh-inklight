@@ -8004,7 +8004,15 @@ var en = {
   // Sort
   "sort.document": "Document order",
   "sort.newest": "Newest first",
-  "sort.oldest": "Oldest first"
+  "sort.oldest": "Oldest first",
+  // Storage / export format headings
+  "storage.section.highlight": "Highlights",
+  "storage.section.note": "Notes",
+  "storage.backToSource": "Back to source",
+  "storage.noteLabel": "Note",
+  "storage.tagLabel": "Tag",
+  "storage.noNotesFound": "No notes found.",
+  "storage.notesOnlyHeading": "Notes"
 };
 var zh = {
   // Commands
@@ -8246,7 +8254,15 @@ var zh = {
   // Sort
   "sort.document": "\u6587\u6863\u987A\u5E8F",
   "sort.newest": "\u6700\u65B0\u4F18\u5148",
-  "sort.oldest": "\u6700\u65E9\u4F18\u5148"
+  "sort.oldest": "\u6700\u65E9\u4F18\u5148",
+  // Storage / export format headings
+  "storage.section.highlight": "\u9AD8\u4EAE",
+  "storage.section.note": "\u7B14\u8BB0",
+  "storage.backToSource": "\u8FD4\u56DE\u539F\u6587",
+  "storage.noteLabel": "\u7B14\u8BB0",
+  "storage.tagLabel": "\u6807\u7B7E",
+  "storage.noNotesFound": "\u672A\u627E\u5230\u7B14\u8BB0\u3002",
+  "storage.notesOnlyHeading": "\u7B14\u8BB0"
 };
 var strings = isZh ? zh : en;
 function t(key, params) {
@@ -10619,18 +10635,41 @@ function renderByColor(entries) {
 function renderNotesOnly(entries) {
   const notes = entries.filter((entry) => entry.kind === "note" && entry.content.trim());
   if (!notes.length) {
-    return ["No notes found.", ""];
+    return [t("storage.noNotesFound"), ""];
   }
-  return ["## Notes", "", ...notes.flatMap((entry) => renderAnnotationBlock(entry))];
+  return [`## ${t("storage.notesOnlyHeading")}`, "", ...notes.flatMap((entry) => renderAnnotationBlock(entry))];
 }
 function renderReadingNotes(entries) {
-  return [
-    "## Reading Notes",
-    "",
-    ...entries.flatMap((entry) => {
-      return [`### ${entrySource(entry)}`, "", ...renderAnnotationBlock(entry)];
-    })
-  ];
+  const highlights = entries.filter((entry) => entry.kind === "highlight");
+  const notes = entries.filter((entry) => entry.kind === "note");
+  const lines = [];
+  function renderSection(title, sectionEntries) {
+    if (!sectionEntries.length) {
+      return;
+    }
+    lines.push(`## ${title}`);
+    lines.push("");
+    const groups = /* @__PURE__ */ new Map();
+    for (const entry of sectionEntries) {
+      const heading = entryGroupHeading(entry);
+      if (!groups.has(heading)) {
+        groups.set(heading, []);
+      }
+      groups.get(heading).push(entry);
+    }
+    for (const [heading, groupEntries] of groups) {
+      if (heading) {
+        lines.push(`### ${heading}`);
+        lines.push("");
+      }
+      for (const entry of groupEntries) {
+        lines.push(...renderAnnotationBlock(entry));
+      }
+    }
+  }
+  renderSection(t("storage.section.highlight"), highlights);
+  renderSection(t("storage.section.note"), notes);
+  return lines;
 }
 function renderAnnotationBlock(entry) {
   const blockId = `${entry.mode}-${entry.id}`;
@@ -10642,16 +10681,16 @@ function renderAnnotationBlock(entry) {
   }
   if (entry.tagName) {
     lines.push(">");
-    lines.push(`> \u6807\u7B7E\uFF1A${entry.tagName}`);
+    lines.push(`> ${t("storage.tagLabel")}\uFF1A${entry.tagName}`);
   }
   if (entry.content.trim()) {
     lines.push(">");
     for (const line of entry.content.split(/\r?\n/)) {
-      lines.push(`> Note: ${line}`);
+      lines.push(`> ${t("storage.noteLabel")}: ${line}`);
     }
   }
   lines.push(">");
-  lines.push(`> [\u8FD4\u56DE\u539F\u6587](${createAnnotationUri(entry.sourcePath, entry.id)})`);
+  lines.push(`> [${t("storage.backToSource")}](${createAnnotationUri(entry.sourcePath, entry.id)})`);
   const anchor = hiddenAnchor(entry);
   if (anchor) {
     lines.push(anchor);
@@ -10680,6 +10719,15 @@ function entrySource(entry) {
     return `${entry.sourcePath} \xB7 ${entry.chapter.trim()}`;
   }
   return entry.sourcePath;
+}
+function entryGroupHeading(entry) {
+  if (entry.pageNumber) {
+    return `p.${entry.pageNumber}`;
+  }
+  if (entry.mode === "epub" && entry.chapter?.trim()) {
+    return entry.chapter.trim();
+  }
+  return void 0;
 }
 var MD_ANNOTATION_ATTR = "data-book-note";
 function emptyDocMeta() {
@@ -10746,6 +10794,15 @@ function sidecarReplies(kind, annotation) {
   }
   return [];
 }
+function sidecarGroupHeading(mode, annotation) {
+  if (mode === "pdf" && "pageNumber" in annotation.anchor && typeof annotation.anchor.pageNumber === "number") {
+    return `p.${annotation.anchor.pageNumber}`;
+  }
+  if (mode === "epub" && "chapter" in annotation.anchor && annotation.anchor.chapter?.trim()) {
+    return annotation.anchor.chapter.trim();
+  }
+  return void 0;
+}
 function serializeDocumentToMarkdown(document2) {
   const meta = {
     filePath: document2.filePath,
@@ -10811,12 +10868,12 @@ function serializeDocumentToMarkdown(document2) {
     }
     if (tagLabel) {
       lines.push(">");
-      lines.push(`> \u6807\u7B7E\uFF1A${tagLabel}`);
+      lines.push(`> ${t("storage.tagLabel")}\uFF1A${tagLabel}`);
     }
     if (content.trim()) {
       lines.push(">");
       for (const line of content.split(/\r?\n/)) {
-        lines.push(`> Note: ${line}`);
+        lines.push(`> ${t("storage.noteLabel")}: ${line}`);
       }
     }
     if (replies.length) {
@@ -10830,28 +10887,46 @@ function serializeDocumentToMarkdown(document2) {
       lines.push("> resolved");
     }
     lines.push(">");
-    lines.push(`> [\u8FD4\u56DE\u539F\u6587](${createAnnotationUri(document2.filePath, annotation.id)})`);
+    lines.push(`> [${t("storage.backToSource")}](${createAnnotationUri(document2.filePath, annotation.id)})`);
     lines.push(`> <span style="display:none" ${MD_ANNOTATION_ATTR}="${escapeHtmlAttribute(JSON.stringify({ kind, value: annotation }))}"></span>`);
     lines.push("");
   };
-  for (const highlight of document2.highlights) {
-    pushBlock("md", "md-highlight", highlight);
+  const items = [
+    ...document2.highlights.map((a3) => ({ mode: "md", kind: "md-highlight", annotation: a3 })),
+    ...document2.comments.map((a3) => ({ mode: "md", kind: "md-comment", annotation: a3 })),
+    ...document2.pdfHighlights.map((a3) => ({ mode: "pdf", kind: "pdf-highlight", annotation: a3 })),
+    ...document2.pdfComments.map((a3) => ({ mode: "pdf", kind: "pdf-comment", annotation: a3 })),
+    ...document2.epubHighlights.map((a3) => ({ mode: "epub", kind: "epub-highlight", annotation: a3 })),
+    ...document2.epubComments.map((a3) => ({ mode: "epub", kind: "epub-comment", annotation: a3 }))
+  ];
+  const highlights = items.filter((i3) => i3.kind.endsWith("-highlight"));
+  const notes = items.filter((i3) => i3.kind.endsWith("-comment"));
+  function renderSection(title, sectionItems) {
+    if (!sectionItems.length) {
+      return;
+    }
+    lines.push(`# ${title}`);
+    lines.push("");
+    const groups = /* @__PURE__ */ new Map();
+    for (const item of sectionItems) {
+      const heading = sidecarGroupHeading(item.mode, item.annotation);
+      if (!groups.has(heading)) {
+        groups.set(heading, []);
+      }
+      groups.get(heading).push(item);
+    }
+    for (const [heading, groupItems] of groups) {
+      if (heading) {
+        lines.push(`## ${heading}`);
+        lines.push("");
+      }
+      for (const item of groupItems) {
+        pushBlock(item.mode, item.kind, item.annotation);
+      }
+    }
   }
-  for (const comment of document2.comments) {
-    pushBlock("md", "md-comment", comment);
-  }
-  for (const highlight of document2.pdfHighlights) {
-    pushBlock("pdf", "pdf-highlight", highlight);
-  }
-  for (const comment of document2.pdfComments) {
-    pushBlock("pdf", "pdf-comment", comment);
-  }
-  for (const highlight of document2.epubHighlights) {
-    pushBlock("epub", "epub-highlight", highlight);
-  }
-  for (const comment of document2.epubComments) {
-    pushBlock("epub", "epub-comment", comment);
-  }
+  renderSection(t("storage.section.highlight"), highlights);
+  renderSection(t("storage.section.note"), notes);
   return lines.join("\n");
 }
 function parseMarkdownDocument(raw, path) {
