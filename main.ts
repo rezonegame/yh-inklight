@@ -188,8 +188,8 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     this.popover?.destroy();
     this.ribbonIconEl?.remove();
     this.ribbonIconEl = null;
-    this.app.workspace.detachLeavesOfType(ANNOTATION_SIDEBAR_VIEW);
-    this.app.workspace.detachLeavesOfType(EPUB_BOOKSHELF_VIEW_TYPE);
+    // 注意：onunload 中不要 detachLeavesOfType。Obsidian 会自动清理插件视图；
+    // 手动 detach 会把用户移动过的 leaf 重置到默认位置，并在下次加载时丢失布局。
   }
 
   async loadSettings(): Promise<void> {

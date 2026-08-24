@@ -1589,15 +1589,16 @@ private contextMenuEl: HTMLElement | null = null;
 
 		const renderer = this.foliateView.renderer as unknown as HTMLElement;
 
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const view = this.foliateView as any;
-		const prevFn = view.prev ?? view.goLeft;
-		const nextFn = view.next ?? view.goRight;
+		/** foliate renderer 在滚动模式下暴露的边界属性 */
+		interface FoliateRendererBounds {
+			start: number;
+			end: number;
+			viewSize: number;
+		}
 
 		/** 读取当前边界状态 */
-		const getBounds = () => {
-			// eslint-disable-next-line @typescript-eslint/no-explicit-any
-			const r = this.foliateView?.renderer as any;
+		const getBounds = (): { atBottom: boolean; atTop: boolean; maxIndex: number } | null => {
+			const r = this.foliateView?.renderer as unknown as FoliateRendererBounds | undefined;
 			if (!r || typeof r.start !== "number" || typeof r.end !== "number" || typeof r.viewSize !== "number")
 				return null;
 			return {
@@ -1617,23 +1618,28 @@ private contextMenuEl: HTMLElement | null = null;
 			const bounds = getBounds();
 			if (!bounds) return;
 
+			const view = this.foliateView;
+			if (!view) return;
+
 			// 方向冷却：刚从反方向翻过来时，忽略此方向
 			if (direction === "next") {
 				if (!bounds.atBottom || this.currentSectionIndex >= bounds.maxIndex) return;
 				if (this.scrolledNavDirection === "prev") return;
-				if (typeof nextFn !== "function") return;
 			} else {
 				if (!bounds.atTop || this.currentSectionIndex <= 0) return;
 				if (this.scrolledNavDirection === "next") return;
-				if (typeof prevFn !== "function") return;
 			}
+
+			const fn = direction === "next"
+				? (view.next ?? view.goRight)
+				: (view.prev ?? view.goLeft);
+			if (typeof fn !== "function") return;
 
 			this.scrolledNavigating = true;
 			this.scrolledNavDirection = direction;
 			this.scrollOverrunNext = 0;
 			this.scrollOverrunPrev = 0;
 
-			const fn = direction === "next" ? nextFn : prevFn;
 			void (async () => {
 				const sectionBefore = this.currentSectionIndex;
 				await fn.call(view);
@@ -2412,11 +2418,11 @@ private contextMenuEl: HTMLElement | null = null;
 				highlight.setAttribute("y", String(y));
 				highlight.setAttribute("width", String(width));
 				highlight.setAttribute("height", String(height));
-				highlight.setAttribute("rx", "2");
-				highlight.setAttribute("fill", rgba);
-				highlight.setAttribute("style", "mix-blend-mode:multiply;pointer-events:none");
-				group.appendChild(highlight);
-				continue;
+			highlight.setAttribute("rx", "2");
+			highlight.setAttribute("fill", rgba);
+			highlight.setCssProps({ mixBlendMode: "multiply", pointerEvents: "none" });
+			group.appendChild(highlight);
+			continue;
 			}
 
 			const line = activeDocument.createElementNS(svgNS, "line");
@@ -2430,7 +2436,7 @@ private contextMenuEl: HTMLElement | null = null;
 			if (style === "wavy") {
 				line.setAttribute("stroke-dasharray", "2 2");
 			}
-			line.setAttribute("style", "pointer-events:none");
+			line.setCssProps({ pointerEvents: "none" });
 			group.appendChild(line);
 		}
 
@@ -2661,16 +2667,14 @@ private contextMenuEl: HTMLElement | null = null;
 				resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-chapter", text: currentLabel });
 			}
 			const btn = resultsEl.createEl("button", { cls: "book-note-epub-toolbar-search-hit", attr: { type: "button" } });
-			btn.innerHTML = `${this.escapeHtml(h.excerpt.pre)}<strong>${this.escapeHtml(h.excerpt.match)}</strong>${this.escapeHtml(h.excerpt.post)}`;
+			btn.createSpan({ text: h.excerpt.pre });
+			btn.createEl("strong", { text: h.excerpt.match });
+			btn.createSpan({ text: h.excerpt.post });
 			btn.addEventListener("click", () => {
 				if (this.foliateView) {
 					void this.foliateView.goTo(h.cfi);
 				}
 			});
 		}
-	}
-
-	private escapeHtml(text: string): string {
-		return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 	}
 }

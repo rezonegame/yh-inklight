@@ -7758,7 +7758,7 @@ __export(main_exports, {
   default: () => OverlayAnnotationsPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian14 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 
 // src/i18n/index.ts
 var import_obsidian = require("obsidian");
@@ -8473,6 +8473,9 @@ function normalizeLineEndings(content) {
   return content.replace(/\r\n/g, "\n");
 }
 
+// src/editor/selectionToolbar.ts
+var import_obsidian2 = require("obsidian");
+
 // src/tags/tagDomain.ts
 var MAX_ENABLED_ANNOTATION_TAGS = 5;
 var MAX_ANNOTATION_TAG_NAME_LENGTH = 20;
@@ -8758,14 +8761,14 @@ var SelectionToolbar = class {
       button.addEventListener("click", () => this.options.onHighlight(color));
     }
     this.element.createDiv({ cls: "book-note-toolbar-sep" });
-    const commentButton = this.iconButton(t("common.addNote"), NOTE_ICON);
+    const commentButton = this.iconButton(t("common.addNote"), "message-square");
     commentButton.addEventListener("click", () => this.options.onComment());
-    const copyButton = this.iconButton(t("common.copy"), COPY_ICON);
+    const copyButton = this.iconButton(t("common.copy"), "copy");
     copyButton.addEventListener("click", () => this.options.onCopy());
-    const sidebarButton = this.iconButton(t("common.openOverview"), OVERVIEW_ICON);
+    const sidebarButton = this.iconButton(t("common.openOverview"), "list");
     sidebarButton.addEventListener("click", () => this.options.onOpenSidebar());
   }
-  iconButton(label, svg) {
+  iconButton(label, iconId) {
     const button = this.element.createEl("button", {
       cls: "book-note-toolbar-action",
       attr: {
@@ -8774,7 +8777,7 @@ var SelectionToolbar = class {
         title: label
       }
     });
-    button.innerHTML = svg;
+    (0, import_obsidian2.setIcon)(button, iconId);
     return button;
   }
 };
@@ -8787,39 +8790,9 @@ function isSelectionInsideWorkspace(range) {
     container.closest(".workspace") || container.closest(".callout-content") || container.closest(".markdown-preview-view")
   );
 }
-var NOTE_ICON = `
-  <svg width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5
-      a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-  </svg>
-`;
-var COPY_ICON = `
-  <svg width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round">
-    <rect x="9" y="9" width="13" height="13"
-      rx="2" ry="2"/>
-    <path d="M5 15H4a2 2 0 0 1-2-2V4
-      a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-  </svg>
-`;
-var OVERVIEW_ICON = `
-  <svg width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round">
-    <line x1="8" y1="6" x2="21" y2="6"/>
-    <line x1="8" y1="12" x2="21" y2="12"/>
-    <line x1="8" y1="18" x2="21" y2="18"/>
-    <line x1="3" y1="6" x2="3.01" y2="6"/>
-    <line x1="3" y1="12" x2="3.01" y2="12"/>
-    <line x1="3" y1="18" x2="3.01" y2="18"/>
-  </svg>
-`;
 
 // src/pdf/pdfAnnotationLayer.ts
-var import_obsidian2 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 
 // src/pdf/textLayerAnchor.ts
 function textRangeFromSelection(pageEl, range) {
@@ -8915,7 +8888,7 @@ var PdfAnnotationLayer = class {
   async createHighlight(color) {
     const snapshot = this.resolveSelection();
     if (!snapshot) {
-      new import_obsidian2.Notice(t("pdf.selectTextFirst"));
+      new import_obsidian3.Notice(t("pdf.selectTextFirst"));
       return true;
     }
     await this.options.addHighlight(snapshot.file, {
@@ -8931,7 +8904,7 @@ var PdfAnnotationLayer = class {
   async createComment(color, content, author, title = "", tagId, tagLabelSnapshot) {
     const snapshot = this.resolveSelection();
     if (!snapshot) {
-      new import_obsidian2.Notice(t("pdf.selectTextFirst"));
+      new import_obsidian3.Notice(t("pdf.selectTextFirst"));
       return true;
     }
     const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -9235,7 +9208,7 @@ var PdfAnnotationLayer = class {
     const header = this.popover.createDiv({ cls: "book-note-popover-header" });
     header.createSpan({ cls: "book-note-popover-title", text: `t("pdf.popoverTitle", { page: annotation.anchor.pageNumber })` });
     const close = header.createEl("button", { cls: "book-note-icon-button", attr: { type: "button", title: t("common.close") } });
-    (0, import_obsidian2.setIcon)(close, "x");
+    (0, import_obsidian3.setIcon)(close, "x");
     close.addEventListener("click", () => this.hidePopover());
     const card = this.popover.createDiv({
       cls: "book-note-popover-card",
@@ -9244,7 +9217,7 @@ var PdfAnnotationLayer = class {
     card.createDiv({ cls: "book-note-popover-quote", text: annotation.anchor.selectedText });
     if ("content" in annotation && annotation.content) {
       const body = card.createDiv({ cls: "book-note-popover-body" });
-      import_obsidian2.MarkdownRenderer.render(this.options.app, annotation.content, body, sourcePath, this.options.component);
+      import_obsidian3.MarkdownRenderer.render(this.options.app, annotation.content, body, sourcePath, this.options.component);
     }
     const width = Math.min(320, window.innerWidth - 24);
     this.popover.style.width = `${width}px`;
@@ -9302,7 +9275,7 @@ function pdfHighlightBackground(color) {
 }
 
 // src/pdf/pdfViewerAdapter.ts
-var import_obsidian3 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 var PDF_PAGE_SELECTOR = ".pdf-page, .page[data-page-number], .page";
 var PDF_VIEWER_SELECTOR2 = ".pdf-container, .pdf-viewer, .pdf-embed, .workspace-leaf-content[data-type='pdf']";
 var PdfViewerAdapter = class {
@@ -9312,7 +9285,7 @@ var PdfViewerAdapter = class {
   }
   getContext() {
     const file = this.app.workspace.getActiveFile();
-    if (!(file instanceof import_obsidian3.TFile) || file.extension.toLowerCase() !== "pdf") {
+    if (!(file instanceof import_obsidian4.TFile) || file.extension.toLowerCase() !== "pdf") {
       return null;
     }
     const activeView = this.app.workspace.activeLeaf?.view;
@@ -9545,7 +9518,7 @@ var PdfViewerAdapter = class {
 };
 
 // src/links/annotationLinkService.ts
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/links/annotationLink.ts
 function createAnnotationUri(filePath, annotationId) {
@@ -9574,7 +9547,7 @@ var AnnotationLinkService = class {
   }
   async open(params) {
     if (!params.file || !params.id) {
-      new import_obsidian4.Notice(t("notice.invalidLink"));
+      new import_obsidian5.Notice(t("notice.invalidLink"));
       return false;
     }
     let target = await this.store.findAnnotationTarget(params.file, params.id);
@@ -9583,19 +9556,19 @@ var AnnotationLinkService = class {
       if (candidates.length === 1) {
         target = candidates[0];
       } else if (candidates.length > 1) {
-        new import_obsidian4.Notice(t("notice.multipleSameId"));
+        new import_obsidian5.Notice(t("notice.multipleSameId"));
         return false;
       }
     }
     if (!target) {
       const file = this.app.vault.getAbstractFileByPath(params.file);
-      if (file instanceof import_obsidian4.TFile) {
+      if (file instanceof import_obsidian5.TFile) {
         const leaf = this.app.workspace.getLeaf("tab");
         await leaf.openFile(file);
         this.app.workspace.revealLeaf(leaf);
-        new import_obsidian4.Notice(t("notice.annotationGone"));
+        new import_obsidian5.Notice(t("notice.annotationGone"));
       } else {
-        new import_obsidian4.Notice(t("notice.sourceFileMissing"));
+        new import_obsidian5.Notice(t("notice.sourceFileMissing"));
       }
       return false;
     }
@@ -9603,23 +9576,23 @@ var AnnotationLinkService = class {
   }
   async openLegacyEpub(filePath, cfi) {
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (!(file instanceof import_obsidian4.TFile)) {
-      new import_obsidian4.Notice(t("notice.epubSourceMissing"));
+    if (!(file instanceof import_obsidian5.TFile)) {
+      new import_obsidian5.Notice(t("notice.epubSourceMissing"));
       return false;
     }
     return this.navigator.openEpub(file, { cfiRange: cfi, selectedText: "", chapter: "" }, "");
   }
   async openTarget(target) {
     const file = this.app.vault.getAbstractFileByPath(target.filePath);
-    if (!(file instanceof import_obsidian4.TFile)) {
-      new import_obsidian4.Notice(t("notice.sourceFileMissing"));
+    if (!(file instanceof import_obsidian5.TFile)) {
+      new import_obsidian5.Notice(t("notice.sourceFileMissing"));
       return false;
     }
     if (target.mode === "md") {
       const source = await this.app.vault.cachedRead(file);
       const resolved = resolveTextAnchor(source, target.anchor);
       if (resolved.orphaned) {
-        new import_obsidian4.Notice(t("notice.originalChanged"));
+        new import_obsidian5.Notice(t("notice.originalChanged"));
         return false;
       }
       return this.navigator.openMarkdown(file, resolved.anchor, target.id);
@@ -9632,8 +9605,8 @@ var AnnotationLinkService = class {
 };
 
 // src/settings/settingsTab.ts
-var import_obsidian5 = require("obsidian");
-var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
+var import_obsidian6 = require("obsidian");
+var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
   constructor(plugin) {
     super(plugin.app, plugin);
     this.plugin = plugin;
@@ -9642,8 +9615,8 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: t("settings.header") });
-    new import_obsidian5.Setting(containerEl).setName(t("settings.defaultColor")).addDropdown((dropdown) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.header")).setHeading();
+    new import_obsidian6.Setting(containerEl).setName(t("settings.defaultColor")).addDropdown((dropdown) => {
       for (const color of ANNOTATION_COLORS) {
         dropdown.addOption(color, COLOR_LABELS[color]);
       }
@@ -9652,19 +9625,19 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian5.Setting(containerEl).setName(t("settings.defaultAuthor")).addText((text) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.defaultAuthor")).addText((text) => {
       text.setValue(this.plugin.settings.defaultAuthor).onChange(async (value) => {
         this.plugin.settings.defaultAuthor = value.trim() || "\u8BFB\u8005";
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian5.Setting(containerEl).setName(t("settings.migrateOnRename")).addToggle((toggle) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.migrateOnRename")).addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.migrateOnRename).onChange(async (value) => {
         this.plugin.settings.migrateOnRename = value;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian5.Setting(containerEl).setName(t("settings.showRibbonIcon.name")).setDesc(t("settings.showRibbonIcon.desc")).addToggle((toggle) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.showRibbonIcon.name")).setDesc(t("settings.showRibbonIcon.desc")).addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.showRibbonIcon).onChange(async (value) => {
         this.plugin.settings.showRibbonIcon = value;
         await this.plugin.saveSettings();
@@ -9678,8 +9651,8 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
   }
   renderStorageSettings() {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: t("settings.storage.heading") });
-    new import_obsidian5.Setting(containerEl).setName(t("settings.sidecarLocation.name")).setDesc(t("settings.sidecarLocation.desc")).addDropdown((dropdown) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.storage.heading")).setHeading();
+    new import_obsidian6.Setting(containerEl).setName(t("settings.sidecarLocation.name")).setDesc(t("settings.sidecarLocation.desc")).addDropdown((dropdown) => {
       dropdown.addOption("specifiedFolder", t("settings.sidecarLocation.specifiedFolder"));
       dropdown.addOption("sameFolder", t("settings.sidecarLocation.sameFolder"));
       dropdown.setValue(this.plugin.settings.sidecarLocation).onChange(async (value) => {
@@ -9692,7 +9665,7 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
         void this.migrateAndNotify();
       });
     });
-    this.storagePathSetting = new import_obsidian5.Setting(containerEl).setName(t("settings.storagePath.name")).setDesc(t("settings.storagePath.desc")).addText((text) => {
+    this.storagePathSetting = new import_obsidian6.Setting(containerEl).setName(t("settings.storagePath.name")).setDesc(t("settings.storagePath.desc")).addText((text) => {
       text.setPlaceholder(t("settings.storagePath.placeholder")).setValue(this.plugin.settings.storagePath).onChange(async (value) => {
         this.plugin.settings.storagePath = value.trim();
         await this.plugin.saveSettings();
@@ -9701,9 +9674,9 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
       button.setButtonText(t("settings.storage.test")).onClick(async () => {
         try {
           const path = await this.plugin.store.testWriteAccess();
-          new import_obsidian5.Notice(t("notice.storageWritable", { path }));
+          new import_obsidian6.Notice(t("notice.storageWritable", { path }));
         } catch {
-          new import_obsidian5.Notice(t("notice.storageNotWritable"));
+          new import_obsidian6.Notice(t("notice.storageNotWritable"));
         }
       });
     });
@@ -9719,18 +9692,18 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
     try {
       const result = await this.plugin.store.migrateAll();
       if (result.failed > 0) {
-        new import_obsidian5.Notice(t("notice.storageMigratePartial", { migrated: result.migrated, failed: result.failed }));
+        new import_obsidian6.Notice(t("notice.storageMigratePartial", { migrated: result.migrated, failed: result.failed }));
       } else {
-        new import_obsidian5.Notice(t("notice.storageMigrated", { count: result.migrated }));
+        new import_obsidian6.Notice(t("notice.storageMigrated", { count: result.migrated }));
       }
       this.display();
     } catch (error) {
-      new import_obsidian5.Notice(t("notice.storageMigrateFailed", { error: String(error) }));
+      new import_obsidian6.Notice(t("notice.storageMigrateFailed", { error: String(error) }));
     }
   }
   renderTagSettings() {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: t("settings.tags.heading") });
+    new import_obsidian6.Setting(containerEl).setName(t("settings.tags.heading")).setHeading();
     containerEl.createDiv({
       cls: "setting-item-description",
       text: t("settings.tags.desc", { max: MAX_ENABLED_ANNOTATION_TAGS })
@@ -9742,7 +9715,7 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
     const actions = section.createDiv({ cls: "book-note-tag-settings-actions" });
     const add = actions.createEl("button", { text: t("settings.tags.add"), attr: { type: "button" } });
     const reset = actions.createEl("button", { attr: { type: "button", title: t("settings.tags.reset"), "aria-label": t("settings.tags.reset") } });
-    (0, import_obsidian5.setIcon)(reset, "rotate-ccw");
+    (0, import_obsidian6.setIcon)(reset, "rotate-ccw");
     const save = actions.createEl("button", { text: t("settings.tags.save"), cls: "mod-cta", attr: { type: "button" } });
     const refreshValidation = () => {
       const validation = validateAnnotationTags(draft);
@@ -9782,7 +9755,7 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
           refreshValidation();
         });
         const up = row.createEl("button", { attr: { type: "button", title: t("common.moveUp"), "aria-label": t("common.moveUp") } });
-        (0, import_obsidian5.setIcon)(up, "chevron-up");
+        (0, import_obsidian6.setIcon)(up, "chevron-up");
         up.disabled = index === 0;
         up.addEventListener("click", () => {
           [draft[index - 1], draft[index]] = [draft[index], draft[index - 1]];
@@ -9790,7 +9763,7 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
           refreshValidation();
         });
         const down = row.createEl("button", { attr: { type: "button", title: t("common.moveDown"), "aria-label": t("common.moveDown") } });
-        (0, import_obsidian5.setIcon)(down, "chevron-down");
+        (0, import_obsidian6.setIcon)(down, "chevron-down");
         down.disabled = index === draft.length - 1;
         down.addEventListener("click", () => {
           [draft[index], draft[index + 1]] = [draft[index + 1], draft[index]];
@@ -9812,7 +9785,7 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
       const candidate = [...cloneDefaultAnnotationTags(), ...customTags];
       const validation = validateAnnotationTags(candidate);
       if (validation) {
-        new import_obsidian5.Notice(t("notice.resetTagsFailed", { validation }));
+        new import_obsidian6.Notice(t("notice.resetTagsFailed", { validation }));
         return;
       }
       draft = candidate;
@@ -9822,13 +9795,13 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
     save.addEventListener("click", async () => {
       const validation = validateAnnotationTags(draft);
       if (validation) {
-        new import_obsidian5.Notice(validation);
+        new import_obsidian6.Notice(validation);
         refreshValidation();
         return;
       }
       this.plugin.settings.annotationTags = draft.map((tag) => ({ ...tag, name: normalizeTagLabel(tag.name) }));
       await this.plugin.saveSettings();
-      new import_obsidian5.Notice(t("settings.tags.saved"));
+      new import_obsidian6.Notice(t("settings.tags.saved"));
       this.display();
     });
     renderRows();
@@ -9837,14 +9810,14 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
   /** EPUB 阅读相关设置：字号 / 主题 / 翻页 / 高亮样式 / 摘录目录 / 段落模式 / 脚注 / 回显 */
   renderEpubSettings() {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: t("settings.epub.heading") });
-    new import_obsidian5.Setting(containerEl).setName(t("settings.epub.fontSize.name")).setDesc(t("settings.epub.fontSize.desc")).addSlider((slider) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.epub.heading")).setHeading();
+    new import_obsidian6.Setting(containerEl).setName(t("settings.epub.fontSize.name")).setDesc(t("settings.epub.fontSize.desc")).addSlider((slider) => {
       slider.setLimits(12, 28, 1).setValue(this.plugin.settings.epubFontSize).setDynamicTooltip().onChange(async (value) => {
         this.plugin.settings.epubFontSize = value;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian5.Setting(containerEl).setName(t("settings.epub.theme.name")).setDesc(t("settings.epub.theme.desc")).addDropdown((dropdown) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.epub.theme.name")).setDesc(t("settings.epub.theme.desc")).addDropdown((dropdown) => {
       for (const theme of EPUB_READING_THEMES) {
         dropdown.addOption(theme.id, theme.label);
       }
@@ -9853,7 +9826,7 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian5.Setting(containerEl).setName(t("settings.epub.flow.name")).setDesc(t("settings.epub.flow.desc")).addDropdown((dropdown) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.epub.flow.name")).setDesc(t("settings.epub.flow.desc")).addDropdown((dropdown) => {
       dropdown.addOption("paginated", "\u7FFB\u9875");
       dropdown.addOption("scrolled", "\u6EDA\u52A8");
       dropdown.setValue(this.plugin.settings.epubDefaultFlow).onChange(async (value) => {
@@ -9861,7 +9834,7 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian5.Setting(containerEl).setName(t("settings.epub.highlightStyle.name")).setDesc(t("settings.epub.highlightStyle.desc")).addDropdown((dropdown) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.epub.highlightStyle.name")).setDesc(t("settings.epub.highlightStyle.desc")).addDropdown((dropdown) => {
       for (const style2 of EPUB_HIGHLIGHT_STYLES) {
         dropdown.addOption(style2.id, style2.label);
       }
@@ -9873,8 +9846,8 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
   }
   renderPdfSettings() {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: t("settings.pdf.heading") });
-    new import_obsidian5.Setting(containerEl).setName(t("settings.pdf.progress.name")).setDesc(t("settings.pdf.progress.desc")).addToggle((toggle) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.pdf.heading")).setHeading();
+    new import_obsidian6.Setting(containerEl).setName(t("settings.pdf.progress.name")).setDesc(t("settings.pdf.progress.desc")).addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.pdfProgressTracking).onChange(async (value) => {
         this.plugin.settings.pdfProgressTracking = value;
         await this.plugin.saveSettings();
@@ -9884,7 +9857,7 @@ var AnnotationSettingsTab = class extends import_obsidian5.PluginSettingTab {
 };
 
 // src/storage/annotationStore.ts
-var import_obsidian6 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 var DEFAULT_STORE_DIR = "booknote";
 var AnnotationStoreReadError = class extends Error {
   constructor(path, originalError) {
@@ -9947,7 +9920,7 @@ var AnnotationStore = class {
     const filePaths = Object.keys(this.index.files).sort((left, right) => left.localeCompare(right));
     for (const filePath of filePaths) {
       const file = this.app.vault.getAbstractFileByPath(filePath);
-      if (!(file instanceof import_obsidian6.TFile)) {
+      if (!(file instanceof import_obsidian7.TFile)) {
         continue;
       }
       documents.push(await this.getDocument(file));
@@ -9980,7 +9953,7 @@ var AnnotationStore = class {
   }
   async findAnnotationTarget(filePath, annotationId) {
     const file = this.app.vault.getAbstractFileByPath(this.normalizeVaultPath(filePath));
-    if (!(file instanceof import_obsidian6.TFile)) {
+    if (!(file instanceof import_obsidian7.TFile)) {
       return null;
     }
     return this.findTargetInDocument(file.path, await this.getDocument(file), annotationId);
@@ -9989,7 +9962,7 @@ var AnnotationStore = class {
     const results = [];
     for (const filePath of Object.keys(this.index.files)) {
       const file = this.app.vault.getAbstractFileByPath(filePath);
-      if (!(file instanceof import_obsidian6.TFile)) {
+      if (!(file instanceof import_obsidian7.TFile)) {
         continue;
       }
       const target = this.findTargetInDocument(file.path, await this.getDocument(file), annotationId);
@@ -10021,7 +9994,7 @@ var AnnotationStore = class {
         this.index = nextIndex;
       });
     } catch (error) {
-      new import_obsidian6.Notice(t("notice.notSaved", { path: sidecarPath }));
+      new import_obsidian7.Notice(t("notice.notSaved", { path: sidecarPath }));
       throw new AnnotationStoreWriteError(sidecarPath, error);
     }
     this.documents.set(this.toCacheKey(normalized.filePath), normalized);
@@ -10161,16 +10134,16 @@ var AnnotationStore = class {
       `\u300A${oldBase.split(/[\\/]/).pop()}\u300B\u6458\u5F55.md`
     ];
     for (const candidate of candidates) {
-      const candidatePath = (0, import_obsidian6.normalizePath)(`${oldParent}/${candidate}`);
+      const candidatePath = (0, import_obsidian7.normalizePath)(`${oldParent}/${candidate}`);
       const excerptFile = this.app.vault.getAbstractFileByPath(candidatePath);
-      if (!(excerptFile instanceof import_obsidian6.TFile)) {
+      if (!(excerptFile instanceof import_obsidian7.TFile)) {
         continue;
       }
       try {
         const content = await this.app.vault.read(excerptFile);
         const updated = content.split(oldPath).join(newPath);
         const newName = candidate.replace(oldBase.split(/[\\/]/).pop(), newBase.split(/[\\/]/).pop());
-        const targetPath = (0, import_obsidian6.normalizePath)(`${newParent}/${newName}`);
+        const targetPath = (0, import_obsidian7.normalizePath)(`${newParent}/${newName}`);
         if (updated !== content) {
           await this.app.vault.modify(excerptFile, updated);
         }
@@ -10233,10 +10206,10 @@ var AnnotationStore = class {
     const document2 = await this.getDocument(file);
     const baseName = file.basename || file.name.replace(/\.md$/i, "");
     const suffix = format === "summary" ? "" : `-${format}`;
-    const targetPath = (0, import_obsidian6.normalizePath)(`${file.parent?.path ?? ""}/${baseName}-notes${suffix}.md`);
+    const targetPath = (0, import_obsidian7.normalizePath)(`${file.parent?.path ?? ""}/${baseName}-notes${suffix}.md`);
     const lines = buildExportLines(`Notes for ${file.path}`, [{ filePath: file.path, document: document2 }], format, this.getAnnotationTags());
     const existing = this.app.vault.getAbstractFileByPath(targetPath);
-    if (existing instanceof import_obsidian6.TFile) {
+    if (existing instanceof import_obsidian7.TFile) {
       await this.app.vault.modify(existing, lines.join("\n"));
       return existing;
     }
@@ -10245,11 +10218,11 @@ var AnnotationStore = class {
   async exportAllNotes(format = "summary") {
     const documents = await this.getIndexedDocuments();
     const suffix = format === "summary" ? "" : `-${format}`;
-    const targetPath = (0, import_obsidian6.normalizePath)(`book-note-all-notes${suffix}.md`);
+    const targetPath = (0, import_obsidian7.normalizePath)(`book-note-all-notes${suffix}.md`);
     const sources = documents.map((document2) => ({ filePath: document2.filePath, document: document2 }));
     const lines = buildExportLines(t("export.heading"), sources, format, this.getAnnotationTags());
     const existing = this.app.vault.getAbstractFileByPath(targetPath);
-    if (existing instanceof import_obsidian6.TFile) {
+    if (existing instanceof import_obsidian7.TFile) {
       await this.app.vault.modify(existing, lines.join("\n"));
       return existing;
     }
@@ -10257,7 +10230,7 @@ var AnnotationStore = class {
   }
   async testWriteAccess() {
     const testDir = this.getSidecarLocation() === "sameFolder" ? "" : this.getBaseDir();
-    const testPath = (0, import_obsidian6.normalizePath)(`${testDir}/.write-test.json`);
+    const testPath = (0, import_obsidian7.normalizePath)(`${testDir}/.write-test.json`);
     const payload = JSON.stringify({ ok: true, timestamp: (/* @__PURE__ */ new Date()).toISOString() }, null, 2);
     try {
       await this.app.vault.adapter.write(testPath, payload);
@@ -10268,7 +10241,7 @@ var AnnotationStore = class {
       await this.deleteIfExists(testPath);
       return testPath;
     } catch (error) {
-      new import_obsidian6.Notice(t("notice.storageTestFailed", { path: testPath }));
+      new import_obsidian7.Notice(t("notice.storageTestFailed", { path: testPath }));
       throw new AnnotationStoreWriteError(testPath, error);
     }
   }
@@ -10291,11 +10264,11 @@ var AnnotationStore = class {
     const normalized = this.normalizeVaultPath(filePath);
     const sidecarExt = "md";
     if (this.getSidecarLocation() === "sameFolder") {
-      return (0, import_obsidian6.normalizePath)(`${normalized}.${sidecarExt}`);
+      return (0, import_obsidian7.normalizePath)(`${normalized}.${sidecarExt}`);
     }
     const parts = normalized.split("/").filter((part) => part.length > 0);
     const safeName = parts.join("-");
-    return (0, import_obsidian6.normalizePath)(`${this.getBaseDir()}/${safeName}.${sidecarExt}`);
+    return (0, import_obsidian7.normalizePath)(`${this.getBaseDir()}/${safeName}.${sidecarExt}`);
   }
   async createEmptyDocument(file) {
     return {
@@ -10351,7 +10324,7 @@ var AnnotationStore = class {
     await this.ensureDir(this.getBaseDir());
   }
   async ensureDir(path) {
-    const normalizedPath = (0, import_obsidian6.normalizePath)(path);
+    const normalizedPath = (0, import_obsidian7.normalizePath)(path);
     if (await this.app.vault.adapter.exists(normalizedPath)) {
       return;
     }
@@ -10375,7 +10348,7 @@ var AnnotationStore = class {
     }
   }
   async readJson(path, fallback, options = {}) {
-    const normalizedPath = (0, import_obsidian6.normalizePath)(path);
+    const normalizedPath = (0, import_obsidian7.normalizePath)(path);
     if (!await this.app.vault.adapter.exists(normalizedPath)) {
       return fallback;
     }
@@ -10385,24 +10358,24 @@ var AnnotationStore = class {
       if (options.allowCorruptFallback) {
         return fallback;
       }
-      new import_obsidian6.Notice(t("notice.cannotRead", { path: normalizedPath }));
+      new import_obsidian7.Notice(t("notice.cannotRead", { path: normalizedPath }));
       throw new AnnotationStoreReadError(normalizedPath, error);
     }
   }
   async readDocumentOrFallback(path, fallback) {
-    const normalizedPath = (0, import_obsidian6.normalizePath)(path);
+    const normalizedPath = (0, import_obsidian7.normalizePath)(path);
     if (!await this.app.vault.adapter.exists(normalizedPath)) {
       return fallback;
     }
     try {
       return this.parseDocument(await this.app.vault.adapter.read(normalizedPath), normalizedPath);
     } catch (error) {
-      new import_obsidian6.Notice(t("notice.cannotRead", { path: normalizedPath }));
+      new import_obsidian7.Notice(t("notice.cannotRead", { path: normalizedPath }));
       return fallback;
     }
   }
   async readDocumentOrThrow(path) {
-    const normalizedPath = (0, import_obsidian6.normalizePath)(path);
+    const normalizedPath = (0, import_obsidian7.normalizePath)(path);
     if (!await this.app.vault.adapter.exists(normalizedPath)) {
       throw new AnnotationStoreReadError(normalizedPath, new Error("missing"));
     }
@@ -10450,7 +10423,7 @@ var AnnotationStore = class {
     return result;
   }
   async deleteIfExists(path) {
-    const normalizedPath = (0, import_obsidian6.normalizePath)(path);
+    const normalizedPath = (0, import_obsidian7.normalizePath)(path);
     if (await this.app.vault.adapter.exists(normalizedPath)) {
       await this.app.vault.adapter.remove(normalizedPath);
     }
@@ -10486,7 +10459,7 @@ var AnnotationStore = class {
     return epub ? { filePath, id: annotationId, mode: "epub", anchor: epub.anchor } : null;
   }
   normalizeVaultPath(filePath) {
-    return (0, import_obsidian6.normalizePath)(filePath);
+    return (0, import_obsidian7.normalizePath)(filePath);
   }
   toCacheKey(filePath) {
     return this.normalizeVaultPath(filePath).toLowerCase();
@@ -10745,7 +10718,7 @@ function resolveStoreDir(raw) {
   if (!trimmed) {
     return DEFAULT_STORE_DIR;
   }
-  const normalized = (0, import_obsidian6.normalizePath)(trimmed);
+  const normalized = (0, import_obsidian7.normalizePath)(trimmed);
   if (normalized.startsWith("/") || normalized.startsWith("\\") || /^[A-Za-z]:[\\/]/.test(normalized) || normalized.includes("..") || normalized === "." || normalized === "..") {
     return DEFAULT_STORE_DIR;
   }
@@ -11123,7 +11096,7 @@ function unescapeHtmlAttribute(value) {
 }
 
 // src/views/annotationPopover.ts
-var import_obsidian7 = require("obsidian");
+var import_obsidian8 = require("obsidian");
 var AnnotationPopover = class {
   constructor(options) {
     this.options = options;
@@ -11143,7 +11116,7 @@ var AnnotationPopover = class {
       cls: "book-note-icon-button",
       attr: { type: "button", title: t("aria.closePopover") }
     });
-    (0, import_obsidian7.setIcon)(close, "x");
+    (0, import_obsidian8.setIcon)(close, "x");
     close.addEventListener("click", () => this.hide());
     const list = this.element.createDiv({ cls: "book-note-popover-list" });
     for (const item of options.items) {
@@ -11183,7 +11156,7 @@ var AnnotationPopover = class {
       return;
     }
     const body = card.createDiv({ cls: "book-note-popover-body" });
-    import_obsidian7.MarkdownRenderer.render(this.options.app, item.content, body, sourcePath, this.options.component);
+    import_obsidian8.MarkdownRenderer.render(this.options.app, item.content, body, sourcePath, this.options.component);
   }
   place(rect) {
     const width = Math.min(320, window.innerWidth - 24);
@@ -11200,7 +11173,7 @@ function clamp(value, min, max) {
 }
 
 // src/views/sidebarView.ts
-var import_obsidian8 = require("obsidian");
+var import_obsidian9 = require("obsidian");
 
 // src/utils/format.ts
 function formatTime(value) {
@@ -11211,7 +11184,7 @@ function formatTime(value) {
 var ANNOTATION_SIDEBAR_VIEW = "book-note-sidebar";
 var ALL_TAGS_FILTER = "__all__";
 var UNTAGGED_FILTER = "__untagged__";
-var AnnotationSidebarView = class extends import_obsidian8.ItemView {
+var AnnotationSidebarView = class extends import_obsidian9.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
@@ -11465,13 +11438,13 @@ var AnnotationSidebarView = class extends import_obsidian8.ItemView {
       cls: "book-note-icon-btn book-note-ov-refresh",
       attr: { type: "button", title: t("common.refresh"), "aria-label": t("aria.refreshAnnotations") }
     });
-    (0, import_obsidian8.setIcon)(refresh, "refresh-cw");
+    (0, import_obsidian9.setIcon)(refresh, "refresh-cw");
     refresh.addEventListener("click", () => this.requestRender());
     const close = actions.createEl("button", {
       cls: "book-note-icon-btn book-note-ov-close",
       attr: { type: "button", title: t("aria.closePanel"), "aria-label": t("aria.closePanel") }
     });
-    (0, import_obsidian8.setIcon)(close, "x");
+    (0, import_obsidian9.setIcon)(close, "x");
     close.addEventListener("click", () => {
       void this.leaf.detach();
     });
@@ -11503,7 +11476,7 @@ var AnnotationSidebarView = class extends import_obsidian8.ItemView {
       await this.render();
     });
     const filterButton = searchRow.createEl("button", { cls: "book-note-icon-btn", attr: { type: "button", title: t("sidebar.filter") } });
-    (0, import_obsidian8.setIcon)(filterButton, "filter");
+    (0, import_obsidian9.setIcon)(filterButton, "filter");
     const filterRow = container.createDiv({ cls: "book-note-ov-filter-row" });
     const color = filterRow.createEl("select", { cls: "book-note-filter-select" });
     color.createEl("option", { text: t("sidebar.filterColor.all"), value: "all" });
@@ -11580,7 +11553,7 @@ var AnnotationSidebarView = class extends import_obsidian8.ItemView {
       }
       tag.empty();
       const icon = tag.createSpan({ cls: "book-note-ov-tag-icon" });
-      (0, import_obsidian8.setIcon)(icon, resolvedTag.icon);
+      (0, import_obsidian9.setIcon)(icon, resolvedTag.icon);
       tag.createSpan({ text: resolvedTag.name });
     }
     head.createSpan({ cls: "book-note-ov-time", text: formatTime(cardData.createdAt) });
@@ -11590,7 +11563,7 @@ var AnnotationSidebarView = class extends import_obsidian8.ItemView {
     this.addExpandToggle(quote, card);
     if (cardData.content) {
       const content = card.createDiv({ cls: "book-note-ov-content" });
-      void import_obsidian8.MarkdownRenderer.render(this.app, cardData.content, content, cardData.sourcePath, this).then(() => {
+      void import_obsidian9.MarkdownRenderer.render(this.app, cardData.content, content, cardData.sourcePath, this).then(() => {
         this.addExpandToggle(content, card);
       });
     }
@@ -11606,7 +11579,7 @@ var AnnotationSidebarView = class extends import_obsidian8.ItemView {
         cls: "book-note-ov-btn book-note-ov-btn--icon",
         attr: { type: "button", title: t("common.edit"), "data-action": "edit-note" }
       });
-      (0, import_obsidian8.setIcon)(edit2, "pencil");
+      (0, import_obsidian9.setIcon)(edit2, "pencil");
       edit2.disabled = !file;
       edit2.addEventListener("click", () => {
         if (file) {
@@ -11642,7 +11615,7 @@ var AnnotationSidebarView = class extends import_obsidian8.ItemView {
       cls: "book-note-ov-btn book-note-ov-btn--icon",
       attr: { type: "button", title: t("aria.moreActions"), "aria-label": t("aria.moreActions") }
     });
-    (0, import_obsidian8.setIcon)(more, "ellipsis");
+    (0, import_obsidian9.setIcon)(more, "ellipsis");
     more.disabled = !file;
     more.addEventListener("click", () => {
       if (file) {
@@ -11698,7 +11671,7 @@ var AnnotationSidebarView = class extends import_obsidian8.ItemView {
     });
   }
   openCardMenu(file, card, position) {
-    const menu = new import_obsidian8.Menu();
+    const menu = new import_obsidian9.Menu();
     const targetId = card.highlight?.id ?? card.note?.id ?? card.id;
     menu.addItem((item) => {
       item.setTitle("Copy annotation link").setIcon("link").onClick(() => {
@@ -11898,7 +11871,7 @@ var AnnotationSidebarView = class extends import_obsidian8.ItemView {
   }
   fileForCard(card) {
     const file = this.app.vault.getAbstractFileByPath(card.sourcePath);
-    return file instanceof import_obsidian8.TFile ? file : null;
+    return file instanceof import_obsidian9.TFile ? file : null;
   }
   filterCards(cards) {
     return cards.filter((card) => this.color === "all" || card.color === this.color).filter((card) => {
@@ -11955,7 +11928,7 @@ var AnnotationSidebarView = class extends import_obsidian8.ItemView {
         return;
       }
       const exported = this.annotationScope === "all" ? await this.plugin.store.exportAllNotes(this.exportFormat) : await this.plugin.store.exportNotes(file, this.exportFormat);
-      new import_obsidian8.Notice(t("notice.exported", { path: exported.path }));
+      new import_obsidian9.Notice(t("notice.exported", { path: exported.path }));
     });
     footer.createDiv({ cls: "book-note-ov-export-note", text: this.exportFormatLabel() });
   }
@@ -11981,7 +11954,7 @@ var AnnotationSidebarView = class extends import_obsidian8.ItemView {
       }, 120);
       return;
     }
-    const view = leaf.view instanceof import_obsidian8.MarkdownView ? leaf.view : this.app.workspace.getActiveViewOfType(import_obsidian8.MarkdownView);
+    const view = leaf.view instanceof import_obsidian9.MarkdownView ? leaf.view : this.app.workspace.getActiveViewOfType(import_obsidian9.MarkdownView);
     if (!view) {
       return;
     }
@@ -12000,7 +11973,7 @@ function isCodeLikeText(text) {
 }
 
 // src/epub/EpubReaderView.ts
-var import_obsidian11 = require("obsidian");
+var import_obsidian12 = require("obsidian");
 
 // src/epub/EpubChapterResolver.ts
 function resolveChapterLabel(entries, spineIndex) {
@@ -12345,7 +12318,7 @@ function installFoliateCustomElementGuard(registry = customElements) {
 }
 
 // src/epub/EpubFoliatePatches.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian10 = require("obsidian");
 var foliateBlobIframePatchInstalled = false;
 var foliateBlobIframeLoadTokens = /* @__PURE__ */ new WeakMap();
 async function readBlobUrlAsText(url) {
@@ -12675,8 +12648,8 @@ async function showFoliateStart(view) {
 }
 
 // src/epub/EpubNoteModal.ts
-var import_obsidian10 = require("obsidian");
-var EpubNoteModal = class extends import_obsidian10.Modal {
+var import_obsidian11 = require("obsidian");
+var EpubNoteModal = class extends import_obsidian11.Modal {
   constructor(app, selectedText, tags, initial, onSubmit, titleText = t("epubNote.title")) {
     super(app);
     this.tags = tags;
@@ -12755,7 +12728,7 @@ var EpubNoteModal = class extends import_obsidian10.Modal {
       chip.title = tag.enabled ? tag.name : `${tag.name}${t("modal.sticky.disabledSuffix")}`;
       chip.setAttribute("data-tag-id", tag.id);
       const icon = chip.createSpan({ cls: "book-note-epub-note-type-icon" });
-      (0, import_obsidian10.setIcon)(icon, tag.icon);
+      (0, import_obsidian11.setIcon)(icon, tag.icon);
       chip.createSpan({ text: tag.name });
       if (tag.id === this.tagId) {
         chip.addClass("is-active");
@@ -12807,7 +12780,7 @@ var WHEEL_DEBOUNCE_MS = 400;
 var PROGRESS_SAVE_DEBOUNCE_MS = 2e3;
 var SELECTION_SYNC_RETRY_DELAY_MS = 120;
 var SCROLL_OVERRUN_THRESHOLD = 40;
-var EpubReaderView = class extends import_obsidian11.FileView {
+var EpubReaderView = class extends import_obsidian12.FileView {
   // ================================================================
   // 构造 & 生命周期
   // ================================================================
@@ -12899,13 +12872,13 @@ var EpubReaderView = class extends import_obsidian11.FileView {
       this.attachKeyboardNavigation(doc);
       this.handleRendered();
       requestAnimationFrame(() => this.focusActiveIframe());
-      if (import_obsidian11.Platform.isMobile) {
+      if (import_obsidian12.Platform.isMobile) {
         doc.addEventListener("click", (e3) => this.handleReaderAreaClick(e3));
       }
     };
     this.handleFoliateRelocate = (event) => {
       this.handleRelocated(event.detail ?? {});
-      if (!import_obsidian11.Platform.isMobile && this.currentFlowMode === "paginated") {
+      if (!import_obsidian12.Platform.isMobile && this.currentFlowMode === "paginated") {
         requestAnimationFrame(() => this.focusActiveIframe());
       }
     };
@@ -12983,7 +12956,7 @@ var EpubReaderView = class extends import_obsidian11.FileView {
       this.renderSidebar();
     } catch (error) {
       console.error("book-note: EPUB load failed", error);
-      new import_obsidian11.Notice(t("epub.loadFailed", { error: error instanceof Error ? error.message : String(error) }));
+      new import_obsidian12.Notice(t("epub.loadFailed", { error: error instanceof Error ? error.message : String(error) }));
     }
   }
   /**
@@ -13031,7 +13004,7 @@ var EpubReaderView = class extends import_obsidian11.FileView {
     this.contentEl.addEventListener("keydown", (event) => this.handleKeydown(event));
     this.readerContainerEl.addEventListener("wheel", (event) => this.handleWheel(event), { passive: false });
     this.readerContainerEl.addEventListener("click", (event) => this.handleReaderAreaClick(event));
-    if (import_obsidian11.Platform.isMobile) {
+    if (import_obsidian12.Platform.isMobile) {
       const tapHandler = (event) => this.handleTapZone(event);
       this.readerContainerEl.addEventListener("click", tapHandler);
       this.mobileTapZoneCleanup = () => {
@@ -13088,14 +13061,14 @@ var EpubReaderView = class extends import_obsidian11.FileView {
         cls: "book-note-epub-toolbar-btn",
         attr: { type: "button", title: opts.title, "aria-label": opts.title }
       });
-      if (opts.icon) (0, import_obsidian11.setIcon)(btn, opts.icon);
+      if (opts.icon) (0, import_obsidian12.setIcon)(btn, opts.icon);
       if (opts.text) btn.textContent = opts.text;
       btn.addEventListener("click", opts.onClick);
       return btn;
     };
     const keyNavBtn = createBtn({
-      icon: import_obsidian11.Platform.isMobile ? this.mobileTapEnabled ? "hand" : "move" : this.pcNavMode === "keyboard" ? "keyboard" : "mouse",
-      title: import_obsidian11.Platform.isMobile ? this.mobileTapEnabled ? t("epub.toggleToSwipe") : t("epub.toggleToTap") : this.pcNavMode === "keyboard" ? t("epub.toggleToWheel") : t("epub.toggleToKeyboard"),
+      icon: import_obsidian12.Platform.isMobile ? this.mobileTapEnabled ? "hand" : "move" : this.pcNavMode === "keyboard" ? "keyboard" : "mouse",
+      title: import_obsidian12.Platform.isMobile ? this.mobileTapEnabled ? t("epub.toggleToSwipe") : t("epub.toggleToTap") : this.pcNavMode === "keyboard" ? t("epub.toggleToWheel") : t("epub.toggleToKeyboard"),
       onClick: () => this.toggleKeyNav()
     });
     this.toolbarItems.push(
@@ -13262,7 +13235,7 @@ var EpubReaderView = class extends import_obsidian11.FileView {
    * 只在 Platform.isMobile 为 true 时生效。
    */
   handleReaderAreaClick(event) {
-    if (!import_obsidian11.Platform.isMobile || !this.sidebarOpen) {
+    if (!import_obsidian12.Platform.isMobile || !this.sidebarOpen) {
       return;
     }
     if (event.target instanceof Node && this.sidebarContainerEl.contains(event.target)) {
@@ -13455,10 +13428,10 @@ var EpubReaderView = class extends import_obsidian11.FileView {
       this.renderAnnotationOnRendition(annotation);
       this.renderSidebar();
       this.refreshAnnotations();
-      new import_obsidian11.Notice(t("epub.highlightAdded", { color: COLOR_LABELS[color] }));
+      new import_obsidian12.Notice(t("epub.highlightAdded", { color: COLOR_LABELS[color] }));
     } catch (error) {
       console.error("book-note: EPUB highlight creation failed", error);
-      new import_obsidian11.Notice(t("epub.highlightCreateFailed"));
+      new import_obsidian12.Notice(t("epub.highlightCreateFailed"));
     }
   }
   /**
@@ -13508,10 +13481,10 @@ var EpubReaderView = class extends import_obsidian11.FileView {
           this.renderAnnotationOnRendition(annotation);
           this.renderSidebar();
           this.refreshAnnotations();
-          new import_obsidian11.Notice(t("epub.noteAdded"));
+          new import_obsidian12.Notice(t("epub.noteAdded"));
         } catch (error) {
           console.error("book-note: EPUB comment creation failed", error);
-          new import_obsidian11.Notice(t("epub.noteCreateFailed"));
+          new import_obsidian12.Notice(t("epub.noteCreateFailed"));
         }
       }
     ).open();
@@ -13573,10 +13546,10 @@ var EpubReaderView = class extends import_obsidian11.FileView {
       this.refreshRenditionAnnotations();
       this.renderSidebar();
       this.refreshAnnotations();
-      new import_obsidian11.Notice(t("epub.noteDeleted"));
+      new import_obsidian12.Notice(t("epub.noteDeleted"));
     } catch (error) {
       console.error("book-note: EPUB annotation deletion failed", error);
-      new import_obsidian11.Notice(t("epub.noteDeleteFailed"));
+      new import_obsidian12.Notice(t("epub.noteDeleteFailed"));
     }
   }
   /**
@@ -14060,9 +14033,6 @@ var EpubReaderView = class extends import_obsidian11.FileView {
     this.scrollOverrunNext = 0;
     this.scrollOverrunPrev = 0;
     const renderer = this.foliateView.renderer;
-    const view = this.foliateView;
-    const prevFn = view.prev ?? view.goLeft;
-    const nextFn = view.next ?? view.goRight;
     const getBounds = () => {
       const r3 = this.foliateView?.renderer;
       if (!r3 || typeof r3.start !== "number" || typeof r3.end !== "number" || typeof r3.viewSize !== "number")
@@ -14078,20 +14048,21 @@ var EpubReaderView = class extends import_obsidian11.FileView {
       if (this.currentFlowMode !== "scrolled") return;
       const bounds = getBounds();
       if (!bounds) return;
+      const view = this.foliateView;
+      if (!view) return;
       if (direction === "next") {
         if (!bounds.atBottom || this.currentSectionIndex >= bounds.maxIndex) return;
         if (this.scrolledNavDirection === "prev") return;
-        if (typeof nextFn !== "function") return;
       } else {
         if (!bounds.atTop || this.currentSectionIndex <= 0) return;
         if (this.scrolledNavDirection === "next") return;
-        if (typeof prevFn !== "function") return;
       }
+      const fn = direction === "next" ? view.next ?? view.goRight : view.prev ?? view.goLeft;
+      if (typeof fn !== "function") return;
       this.scrolledNavigating = true;
       this.scrolledNavDirection = direction;
       this.scrollOverrunNext = 0;
       this.scrollOverrunPrev = 0;
-      const fn = direction === "next" ? nextFn : prevFn;
       void (async () => {
         const sectionBefore = this.currentSectionIndex;
         await fn.call(view);
@@ -14298,14 +14269,14 @@ var EpubReaderView = class extends import_obsidian11.FileView {
    * 移动端在点按翻页 / 滑动翻页之间切换。
    */
   toggleKeyNav() {
-    if (import_obsidian11.Platform.isMobile) {
+    if (import_obsidian12.Platform.isMobile) {
       this.mobileTapEnabled = !this.mobileTapEnabled;
       this.renderToolbar();
-      new import_obsidian11.Notice(this.mobileTapEnabled ? t("epub.tapPageOn") : t("epub.swipePageOn"));
+      new import_obsidian12.Notice(this.mobileTapEnabled ? t("epub.tapPageOn") : t("epub.swipePageOn"));
     } else {
       this.pcNavMode = this.pcNavMode === "keyboard" ? "wheel" : "keyboard";
       this.renderToolbar();
-      new import_obsidian11.Notice(this.pcNavMode === "keyboard" ? t("epub.keyboardPageOn") : t("epub.scrollPageOn"));
+      new import_obsidian12.Notice(this.pcNavMode === "keyboard" ? t("epub.keyboardPageOn") : t("epub.scrollPageOn"));
     }
   }
   // ================================================================
@@ -14639,7 +14610,7 @@ var EpubReaderView = class extends import_obsidian11.FileView {
     const wheelHandler = (event) => this.handleWheel(event);
     doc.addEventListener("wheel", wheelHandler, { passive: false });
     cleanups.push(() => doc.removeEventListener("wheel", wheelHandler));
-    if (import_obsidian11.Platform.isMobile) {
+    if (import_obsidian12.Platform.isMobile) {
       const tapHandler = (event) => this.handleTapZone(event);
       doc.addEventListener("click", tapHandler, true);
       cleanups.push(() => doc.removeEventListener("click", tapHandler, true));
@@ -14728,7 +14699,7 @@ var EpubReaderView = class extends import_obsidian11.FileView {
         highlight.setAttribute("height", String(height));
         highlight.setAttribute("rx", "2");
         highlight.setAttribute("fill", rgba);
-        highlight.setAttribute("style", "mix-blend-mode:multiply;pointer-events:none");
+        highlight.setCssProps({ mixBlendMode: "multiply", pointerEvents: "none" });
         group.appendChild(highlight);
         continue;
       }
@@ -14743,7 +14714,7 @@ var EpubReaderView = class extends import_obsidian11.FileView {
       if (style2 === "wavy") {
         line.setAttribute("stroke-dasharray", "2 2");
       }
-      line.setAttribute("style", "pointer-events:none");
+      line.setCssProps({ pointerEvents: "none" });
       group.appendChild(line);
     }
     return group;
@@ -14954,7 +14925,9 @@ var EpubReaderView = class extends import_obsidian11.FileView {
         resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-chapter", text: currentLabel });
       }
       const btn = resultsEl.createEl("button", { cls: "book-note-epub-toolbar-search-hit", attr: { type: "button" } });
-      btn.innerHTML = `${this.escapeHtml(h3.excerpt.pre)}<strong>${this.escapeHtml(h3.excerpt.match)}</strong>${this.escapeHtml(h3.excerpt.post)}`;
+      btn.createSpan({ text: h3.excerpt.pre });
+      btn.createEl("strong", { text: h3.excerpt.match });
+      btn.createSpan({ text: h3.excerpt.post });
       btn.addEventListener("click", () => {
         if (this.foliateView) {
           void this.foliateView.goTo(h3.cfi);
@@ -14962,15 +14935,12 @@ var EpubReaderView = class extends import_obsidian11.FileView {
       });
     }
   }
-  escapeHtml(text) {
-    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  }
 };
 
 // src/epub/EpubBookshelfView.ts
-var import_obsidian12 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 var EPUB_BOOKSHELF_VIEW_TYPE = "book-note-epub-bookshelf";
-var EpubBookshelfView = class extends import_obsidian12.ItemView {
+var EpubBookshelfView = class extends import_obsidian13.ItemView {
   constructor(leaf, store, onOpen) {
     super(leaf);
     this.store = store;
@@ -15071,7 +15041,7 @@ var EpubBookshelfView = class extends import_obsidian12.ItemView {
 };
 
 // src/epub/EpubGotoHandler.ts
-var import_obsidian13 = require("obsidian");
+var import_obsidian14 = require("obsidian");
 var CALLOUT_TYPE = "book-note-epub";
 var CFI_COMMENT_RE = /<!--\s*book-note-epub-cfi:\s*(epubcfi\([\s\S]*?\))\s*-->/;
 var SOURCE_EXTENSIONS = ["epub", "mobi", "azw3", "fb2", "fbz", "cbz", "txt"];
@@ -15145,7 +15115,7 @@ function wireGotoAnchor(anchor, sourcePath, goto, resolveAnn, app) {
       void goto(target.file, target.cfi);
       return;
     }
-    new import_obsidian13.Notice(t("notice.unableResolve"));
+    new import_obsidian14.Notice(t("notice.unableResolve"));
   });
 }
 function findTargetNear(container, exportPath, app) {
@@ -15206,7 +15176,7 @@ var BOOK_NOTE_ICON = `
     </g>
   </svg>
 `;
-var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
+var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -15215,7 +15185,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
     this.ribbonIconEl = null;
   }
   async onload() {
-    (0, import_obsidian14.addIcon)("book-note-icon", BOOK_NOTE_ICON);
+    (0, import_obsidian15.addIcon)("book-note-icon", BOOK_NOTE_ICON);
     await this.loadSettings();
     console.info(`book-note loaded v${this.manifest.version}`);
     this.store = new AnnotationStore(
@@ -15319,8 +15289,6 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
     this.popover?.destroy();
     this.ribbonIconEl?.remove();
     this.ribbonIconEl = null;
-    this.app.workspace.detachLeavesOfType(ANNOTATION_SIDEBAR_VIEW);
-    this.app.workspace.detachLeavesOfType(EPUB_BOOKSHELF_VIEW_TYPE);
   }
   async loadSettings() {
     const stored = await this.loadData() ?? {};
@@ -15359,7 +15327,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
   async gotoPdfPage(pageNumber) {
     const ok = await this.pdfViewerAdapter.goToPage(pageNumber, { flash: true, block: "center" });
     if (!ok) {
-      new import_obsidian14.Notice(t("notice.pageNotFound", { page: pageNumber }));
+      new import_obsidian15.Notice(t("notice.pageNotFound", { page: pageNumber }));
     }
   }
   /** 根据 settings.showRibbonIcon 增删左侧栏高亮笔图标（即时生效，无需重载插件）。 */
@@ -15386,7 +15354,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
    * Markdown 及其它格式不再触发本插件（进度、选区批注等）。
    */
   isSupportedFile(file) {
-    if (!(file instanceof import_obsidian14.TFile)) {
+    if (!(file instanceof import_obsidian15.TFile)) {
       return false;
     }
     const ext = file.extension.toLowerCase();
@@ -15420,12 +15388,12 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
       name: t("command.showPdfOutline"),
       callback: async () => {
         if (!this.pdfLayer.isPdfActive()) {
-          new import_obsidian14.Notice(t("notice.openPdfFirst"));
+          new import_obsidian15.Notice(t("notice.openPdfFirst"));
           return;
         }
         const outline = await this.pdfLayer.getOutline();
         if (outline.length === 0) {
-          new import_obsidian14.Notice(t("notice.pdfNoOutline"));
+          new import_obsidian15.Notice(t("notice.pdfNoOutline"));
           return;
         }
         const lines = outline.map((item) => {
@@ -15433,7 +15401,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
           const children = item.children.filter((c2) => c2.pageNumber > 0).map((c2) => `  \u2514 ${c2.title} \u2192 p.${c2.pageNumber}`).join("\n");
           return `${item.title}${pageInfo}${children ? "\n" + children : ""}`;
         });
-        new import_obsidian14.Notice(t("notice.pdfOutline", { count: outline.length, lines: lines.slice(0, 8).join("\n") }));
+        new import_obsidian15.Notice(t("notice.pdfOutline", { count: outline.length, lines: lines.slice(0, 8).join("\n") }));
       }
     });
     this.addCommand({
@@ -15442,9 +15410,9 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
       callback: async () => {
         try {
           const path = await this.store.testWriteAccess();
-          new import_obsidian14.Notice(t("notice.storageWritable", { path }));
+          new import_obsidian15.Notice(t("notice.storageWritable", { path }));
         } catch {
-          new import_obsidian14.Notice(t("notice.storageNotWritable"));
+          new import_obsidian15.Notice(t("notice.storageNotWritable"));
         }
       }
     });
@@ -15461,7 +15429,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
     });
     this.registerEvent(
       this.app.vault.on("modify", async (file) => {
-        if (!(file instanceof import_obsidian14.TFile) || !this.isSupportedFile(file)) {
+        if (!(file instanceof import_obsidian15.TFile) || !this.isSupportedFile(file)) {
           return;
         }
         const document2 = await this.store.getDocument(file);
@@ -15477,7 +15445,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
     );
     this.registerEvent(
       this.app.vault.on("rename", async (file, oldPath) => {
-        if (!this.settings.migrateOnRename || !(file instanceof import_obsidian14.TFile) || !this.isSupportedFile(file)) {
+        if (!this.settings.migrateOnRename || !(file instanceof import_obsidian15.TFile) || !this.isSupportedFile(file)) {
           return;
         }
         if (this.renameMigrationTimer !== null) {
@@ -15492,7 +15460,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
     );
     this.registerEvent(
       this.app.workspace.on("file-open", async (file) => {
-        if (file instanceof import_obsidian14.TFile && this.isSupportedFile(file)) {
+        if (file instanceof import_obsidian15.TFile && this.isSupportedFile(file)) {
           this.popover.hide();
           await this.store.getDocument(file);
           await this.refreshAnnotations();
@@ -15503,8 +15471,8 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
   async createHighlight(color) {
     if (!this.pdfLayer.isPdfActive()) {
       const activeFile = this.app.workspace.getActiveFile();
-      if (!(activeFile instanceof import_obsidian14.TFile) || !this.isSupportedFile(activeFile)) {
-        new import_obsidian14.Notice(t("notice.onlyPdfEpubAnnotations"));
+      if (!(activeFile instanceof import_obsidian15.TFile) || !this.isSupportedFile(activeFile)) {
+        new import_obsidian15.Notice(t("notice.onlyPdfEpubAnnotations"));
       }
       this.toolbar.hide();
       return;
@@ -15515,8 +15483,8 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
   async createComment() {
     if (!this.pdfLayer.isPdfActive()) {
       const activeFile = this.app.workspace.getActiveFile();
-      if (!(activeFile instanceof import_obsidian14.TFile) || !this.isSupportedFile(activeFile)) {
-        new import_obsidian14.Notice(t("notice.onlyPdfEpubAnnotations"));
+      if (!(activeFile instanceof import_obsidian15.TFile) || !this.isSupportedFile(activeFile)) {
+        new import_obsidian15.Notice(t("notice.onlyPdfEpubAnnotations"));
       }
       this.toolbar.hide();
       return;
@@ -15535,7 +15503,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
     this.toolbar.hide();
   }
   activeEditor() {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian14.MarkdownView);
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian15.MarkdownView);
     return view ? { editor: view.editor, file: view.file } : null;
   }
   async activateSidebar() {
@@ -15577,13 +15545,13 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
   }
   async copyAnnotationLink(filePath, annotationId) {
     await navigator.clipboard.writeText(this.annotationLinks.createUri(filePath, annotationId));
-    new import_obsidian14.Notice(t("notice.annotationLinkCopied"));
+    new import_obsidian15.Notice(t("notice.annotationLinkCopied"));
   }
   async openMarkdownAtAnchor(file, anchor, annotationId) {
     const leaf = this.app.workspace.getLeaf("tab");
     await leaf.openFile(file);
     this.app.workspace.revealLeaf(leaf);
-    const view = leaf.view instanceof import_obsidian14.MarkdownView ? leaf.view : this.app.workspace.getActiveViewOfType(import_obsidian14.MarkdownView);
+    const view = leaf.view instanceof import_obsidian15.MarkdownView ? leaf.view : this.app.workspace.getActiveViewOfType(import_obsidian15.MarkdownView);
     if (!view) {
       return false;
     }
@@ -15608,7 +15576,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
       }
       await new Promise((resolve) => window.setTimeout(resolve, 100));
     }
-    new import_obsidian14.Notice(t("notice.pdfViewNotReady"));
+    new import_obsidian15.Notice(t("notice.pdfViewNotReady"));
     return false;
   }
   async openEpubAtAnchor(file, cfi, annotationId) {
@@ -15631,8 +15599,8 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
    */
   async openEpubAtCfi(filePath, cfi) {
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (!(file instanceof import_obsidian14.TFile) || !SUPPORTED_BOOK_EXTENSIONS.includes(file.extension.toLowerCase())) {
-      new import_obsidian14.Notice(t("notice.epubFileNotFound"));
+    if (!(file instanceof import_obsidian15.TFile) || !SUPPORTED_BOOK_EXTENSIONS.includes(file.extension.toLowerCase())) {
+      new import_obsidian15.Notice(t("notice.epubFileNotFound"));
       return;
     }
     await this.openEpubAtAnchor(file, cfi, "");
@@ -15655,14 +15623,14 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
       }
       await new Promise((resolve) => window.setTimeout(resolve, 100));
     }
-    new import_obsidian14.Notice(t("notice.epubViewNotReady"));
+    new import_obsidian15.Notice(t("notice.epubViewNotReady"));
     return false;
   }
   copySelection() {
     const text = window.getSelection()?.toString() || this.activeEditor()?.editor.getSelection() || "";
     if (text) {
       navigator.clipboard.writeText(text);
-      new import_obsidian14.Notice(t("notice.selectionCopied"));
+      new import_obsidian15.Notice(t("notice.selectionCopied"));
     }
   }
   async handleAnnotationClick(event) {
@@ -15680,7 +15648,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian14.Plugin {
     }
     const annotationId = mark.dataset.bookNoteId;
     const file = this.app.workspace.getActiveFile();
-    if (!annotationId || !(file instanceof import_obsidian14.TFile)) {
+    if (!annotationId || !(file instanceof import_obsidian15.TFile)) {
       return;
     }
     const document2 = this.store.getCachedDocument(file.path) ?? await this.store.getDocument(file);
@@ -15714,7 +15682,7 @@ function unwrapStaleHighlight(mark) {
   parent.removeChild(mark);
   parent.normalize();
 }
-var CommentModal = class extends import_obsidian14.Modal {
+var CommentModal = class extends import_obsidian15.Modal {
   constructor(app, tags, initialTitle, initialContent, initialTagId) {
     super(app);
     this.tags = tags;

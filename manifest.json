@@ -1,8 +1,8 @@
 {
 	"id": "book-note",
 	"name": "Book Note",
-	"version": "0.27.3",
-	"minAppVersion": "1.4.0",
+	"version": "0.27.4",
+	"minAppVersion": "1.7.2",
 	"description": "Non-invasive reading annotation plugin for PDF and EPUB. Highlights, notes, and tags are stored in separate sidecar files — your original documents are never modified.",
 	"author": "hellokunzai",
 	"authorUrl": "https://github.com/hellokunzai/obsidian-book-note",

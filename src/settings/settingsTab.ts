@@ -39,7 +39,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: t("settings.header") });
+    new Setting(containerEl).setName(t("settings.header")).setHeading();
 
     new Setting(containerEl)
       .setName(t("settings.defaultColor"))
@@ -90,7 +90,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
 
   private renderStorageSettings(): void {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: t("settings.storage.heading") });
+    new Setting(containerEl).setName(t("settings.storage.heading")).setHeading();
 
     new Setting(containerEl)
       .setName(t("settings.sidecarLocation.name"))
@@ -155,7 +155,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
 
   private renderTagSettings(): void {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: t("settings.tags.heading") });
+    new Setting(containerEl).setName(t("settings.tags.heading")).setHeading();
     containerEl.createDiv({
       cls: "setting-item-description",
       text: t("settings.tags.desc", { max: MAX_ENABLED_ANNOTATION_TAGS }),
@@ -274,7 +274,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
   /** EPUB 阅读相关设置：字号 / 主题 / 翻页 / 高亮样式 / 摘录目录 / 段落模式 / 脚注 / 回显 */
   private renderEpubSettings(): void {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: t("settings.epub.heading") });
+    new Setting(containerEl).setName(t("settings.epub.heading")).setHeading();
 
     new Setting(containerEl)
       .setName(t("settings.epub.fontSize.name"))
@@ -331,7 +331,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
 
   private renderPdfSettings(): void {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: t("settings.pdf.heading") });
+    new Setting(containerEl).setName(t("settings.pdf.heading")).setHeading();
     new Setting(containerEl)
       .setName(t("settings.pdf.progress.name"))
       .setDesc(t("settings.pdf.progress.desc"))

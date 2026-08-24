@@ -5,6 +5,7 @@
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
+import { setIcon } from "obsidian";
 import { ANNOTATION_COLORS, AnnotationColor, COLOR_LABELS } from "../storage/types";
 import { t } from "../i18n";
 
@@ -86,17 +87,17 @@ export class SelectionToolbar {
 
     this.element.createDiv({ cls: "book-note-toolbar-sep" });
 
-    const commentButton = this.iconButton(t("common.addNote"), NOTE_ICON);
+    const commentButton = this.iconButton(t("common.addNote"), "message-square");
     commentButton.addEventListener("click", () => this.options.onComment());
 
-    const copyButton = this.iconButton(t("common.copy"), COPY_ICON);
+    const copyButton = this.iconButton(t("common.copy"), "copy");
     copyButton.addEventListener("click", () => this.options.onCopy());
 
-    const sidebarButton = this.iconButton(t("common.openOverview"), OVERVIEW_ICON);
+    const sidebarButton = this.iconButton(t("common.openOverview"), "list");
     sidebarButton.addEventListener("click", () => this.options.onOpenSidebar());
   }
 
-  private iconButton(label: string, svg: string): HTMLButtonElement {
+  private iconButton(label: string, iconId: string): HTMLButtonElement {
     const button = this.element.createEl("button", {
       cls: "book-note-toolbar-action",
       attr: {
@@ -105,7 +106,7 @@ export class SelectionToolbar {
         title: label,
       },
     });
-    button.innerHTML = svg;
+    setIcon(button, iconId);
     return button;
   }
 }
@@ -126,36 +127,3 @@ function isSelectionInsideWorkspace(range: Range): boolean {
       container.closest(".markdown-preview-view"),
   );
 }
-
-const NOTE_ICON = `
-  <svg width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5
-      a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-  </svg>
-`;
-
-const COPY_ICON = `
-  <svg width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round">
-    <rect x="9" y="9" width="13" height="13"
-      rx="2" ry="2"/>
-    <path d="M5 15H4a2 2 0 0 1-2-2V4
-      a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-  </svg>
-`;
-
-const OVERVIEW_ICON = `
-  <svg width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round">
-    <line x1="8" y1="6" x2="21" y2="6"/>
-    <line x1="8" y1="12" x2="21" y2="12"/>
-    <line x1="8" y1="18" x2="21" y2="18"/>
-    <line x1="3" y1="6" x2="3.01" y2="6"/>
-    <line x1="3" y1="12" x2="3.01" y2="12"/>
-    <line x1="3" y1="18" x2="3.01" y2="18"/>
-  </svg>
-`;
