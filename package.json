@@ -1,8 +1,9 @@
 {
-	"name": "yh-inklight",
-	"version": "0.20.0",
+	"name": "book-note",
+	"version": "0.27.4",
+	"author": "hellokunzai",
 	"private": true,
-	"description": "Non-invasive Obsidian annotations for Markdown, PDF, and EPUB with a unified sidebar, semantic tags, deep links, and sidecar storage.",
+	"description": "Non-invasive Obsidian annotations for PDF and EPUB with a unified sidebar, semantic tags, deep links, and sidecar storage.",
 	"main": "main.js",
 	"scripts": {
 		"build": "node esbuild.config.mjs production",

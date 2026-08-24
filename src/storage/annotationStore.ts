@@ -1,11 +1,12 @@
 /**
  * [INPUT]: 依赖 obsidian App/Vault/Adapter 的文件读写能力，依赖 storage/types 的 sidecar JSON 合约
- * [OUTPUT]: 对外提供 AnnotationStore，负责 Markdown/PDF 的 .obsidian-annotations sidecar 文件、索引、缓存与导出
+ * [OUTPUT]: 对外提供 AnnotationStore，负责 Markdown/PDF 的 booknote sidecar 文件、索引、缓存与导出
  * [POS]: storage 模块的唯一持久化入口，隔离原始 Markdown 与注释数据
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
 import { App, normalizePath, Notice, TFile } from "obsidian";
+import { t } from "../i18n";
 
 import { createAnnotationUri } from "../links/annotationLink";
 import { AnnotationTagDefinition, resolveAnnotationTag } from "../tags/tagDomain";
@@ -14,25 +15,26 @@ import {
   AnnotationIndexEntry,
   AnnotationColor,
   AnnotationExportFormat,
+  CanvasBinding,
+  CanvasExcerptNode,
   CommentAnnotation,
   EMPTY_INDEX,
+  EpubCommentAnnotation,
+  EpubCfiAnchor,
+  EpubHighlightAnnotation,
+  EpubReadingProgress,
   FileAnnotationDocument,
   HighlightAnnotation,
+  PdfAnchor,
   PdfCommentAnnotation,
   PdfHighlightAnnotation,
   PdfReadingProgress,
-  EpubHighlightAnnotation,
-  EpubCommentAnnotation,
-  EpubReadingProgress,
-  EpubCfiAnchor,
-  PdfAnchor,
+  ReadingBookmark,
+  SidecarLocation,
   TextAnchor,
 } from "./types";
 
-const STORE_DIR = ".obsidian-annotations";
-const INDEX_PATH = normalizePath(`${STORE_DIR}/index.json`);
-const MAX_LEGACY_SIDECAR_NAME_LENGTH = 180;
-const MAX_COMPACT_SIDECAR_PREFIX_LENGTH = 96;
+const DEFAULT_STORE_DIR = "booknote";
 
 interface ExportDocumentSource {
   filePath: string;
@@ -77,6 +79,11 @@ export class AnnotationStoreWriteError extends Error {
   }
 }
 
+export interface StorageConfig {
+  baseDir: string;
+  sidecarLocation: SidecarLocation;
+}
+
 export class AnnotationStore {
   private readonly documents = new Map<string, FileAnnotationDocument>();
   private readonly documentWrites = new Map<string, Promise<unknown>>();
@@ -87,15 +94,37 @@ export class AnnotationStore {
   constructor(
     private readonly app: App,
     private readonly getAnnotationTags: () => AnnotationTagDefinition[] = () => [],
+    private readonly getStorageConfig: () => StorageConfig = () => ({
+      baseDir: DEFAULT_STORE_DIR,
+      sidecarLocation: "specifiedFolder",
+    }),
+    private readonly loadData: () => Promise<unknown> = async () => null,
+    private readonly saveData: (data: unknown) => Promise<void> = async () => {},
   ) {}
 
   get version(): number {
     return this.changeVersion;
   }
 
+  getStorageConfigResolved(): StorageConfig {
+    const cfg = this.getStorageConfig?.() ?? { baseDir: DEFAULT_STORE_DIR, sidecarLocation: "specifiedFolder" };
+    return {
+      baseDir: resolveStoreDir(cfg.baseDir),
+      sidecarLocation: cfg.sidecarLocation === "sameFolder" ? "sameFolder" : "specifiedFolder",
+    };
+  }
+
+  private getBaseDir(): string {
+    return this.getStorageConfigResolved().baseDir;
+  }
+
+  private getSidecarLocation(): SidecarLocation {
+    return this.getStorageConfigResolved().sidecarLocation;
+  }
+
   async initialize(): Promise<void> {
-    await this.ensureStoreDir();
-    this.index = await this.readJson<AnnotationIndex>(INDEX_PATH, EMPTY_INDEX, { allowCorruptFallback: true });
+    const stored = await this.loadData();
+    this.index = stored && typeof stored === "object" && "files" in stored ? (stored as AnnotationIndex) : EMPTY_INDEX;
   }
 
   getCachedDocument(filePath: string): FileAnnotationDocument | null {
@@ -128,7 +157,7 @@ export class AnnotationStore {
 
     const sidecarPath = this.toSidecarPath(filePath);
     const fallback = await this.createEmptyDocument(file);
-    const document = await this.readJson<FileAnnotationDocument>(sidecarPath, fallback);
+    const document = await this.readDocumentOrFallback(sidecarPath, fallback);
     this.documents.set(cacheKey, this.normalizeDocument(document, filePath));
     return this.documents.get(cacheKey)!;
   }
@@ -179,8 +208,9 @@ export class AnnotationStore {
 
     try {
       await this.ensureStoreDir();
-      await this.app.vault.adapter.write(sidecarPath, JSON.stringify(normalized, null, 2));
-      const persisted = await this.readExistingJson<FileAnnotationDocument>(sidecarPath);
+      const serialized = serializeDocumentToMarkdown(normalized);
+      await this.app.vault.adapter.write(sidecarPath, serialized);
+      const persisted = await this.readDocumentOrThrow(sidecarPath);
       this.verifyPersistedDocument(normalized, persisted, sidecarPath);
       await this.enqueueIndexWrite(async () => {
         const nextIndex: AnnotationIndex = {
@@ -194,7 +224,7 @@ export class AnnotationStore {
         this.index = nextIndex;
       });
     } catch (error) {
-      new Notice(`墨光批注未保存，请检查写入权限或同步状态：${sidecarPath}`);
+      new Notice(t("notice.notSaved", { path: sidecarPath }));
       throw new AnnotationStoreWriteError(sidecarPath, error);
     }
 
@@ -316,10 +346,10 @@ export class AnnotationStore {
   async migrateFilePath(oldPath: string, file: TFile): Promise<void> {
     const normalizedOldPath = this.normalizeVaultPath(oldPath);
     const oldSidecar = this.toSidecarPath(normalizedOldPath);
-    const oldDocument = await this.readJson<FileAnnotationDocument | null>(oldSidecar, null);
-    if (!oldDocument) {
+    if (!(await this.app.vault.adapter.exists(oldSidecar))) {
       return;
     }
+    const oldDocument = await this.readDocumentOrThrow(oldSidecar);
 
     const nextDocument: FileAnnotationDocument = {
       ...oldDocument,
@@ -346,7 +376,7 @@ export class AnnotationStore {
   /**
    * 重命名/移动源文件后，把对应的摘录导出文件一并迁移：
    * 1. 文件名从旧 basename 派生改为新 basename 派生（兼容 {-notes.md} 与 《名》摘录.md 两种历史格式）；
-   * 2. 文件内容里所有指向旧路径的 source 引用（标题、[[wikilink]]、data-yh-source-path）替换为新路径。
+   * 2. 文件内容里所有指向旧路径的 source 引用（标题、[[wikilink]]、data-book-note-source-path）替换为新路径。
    * 摘录文件不存在时静默跳过。
    */
   private async migrateExcerptFile(oldPath: string, newPath: string): Promise<void> {
@@ -371,9 +401,7 @@ export class AnnotationStore {
       try {
         const content = await this.app.vault.read(excerptFile);
         // 替换内容中所有旧路径引用（标题、wikilink、hidden anchor）
-        const updated = content
-          .split(oldPath).join(newPath)
-          .split(encodeURIComponent(oldPath)).join(encodeURIComponent(newPath));
+        const updated = content.split(oldPath).join(newPath);
         const newName = candidate.replace(oldBase.split(/[\\/]/).pop()!, newBase.split(/[\\/]/).pop()!);
         const targetPath = normalizePath(`${newParent}/${newName}`);
         if (updated !== content) {
@@ -383,7 +411,7 @@ export class AnnotationStore {
           await this.app.vault.rename(excerptFile, targetPath);
         }
       } catch (error) {
-        console.warn("yh-inklight: migrate excerpt file failed", candidatePath, error);
+        console.warn("book-note: migrate excerpt file failed", candidatePath, error);
       }
     }
   }
@@ -464,9 +492,9 @@ export class AnnotationStore {
   async exportAllNotes(format: AnnotationExportFormat = "summary"): Promise<TFile> {
     const documents = await this.getIndexedDocuments();
     const suffix = format === "summary" ? "" : `-${format}`;
-    const targetPath = normalizePath(`inklight-all-notes${suffix}.md`);
+    const targetPath = normalizePath(`book-note-all-notes${suffix}.md`);
     const sources = documents.map((document) => ({ filePath: document.filePath, document }));
-    const lines = buildExportLines("墨光批注全库汇总", sources, format, this.getAnnotationTags());
+    const lines = buildExportLines(t("export.heading"), sources, format, this.getAnnotationTags());
 
     const existing = this.app.vault.getAbstractFileByPath(targetPath);
     if (existing instanceof TFile) {
@@ -478,8 +506,8 @@ export class AnnotationStore {
   }
 
   async testWriteAccess(): Promise<string> {
-    await this.ensureStoreDir();
-    const testPath = normalizePath(`${STORE_DIR}/.write-test.json`);
+    const testDir = this.getSidecarLocation() === "sameFolder" ? "" : this.getBaseDir();
+    const testPath = normalizePath(`${testDir}/.write-test.json`);
     const payload = JSON.stringify({ ok: true, timestamp: new Date().toISOString() }, null, 2);
 
     try {
@@ -491,7 +519,7 @@ export class AnnotationStore {
       await this.deleteIfExists(testPath);
       return testPath;
     } catch (error) {
-      new Notice(`墨光批注存储测试失败：${testPath}`);
+      new Notice(t("notice.storageTestFailed", { path: testPath }));
       throw new AnnotationStoreWriteError(testPath, error);
     }
   }
@@ -506,31 +534,23 @@ export class AnnotationStore {
     return this.hashBytes(bytes);
   }
 
+  /**
+   * Build a sidecar path from the source file path.
+   *
+   * - specifiedFolder: `{baseDir}/{path-segments}-{filename}.{ext}.{sidecarExt}`
+   *   e.g. `books/未命名.pdf` -> `booknote/books-未命名.pdf.md`
+   * - sameFolder: `{dir}/{filename}.{ext}.{sidecarExt}`
+   *   e.g. `books/未命名.pdf` -> `books/未命名.pdf.md`
+   */
   toSidecarPath(filePath: string): string {
-    const legacyPath = this.toLegacySidecarPath(filePath);
-    const legacyName = legacyPath.split("/").pop() ?? "";
-    if (legacyName.length <= MAX_LEGACY_SIDECAR_NAME_LENGTH) {
-      return legacyPath;
+    const normalized = this.normalizeVaultPath(filePath);
+    const sidecarExt = "md";
+    if (this.getSidecarLocation() === "sameFolder") {
+      return normalizePath(`${normalized}.${sidecarExt}`);
     }
-
-    return this.toCompactSidecarPath(filePath);
-  }
-
-  private toLegacySidecarPath(filePath: string): string {
-    const safeName = this.normalizeVaultPath(filePath)
-      .toLowerCase()
-      .split(/[\\/]/)
-      .map((part) => encodeURIComponent(part))
-      .join("__");
-    return normalizePath(`${STORE_DIR}/${safeName}.json`);
-  }
-
-  private toCompactSidecarPath(filePath: string): string {
-    const normalizedPath = this.normalizeVaultPath(filePath).toLowerCase();
-    const fileName = normalizedPath.split(/[\\/]/).pop() ?? "annotation";
-    const encodedName = encodeURIComponent(fileName).replace(/%/g, "_").replace(/[^a-z0-9._-]/g, "_");
-    const prefix = encodedName.slice(0, MAX_COMPACT_SIDECAR_PREFIX_LENGTH).replace(/[._-]+$/g, "") || "annotation";
-    return normalizePath(`${STORE_DIR}/${prefix}--${hashPath(normalizedPath)}.json`);
+    const parts = normalized.split("/").filter((part) => part.length > 0);
+    const safeName = parts.join("-");
+    return normalizePath(`${this.getBaseDir()}/${safeName}.${sidecarExt}`);
   }
 
   private async createEmptyDocument(file: TFile): Promise<FileAnnotationDocument> {
@@ -584,19 +604,29 @@ export class AnnotationStore {
   }
 
   private async ensureStoreDir(): Promise<void> {
-    await this.ensureDir(STORE_DIR);
+    if (this.getSidecarLocation() === "sameFolder") {
+      return;
+    }
+    await this.ensureDir(this.getBaseDir());
   }
 
   private async ensureDir(path: string): Promise<void> {
     const normalizedPath = normalizePath(path);
-    if (!(await this.app.vault.adapter.exists(normalizedPath))) {
-      await this.app.vault.adapter.mkdir(normalizedPath);
+    if (await this.app.vault.adapter.exists(normalizedPath)) {
+      return;
+    }
+    const segments = normalizedPath.split("/").filter((segment) => segment.length > 0);
+    let current = "";
+    for (const segment of segments) {
+      current = current ? `${current}/${segment}` : segment;
+      if (!(await this.app.vault.adapter.exists(current))) {
+        await this.app.vault.adapter.mkdir(current);
+      }
     }
   }
 
   private async writeIndex(nextIndex: AnnotationIndex = this.index): Promise<void> {
-    await this.ensureStoreDir();
-    await this.app.vault.adapter.write(INDEX_PATH, JSON.stringify(nextIndex, null, 2));
+    await this.saveData(nextIndex);
   }
 
   private verifyPersistedDocument(expected: FileAnnotationDocument, persisted: FileAnnotationDocument, sidecarPath: string): void {
@@ -635,18 +665,77 @@ export class AnnotationStore {
       if (options.allowCorruptFallback) {
         return fallback;
       }
-      new Notice(`墨光批注无法读取 ${normalizedPath}，已停止写入以保护批注数据。`);
+      new Notice(t("notice.cannotRead", { path: normalizedPath }));
       throw new AnnotationStoreReadError(normalizedPath, error);
     }
   }
 
-  private async readExistingJson<T>(path: string): Promise<T> {
+  private async readDocumentOrFallback(path: string, fallback: FileAnnotationDocument): Promise<FileAnnotationDocument> {
     const normalizedPath = normalizePath(path);
     if (!(await this.app.vault.adapter.exists(normalizedPath))) {
-      throw new Error(`Expected JSON file does not exist: ${normalizedPath}`);
+      return fallback;
+    }
+    try {
+      return this.parseDocument(await this.app.vault.adapter.read(normalizedPath), normalizedPath);
+    } catch (error) {
+      new Notice(t("notice.cannotRead", { path: normalizedPath }));
+      return fallback;
+    }
+  }
+
+  private async readDocumentOrThrow(path: string): Promise<FileAnnotationDocument> {
+    const normalizedPath = normalizePath(path);
+    if (!(await this.app.vault.adapter.exists(normalizedPath))) {
+      throw new AnnotationStoreReadError(normalizedPath, new Error("missing"));
+    }
+    try {
+      return this.parseDocument(await this.app.vault.adapter.read(normalizedPath), normalizedPath);
+    } catch (error) {
+      throw new AnnotationStoreReadError(normalizedPath, error);
+    }
+  }
+
+  private parseDocument(raw: string, path: string): FileAnnotationDocument {
+    return parseMarkdownDocument(raw, path);
+  }
+
+  /** Move every indexed sidecar to the path derived from the current storage config. */
+  async migrateAll(): Promise<{ migrated: number; failed: number }> {
+    const result = { migrated: 0, failed: 0 };
+    const filePaths = Object.keys(this.index.files);
+
+    for (const filePath of filePaths) {
+      const entry = this.index.files[filePath];
+      const oldSidecar = entry.sidecarPath;
+      const newSidecar = this.toSidecarPath(filePath);
+
+      if (!(await this.app.vault.adapter.exists(oldSidecar))) {
+        continue;
+      }
+      if (oldSidecar === newSidecar) {
+        continue;
+      }
+
+      try {
+        const document = await this.readDocumentOrThrow(oldSidecar);
+        const normalized = this.normalizeDocument(document, filePath);
+        await this.ensureStoreDir();
+        const serialized = serializeDocumentToMarkdown(normalized);
+        await this.app.vault.adapter.write(newSidecar, serialized);
+        if (newSidecar !== oldSidecar) {
+          await this.deleteIfExists(oldSidecar);
+        }
+        this.index.files[filePath] = this.toIndexEntry(normalized, newSidecar);
+        this.documents.delete(this.toCacheKey(filePath));
+        result.migrated += 1;
+      } catch (error) {
+        console.warn("book-note: migrate sidecar failed", oldSidecar, error);
+        result.failed += 1;
+      }
     }
 
-    return JSON.parse(await this.app.vault.adapter.read(normalizedPath)) as T;
+    await this.writeIndex();
+    return result;
   }
 
   private async deleteIfExists(path: string): Promise<void> {
@@ -711,15 +800,6 @@ export class AnnotationStore {
       .map((byte) => byte.toString(16).padStart(2, "0"))
       .join("");
   }
-}
-
-function hashPath(value: string): string {
-  let hash = 0x811c9dc5;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 0x01000193);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
 }
 
 function buildExportLines(
@@ -872,24 +952,52 @@ function renderByColor(entries: ExportEntry[]): string[] {
 function renderNotesOnly(entries: ExportEntry[]): string[] {
   const notes = entries.filter((entry) => entry.kind === "note" && entry.content.trim());
   if (!notes.length) {
-    return ["No notes found.", ""];
+    return [t("storage.noNotesFound"), ""];
   }
-  return ["## Notes", "", ...notes.flatMap((entry) => renderAnnotationBlock(entry))];
+  return [`## ${t("storage.notesOnlyHeading")}`, "", ...notes.flatMap((entry) => renderAnnotationBlock(entry))];
 }
 
 function renderReadingNotes(entries: ExportEntry[]): string[] {
-  return [
-    "## Reading Notes",
-    "",
-    ...entries.flatMap((entry) => {
-      return [`### ${entrySource(entry)}`, "", ...renderAnnotationBlock(entry)];
-    }),
-  ];
+  const highlights = entries.filter((entry) => entry.kind === "highlight");
+  const notes = entries.filter((entry) => entry.kind === "note");
+  const lines: string[] = [];
+
+  function renderSection(title: string, sectionEntries: ExportEntry[]): void {
+    if (!sectionEntries.length) {
+      return;
+    }
+    lines.push(`## ${title}`);
+    lines.push("");
+
+    const groups = new Map<string | undefined, ExportEntry[]>();
+    for (const entry of sectionEntries) {
+      const heading = entryGroupHeading(entry);
+      if (!groups.has(heading)) {
+        groups.set(heading, []);
+      }
+      groups.get(heading)!.push(entry);
+    }
+
+    for (const [heading, groupEntries] of groups) {
+      if (heading) {
+        lines.push(`### ${heading}`);
+        lines.push("");
+      }
+      for (const entry of groupEntries) {
+        lines.push(...renderAnnotationBlock(entry));
+      }
+    }
+  }
+
+  renderSection(t("storage.section.highlight"), highlights);
+  renderSection(t("storage.section.note"), notes);
+
+  return lines;
 }
 
 function renderAnnotationBlock(entry: ExportEntry): string[] {
   const blockId = `${entry.mode}-${entry.id}`;
-  const calloutType = entry.mode === "epub" ? "inklight-epub" : entry.mode === "pdf" ? "inklight-pdf" : "inklight-md";
+  const calloutType = entry.mode === "epub" ? "book-note-epub" : entry.mode === "pdf" ? "book-note-pdf" : "book-note-md";
   const header = `> [!${calloutType}|${entry.color}] ${entrySource(entry)} - ${entry.createdAt} ^${blockId}`;
   const lines = [header];
 
@@ -899,18 +1007,18 @@ function renderAnnotationBlock(entry: ExportEntry): string[] {
 
   if (entry.tagName) {
     lines.push(">");
-    lines.push(`> 标签：${entry.tagName}`);
+    lines.push(`> ${t("storage.tagLabel")}：${entry.tagName}`);
   }
 
   if (entry.content.trim()) {
     lines.push(">");
     for (const line of entry.content.split(/\r?\n/)) {
-      lines.push(`> Note: ${line}`);
+      lines.push(`> ${t("storage.noteLabel")}: ${line}`);
     }
   }
 
   lines.push(">");
-  lines.push(`> [返回原文](${createAnnotationUri(entry.sourcePath, entry.id)})`);
+  lines.push(`> [${t("storage.backToSource")}](${createAnnotationUri(entry.sourcePath, entry.id)})`);
   const anchor = hiddenAnchor(entry);
   if (anchor) {
     lines.push(anchor);
@@ -922,13 +1030,13 @@ function renderAnnotationBlock(entry: ExportEntry): string[] {
 
 function hiddenAnchor(entry: ExportEntry): string {
   if (entry.mode === "epub" && entry.cfiRange) {
-    return `> <span style="display:none" data-yh-id="${escapeHtmlAttribute(entry.id)}" data-yh-mode="epub" data-yh-cfi="${escapeHtmlAttribute(entry.cfiRange)}" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
+    return `> <span style="display:none" data-book-note-id="${escapeHtmlAttribute(entry.id)}" data-book-note-mode="epub" data-book-note-cfi="${escapeHtmlAttribute(entry.cfiRange)}" data-book-note-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
   }
   if (entry.mode === "pdf" && entry.pageNumber) {
-    const rects = entry.pdfRects ? ` data-yh-pdf-rects="${escapeHtmlAttribute(entry.pdfRects)}"` : "";
-    return `> <span style="display:none" data-yh-id="${escapeHtmlAttribute(entry.id)}" data-yh-mode="pdf" data-yh-pdf-page="${entry.pageNumber}" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}" data-yh-pdf-id="${escapeHtmlAttribute(entry.id)}"${rects}></span>`;
+    const rects = entry.pdfRects ? ` data-book-note-pdf-rects="${escapeHtmlAttribute(entry.pdfRects)}"` : "";
+    return `> <span style="display:none" data-book-note-id="${escapeHtmlAttribute(entry.id)}" data-book-note-mode="pdf" data-book-note-pdf-page="${entry.pageNumber}" data-book-note-source-path="${escapeHtmlAttribute(entry.sourcePath)}" data-book-note-pdf-id="${escapeHtmlAttribute(entry.id)}"${rects}></span>`;
   }
-  return `> <span style="display:none" data-yh-id="${escapeHtmlAttribute(entry.id)}" data-yh-mode="md" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
+  return `> <span style="display:none" data-book-note-id="${escapeHtmlAttribute(entry.id)}" data-book-note-mode="md" data-book-note-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
 }
 
 function escapeHtmlAttribute(value: string): string {
@@ -947,4 +1055,593 @@ function entrySource(entry: ExportEntry): string {
     return `${entry.sourcePath} · ${entry.chapter.trim()}`;
   }
   return entry.sourcePath;
+}
+
+function entryGroupHeading(entry: ExportEntry): string | undefined {
+  if (entry.pageNumber) {
+    return `p.${entry.pageNumber}`;
+  }
+  if (entry.mode === "epub" && entry.chapter?.trim()) {
+    return entry.chapter.trim();
+  }
+  return undefined;
+}
+
+// ===== Markdown sidecar storage =====
+// Document-level metadata (including reading progress) is stored in YAML
+// frontmatter. Annotations are grouped under # 高亮 / # 笔记 sections and
+// further under ## chapter/page subheadings. Machine-readable data lives in a
+// hidden span (data-book-note) so the file round-trips losslessly.
+
+const MD_ANNOTATION_ATTR = "data-book-note";
+
+interface SerializedAnnotation {
+  kind: "md-highlight" | "md-comment" | "pdf-highlight" | "pdf-comment" | "epub-highlight" | "epub-comment";
+  value: unknown;
+}
+
+interface DocMeta {
+  filePath: string;
+  fileHash: string;
+  lastModified: string;
+  // Reading progress is flattened to top-level keys (PDF or EPUB fields only,
+  // never both — a file is either a PDF or an EPUB). The sidecar file name
+  // preserves the original extension, so the format is unambiguous.
+  // Parsed back into nested PdfReadingProgress / EpubReadingProgress objects.
+  pageNumber?: number;
+  totalPages?: number;
+  percent?: number;
+  lastRead?: string;
+  cfi?: string;
+  chapter?: string;
+  readingTimeSeconds?: number;
+  estimatedRemainingMinutes?: number;
+  bookmarks: ReadingBookmark[];
+  canvasBinding: CanvasBinding | null;
+  canvasNodes: CanvasExcerptNode[];
+}
+
+function emptyDocMeta(): DocMeta {
+  return {
+    filePath: "",
+    fileHash: "",
+    lastModified: new Date().toISOString(),
+    bookmarks: [],
+    canvasBinding: null,
+    canvasNodes: [],
+  };
+}
+
+/**
+ * Resolve a user-provided storage directory to a safe, vault-relative path.
+ * Only vault-relative paths are allowed (mobile-safe, no Node fs). Anything
+ * absolute, containing "..", or empty falls back to the default directory.
+ */
+function resolveStoreDir(raw: string): string {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) {
+    return DEFAULT_STORE_DIR;
+  }
+  const normalized = normalizePath(trimmed);
+  if (
+    normalized.startsWith("/") ||
+    normalized.startsWith("\\") ||
+    /^[A-Za-z]:[\\/]/.test(normalized) ||
+    normalized.includes("..") ||
+    normalized === "." ||
+    normalized === ".."
+  ) {
+    return DEFAULT_STORE_DIR;
+  }
+  return normalized;
+}
+
+function sidecarSource(
+  filePath: string,
+  mode: "md" | "pdf" | "epub",
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): string {
+  if (mode === "pdf" && "pageNumber" in annotation.anchor && typeof annotation.anchor.pageNumber === "number") {
+    return `${filePath} p.${annotation.anchor.pageNumber}`;
+  }
+  if (mode === "epub" && "chapter" in annotation.anchor && annotation.anchor.chapter?.trim()) {
+    return `${filePath} · ${annotation.anchor.chapter.trim()}`;
+  }
+  return filePath;
+}
+
+function sidecarCreatedAt(
+  kind: SerializedAnnotation["kind"],
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): string {
+  if (kind === "md-comment" || kind === "pdf-comment") {
+    const comment = annotation as CommentAnnotation | PdfCommentAnnotation;
+    return comment.updatedAt || comment.createdAt;
+  }
+  return annotation.createdAt;
+}
+
+function sidecarContent(
+  kind: SerializedAnnotation["kind"],
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): string {
+  if (kind === "epub-comment") {
+    return (annotation as EpubCommentAnnotation).note;
+  }
+  if (kind.endsWith("-comment")) {
+    return (annotation as CommentAnnotation | PdfCommentAnnotation).content;
+  }
+  return "";
+}
+
+function sidecarTagLabel(
+  kind: SerializedAnnotation["kind"],
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): string | undefined {
+  if (kind.endsWith("-comment")) {
+    return (annotation as CommentAnnotation | PdfCommentAnnotation | EpubCommentAnnotation).tagLabelSnapshot;
+  }
+  return undefined;
+}
+
+function sidecarResolved(
+  kind: SerializedAnnotation["kind"],
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): boolean {
+  if (kind.endsWith("-comment")) {
+    return (annotation as CommentAnnotation | PdfCommentAnnotation | EpubCommentAnnotation).resolved;
+  }
+  return false;
+}
+
+function sidecarReplies(
+  kind: SerializedAnnotation["kind"],
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): { createdAt: string; content: string }[] {
+  if (kind.endsWith("-comment")) {
+    return (annotation as CommentAnnotation | PdfCommentAnnotation | EpubCommentAnnotation).replies;
+  }
+  return [];
+}
+
+function sidecarGroupHeading(
+  mode: "md" | "pdf" | "epub",
+  annotation:
+    | HighlightAnnotation
+    | CommentAnnotation
+    | PdfHighlightAnnotation
+    | PdfCommentAnnotation
+    | EpubHighlightAnnotation
+    | EpubCommentAnnotation,
+): string | undefined {
+  if (mode === "pdf" && "pageNumber" in annotation.anchor && typeof annotation.anchor.pageNumber === "number") {
+    return `p.${annotation.anchor.pageNumber}`;
+  }
+  if (mode === "epub" && "chapter" in annotation.anchor && annotation.anchor.chapter?.trim()) {
+    return annotation.anchor.chapter.trim();
+  }
+  return undefined;
+}
+
+function sidecarSectionTitle(kind: SerializedAnnotation["kind"]): string {
+  return kind.endsWith("-highlight") ? t("storage.section.highlight") : t("storage.section.note");
+}
+
+export function serializeDocumentToMarkdown(document: FileAnnotationDocument): string {
+  const meta: DocMeta = {
+    filePath: document.filePath,
+    fileHash: document.fileHash,
+    lastModified: document.lastModified,
+    bookmarks: document.bookmarks ?? [],
+    canvasBinding: document.canvasBinding ?? null,
+    canvasNodes: document.canvasNodes ?? [],
+  };
+  if (document.pdfProgress) {
+    meta.pageNumber = document.pdfProgress.pageNumber;
+    meta.totalPages = document.pdfProgress.totalPages;
+    meta.percent = document.pdfProgress.percent;
+    meta.lastRead = document.pdfProgress.lastRead;
+  }
+  if (document.epubProgress) {
+    meta.cfi = document.epubProgress.cfi;
+    meta.chapter = document.epubProgress.chapter;
+    meta.percent = document.epubProgress.percent;
+    meta.lastRead = document.epubProgress.lastRead;
+    meta.readingTimeSeconds = document.epubProgress.readingTimeSeconds;
+    meta.estimatedRemainingMinutes = document.epubProgress.estimatedRemainingMinutes;
+  }
+
+  const lines: string[] = [];
+  lines.push("---");
+  lines.push(`filePath: ${yamlValue(meta.filePath)}`);
+  lines.push(`fileHash: ${yamlValue(meta.fileHash)}`);
+  lines.push(`lastModified: ${yamlValue(meta.lastModified)}`);
+  if (meta.pageNumber !== undefined) {
+    lines.push(`pageNumber: ${yamlValue(meta.pageNumber)}`);
+    lines.push(`totalPages: ${yamlValue(meta.totalPages)}`);
+    lines.push(`percent: ${yamlValue(meta.percent)}`);
+    lines.push(`lastRead: ${yamlValue(meta.lastRead)}`);
+  }
+  if (meta.cfi !== undefined) {
+    lines.push(`cfi: ${yamlValue(meta.cfi)}`);
+    lines.push(`chapter: ${yamlValue(meta.chapter)}`);
+    lines.push(`percent: ${yamlValue(meta.percent)}`);
+    lines.push(`lastRead: ${yamlValue(meta.lastRead)}`);
+    lines.push(`readingTimeSeconds: ${yamlValue(meta.readingTimeSeconds)}`);
+    if (meta.estimatedRemainingMinutes !== undefined) {
+      lines.push(`estimatedRemainingMinutes: ${yamlValue(meta.estimatedRemainingMinutes)}`);
+    }
+  }
+  lines.push(`bookmarks: ${yamlValue(meta.bookmarks)}`);
+  lines.push(`canvasBinding: ${yamlValue(meta.canvasBinding)}`);
+  lines.push(`canvasNodes: ${yamlValue(meta.canvasNodes)}`);
+  lines.push("---");
+  lines.push("");
+
+  const pushBlock = (
+    mode: "md" | "pdf" | "epub",
+    kind: SerializedAnnotation["kind"],
+    annotation:
+      | HighlightAnnotation
+      | CommentAnnotation
+      | PdfHighlightAnnotation
+      | PdfCommentAnnotation
+      | EpubHighlightAnnotation
+      | EpubCommentAnnotation,
+  ): void => {
+    const blockId = `bn-${mode}-${annotation.id}`;
+    const calloutType = mode === "epub" ? "book-note-epub" : mode === "pdf" ? "book-note-pdf" : "book-note-md";
+    const source = sidecarSource(document.filePath, mode, annotation);
+    const createdAt = sidecarCreatedAt(kind, annotation);
+    const selectedText = annotation.anchor.selectedText;
+    const content = sidecarContent(kind, annotation);
+    const tagLabel = sidecarTagLabel(kind, annotation);
+    const resolved = sidecarResolved(kind, annotation);
+    const replies = sidecarReplies(kind, annotation);
+
+    lines.push(`> [!${calloutType}|${annotation.color}] ${source} - ${createdAt} ^${blockId}`);
+    for (const line of selectedText.split(/\r?\n/)) {
+      lines.push(`> ${line}`);
+    }
+
+    if (tagLabel) {
+      lines.push(">");
+      lines.push(`> ${t("storage.tagLabel")}：${tagLabel}`);
+    }
+
+    if (content.trim()) {
+      lines.push(">");
+      for (const line of content.split(/\r?\n/)) {
+        lines.push(`> ${t("storage.noteLabel")}: ${line}`);
+      }
+    }
+
+    if (replies.length) {
+      lines.push(">");
+      for (const reply of replies) {
+        lines.push(`> reply ${reply.createdAt}: ${reply.content}`);
+      }
+    }
+
+    if (resolved) {
+      lines.push(">");
+      lines.push("> resolved");
+    }
+
+    lines.push(">");
+    lines.push(`> [${t("storage.backToSource")}](${createAnnotationUri(document.filePath, annotation.id)})`);
+    lines.push(`> <span style="display:none" ${MD_ANNOTATION_ATTR}="${escapeHtmlAttribute(JSON.stringify({ kind, value: annotation }))}"></span>`);
+    lines.push("");
+  };
+
+  type SidecarItem = {
+    mode: "md" | "pdf" | "epub";
+    kind: SerializedAnnotation["kind"];
+    annotation:
+      | HighlightAnnotation
+      | CommentAnnotation
+      | PdfHighlightAnnotation
+      | PdfCommentAnnotation
+      | EpubHighlightAnnotation
+      | EpubCommentAnnotation;
+  };
+
+  const items: SidecarItem[] = [
+    ...document.highlights.map((a): SidecarItem => ({ mode: "md", kind: "md-highlight", annotation: a })),
+    ...document.comments.map((a): SidecarItem => ({ mode: "md", kind: "md-comment", annotation: a })),
+    ...document.pdfHighlights.map((a): SidecarItem => ({ mode: "pdf", kind: "pdf-highlight", annotation: a })),
+    ...document.pdfComments.map((a): SidecarItem => ({ mode: "pdf", kind: "pdf-comment", annotation: a })),
+    ...document.epubHighlights.map((a): SidecarItem => ({ mode: "epub", kind: "epub-highlight", annotation: a })),
+    ...document.epubComments.map((a): SidecarItem => ({ mode: "epub", kind: "epub-comment", annotation: a })),
+  ];
+
+  const highlights = items.filter((i) => i.kind.endsWith("-highlight"));
+  const notes = items.filter((i) => i.kind.endsWith("-comment"));
+
+  function renderSection(title: string, sectionItems: SidecarItem[]): void {
+    if (!sectionItems.length) {
+      return;
+    }
+    lines.push(`# ${title}`);
+    lines.push("");
+
+    const groups = new Map<string | undefined, SidecarItem[]>();
+    for (const item of sectionItems) {
+      const heading = sidecarGroupHeading(item.mode, item.annotation);
+      if (!groups.has(heading)) {
+        groups.set(heading, []);
+      }
+      groups.get(heading)!.push(item);
+    }
+
+    for (const [heading, groupItems] of groups) {
+      if (heading) {
+        lines.push(`## ${heading}`);
+        lines.push("");
+      }
+      for (const item of groupItems) {
+        pushBlock(item.mode, item.kind, item.annotation);
+      }
+    }
+  }
+
+  renderSection(t("storage.section.highlight"), highlights);
+  renderSection(t("storage.section.note"), notes);
+
+  return lines.join("\n");
+}
+
+export function parseMarkdownDocument(raw: string, path: string): FileAnnotationDocument {
+  const meta = parseFrontmatter(raw);
+  const annotations = extractAnnotations(raw);
+  const document: FileAnnotationDocument = {
+    filePath: meta.filePath,
+    fileHash: meta.fileHash ?? "",
+    lastModified: meta.lastModified ?? new Date().toISOString(),
+    highlights: [],
+    comments: [],
+    pdfHighlights: [],
+    pdfComments: [],
+    epubHighlights: [],
+    epubComments: [],
+    // cfi means EPUB; pageNumber means PDF. The two formats never coexist in one file.
+    epubProgress: meta.cfi !== undefined
+      ? {
+          cfi: meta.cfi,
+          chapter: meta.chapter ?? "",
+          percent: meta.percent ?? 0,
+          lastRead: meta.lastRead ?? "",
+          readingTimeSeconds: meta.readingTimeSeconds ?? 0,
+          ...(meta.estimatedRemainingMinutes !== undefined
+            ? { estimatedRemainingMinutes: meta.estimatedRemainingMinutes }
+            : {}),
+        }
+      : undefined,
+    pdfProgress: meta.pageNumber !== undefined
+      ? {
+          pageNumber: meta.pageNumber,
+          totalPages: meta.totalPages ?? 0,
+          percent: meta.percent ?? 0,
+          lastRead: meta.lastRead ?? "",
+        }
+      : undefined,
+    bookmarks: meta.bookmarks ?? [],
+    canvasBinding: meta.canvasBinding ?? undefined,
+    canvasNodes: meta.canvasNodes ?? [],
+  };
+
+  for (const item of annotations) {
+    switch (item.kind) {
+      case "md-highlight":
+        document.highlights.push(item.value as HighlightAnnotation);
+        break;
+      case "md-comment":
+        document.comments.push(item.value as CommentAnnotation);
+        break;
+      case "pdf-highlight":
+        document.pdfHighlights.push(item.value as PdfHighlightAnnotation);
+        break;
+      case "pdf-comment":
+        document.pdfComments.push(item.value as PdfCommentAnnotation);
+        break;
+      case "epub-highlight":
+        document.epubHighlights.push(item.value as EpubHighlightAnnotation);
+        break;
+      case "epub-comment":
+        document.epubComments.push(item.value as EpubCommentAnnotation);
+        break;
+    }
+  }
+
+  return document;
+}
+
+
+function parseFrontmatter(raw: string): DocMeta {
+  const meta = emptyDocMeta();
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(raw);
+  if (!match) {
+    return meta;
+  }
+  for (const line of match[1].split(/\r?\n/)) {
+    const idx = line.indexOf(":");
+    if (idx <= 0) {
+      continue;
+    }
+    const key = line.slice(0, idx).trim();
+    const value = parseYamlScalar(line.slice(idx + 1).trim());
+    switch (key) {
+      case "filePath":
+        meta.filePath = typeof value === "string" ? value : "";
+        break;
+      case "fileHash":
+        meta.fileHash = typeof value === "string" ? value : "";
+        break;
+      case "lastModified":
+        meta.lastModified = typeof value === "string" ? value : new Date().toISOString();
+        break;
+      case "pageNumber":
+        if (meta.pageNumber === undefined) meta.pageNumber = typeof value === "number" ? value : Number(value);
+        break;
+      case "pdfPageNumber":
+        if (meta.pageNumber === undefined) meta.pageNumber = typeof value === "number" ? value : Number(value);
+        break;
+      case "totalPages":
+        if (meta.totalPages === undefined) meta.totalPages = typeof value === "number" ? value : Number(value);
+        break;
+      case "pdfTotalPages":
+        if (meta.totalPages === undefined) meta.totalPages = typeof value === "number" ? value : Number(value);
+        break;
+      case "percent":
+        if (meta.percent === undefined) meta.percent = typeof value === "number" ? value : Number(value);
+        break;
+      case "pdfPercent":
+      case "epubPercent":
+        if (meta.percent === undefined) meta.percent = typeof value === "number" ? value : Number(value);
+        break;
+      case "lastRead":
+        if (meta.lastRead === undefined) meta.lastRead = typeof value === "string" ? value : "";
+        break;
+      case "pdfLastRead":
+      case "epubLastRead":
+        if (meta.lastRead === undefined) meta.lastRead = typeof value === "string" ? value : "";
+        break;
+      case "cfi":
+        if (meta.cfi === undefined) meta.cfi = typeof value === "string" ? value : "";
+        break;
+      case "epubCfi":
+        if (meta.cfi === undefined) meta.cfi = typeof value === "string" ? value : "";
+        break;
+      case "chapter":
+        if (meta.chapter === undefined) meta.chapter = typeof value === "string" ? value : "";
+        break;
+      case "epubChapter":
+        if (meta.chapter === undefined) meta.chapter = typeof value === "string" ? value : "";
+        break;
+      case "readingTimeSeconds":
+        if (meta.readingTimeSeconds === undefined) meta.readingTimeSeconds = typeof value === "number" ? value : Number(value);
+        break;
+      case "epubReadingTimeSeconds":
+        if (meta.readingTimeSeconds === undefined) meta.readingTimeSeconds = typeof value === "number" ? value : Number(value);
+        break;
+      case "estimatedRemainingMinutes":
+        if (meta.estimatedRemainingMinutes === undefined) meta.estimatedRemainingMinutes = typeof value === "number" ? value : Number(value);
+        break;
+      case "epubEstimatedRemainingMinutes":
+        if (meta.estimatedRemainingMinutes === undefined) meta.estimatedRemainingMinutes = typeof value === "number" ? value : Number(value);
+        break;
+      case "bookmarks":
+        meta.bookmarks = Array.isArray(value) ? (value as unknown as ReadingBookmark[]) : [];
+        break;
+      case "canvasBinding":
+        meta.canvasBinding = isObject(value) ? (value as unknown as CanvasBinding) : null;
+        break;
+      case "canvasNodes":
+        meta.canvasNodes = Array.isArray(value) ? (value as CanvasExcerptNode[]) : [];
+        break;
+    }
+  }
+  return meta;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Serialize any value into a YAML-safe single-quoted scalar. The value is
+ * JSON-encoded first, then wrapped in single quotes (with internal single
+ * quotes escaped as ''), which keeps the frontmatter a valid YAML document
+ * while guaranteeing a lossless round-trip through parseYamlScalar.
+ */
+function yamlValue(value: unknown): string {
+  const json = JSON.stringify(value ?? null);
+  return `'${json.replace(/'/g, "''")}'`;
+}
+
+function parseYamlScalar(raw: string): unknown {
+  const s = raw.trim();
+  if (s.startsWith("'") && s.endsWith("'") && s.length >= 2) {
+    try {
+      return JSON.parse(s.slice(1, -1).replace(/''/g, "'"));
+    } catch {
+      return s.slice(1, -1).replace(/''/g, "'");
+    }
+  }
+  if (s.startsWith('"') && s.endsWith('"') && s.length >= 2) {
+    try {
+      return JSON.parse(s.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
+    } catch {
+      return s.slice(1, -1);
+    }
+  }
+  if (s === "" || s === "null") {
+    return null;
+  }
+  try {
+    return JSON.parse(s);
+  } catch {
+    return s;
+  }
+}
+
+function extractAnnotations(raw: string): SerializedAnnotation[] {
+  const regex = new RegExp(`<span[^>]*\\s${MD_ANNOTATION_ATTR}="([^"]*)"[^>]*>\\s*</span>`, "g");
+  const result: SerializedAnnotation[] = [];
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(raw)) !== null) {
+    try {
+      const item = JSON.parse(unescapeHtmlAttribute(match[1])) as SerializedAnnotation;
+      if (item && typeof item.kind === "string" && "value" in item) {
+        result.push(item);
+      }
+    } catch {
+      // skip malformed annotation span; readable callout is cosmetic only
+    }
+  }
+  return result;
+}
+
+function unescapeHtmlAttribute(value: string): string {
+  return value
+    .replace(/&quot;/g, '"')
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&");
 }

@@ -5,10 +5,11 @@
  */
 
 import { ItemView, TFile, WorkspaceLeaf } from "obsidian";
+import { t } from "../i18n";
 import { AnnotationStore } from "../storage/annotationStore";
 import { SUPPORTED_BOOK_EXTENSIONS } from "../storage/types";
 
-export const EPUB_BOOKSHELF_VIEW_TYPE = "inklight-epub-bookshelf";
+export const EPUB_BOOKSHELF_VIEW_TYPE = "book-note-epub-bookshelf";
 
 export class EpubBookshelfView extends ItemView {
   private store: AnnotationStore;
@@ -29,7 +30,7 @@ export class EpubBookshelfView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "EPUB 书架";
+    return t("bookshelf.displayName");
   }
 
   getIcon(): string {
@@ -51,11 +52,11 @@ export class EpubBookshelfView extends ItemView {
   private render(): void {
     const container = this.contentEl;
     container.empty();
-    container.addClass("yh-epub-bookshelf-view");
+    container.addClass("book-note-epub-bookshelf-view");
 
     container.createEl("h4", {
       cls: "bookshelf-heading",
-      text: "📚 电子书书架",
+      text: t("bookshelf.title"),
     });
 
     const bookFiles = this.app.vault
@@ -65,7 +66,7 @@ export class EpubBookshelfView extends ItemView {
     if (bookFiles.length === 0) {
       container.createEl("p", {
         cls: "bookshelf-empty",
-        text: "Vault 中没有找到电子书文件。",
+        text: t("bookshelf.empty"),
       });
       return;
     }
@@ -99,21 +100,21 @@ export class EpubBookshelfView extends ItemView {
       if (progress) {
         meta.createEl("div", {
           cls: "bookshelf-last-read",
-          text: `上次阅读：${progress.chapter || "未知章节"} · ${progress.lastRead.slice(0, 10)}`,
+          text: `t("bookshelf.lastRead", { chapter: progress.chapter || t("common.unknownChapter"), date: progress.lastRead.slice(0, 10) })`,
         });
 
         const readingSeconds = progress.readingTimeSeconds ?? 0;
         if (readingSeconds > 0) {
           meta.createEl("div", {
             cls: "bookshelf-reading-time",
-            text: `已读 ${this.formatReadingTime(readingSeconds)}`,
+            text: `t("bookshelf.readTime", { time: this.formatReadingTime(readingSeconds) })`,
           });
         }
 
         if (progress.estimatedRemainingMinutes != null && progress.estimatedRemainingMinutes > 0) {
           meta.createEl("div", {
             cls: "bookshelf-remaining",
-            text: `剩余约 ${Math.ceil(progress.estimatedRemainingMinutes)} 分钟`,
+            text: `t("bookshelf.remaining", { minutes: Math.ceil(progress.estimatedRemainingMinutes) })`,
           });
         }
       }
@@ -131,12 +132,12 @@ export class EpubBookshelfView extends ItemView {
     const secs = total % 60;
     const parts: string[] = [];
     if (hours > 0) {
-      parts.push(`${hours}小时`);
+      parts.push(t("bookshelf.hours", { count: hours }));
     }
     if (minutes > 0 || hours > 0) {
-      parts.push(`${minutes}分`);
+      parts.push(t("bookshelf.minutes", { count: minutes }));
     }
-    parts.push(`${secs}秒`);
+    parts.push(t("bookshelf.seconds", { count: secs }));
     return parts.join("");
   }
 }

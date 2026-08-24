@@ -6,6 +6,7 @@
  */
 
 import { ItemView, MarkdownRenderer, MarkdownView, Menu, Notice, setIcon, TFile, WorkspaceLeaf } from "obsidian";
+import { t } from "../i18n";
 
 import type OverlayAnnotationsPlugin from "../../main";
 import { formatTime } from "../utils/format";
@@ -30,7 +31,7 @@ import {
   ResolvedAnnotationTag,
 } from "../tags/tagDomain";
 
-export const ANNOTATION_SIDEBAR_VIEW = "yh-inklight-sidebar";
+export const ANNOTATION_SIDEBAR_VIEW = "book-note-sidebar";
 
 type AnnotationKind = "highlight" | "note";
 type AnnotationMode = "md" | "pdf" | "epub";
@@ -99,15 +100,15 @@ export class AnnotationSidebarView extends ItemView {
   }
 
   getDisplayText(): string {
-    return "墨光批注";
+    return "Book Note";
   }
 
   getIcon(): string {
-    return "yh-inklight-icon";
+    return "book-note-icon";
   }
 
   async onOpen(): Promise<void> {
-    this.containerEl.addClass("yh-sidebar");
+    this.containerEl.addClass("book-note-sidebar");
     await this.render();
   }
 
@@ -125,14 +126,14 @@ export class AnnotationSidebarView extends ItemView {
     const token = ++this.renderToken;
     const container = this.containerEl.children[1] ?? this.containerEl;
     container.empty();
-    container.addClass("yh-overview");
+    container.addClass("book-note-overview");
 
     const file = this.app.workspace.getActiveFile();
     this.renderHeader(container);
 
     if (this.annotationScope === "current" && !file) {
       this.renderControls(container, []);
-      container.createDiv({ cls: "yh-empty", text: "Open a Markdown or PDF file to inspect annotations." });
+      container.createDiv({ cls: "book-note-empty", text: t("sidebar.emptyHint") });
       this.renderExportFooter(container, null);
       return;
     }
@@ -147,12 +148,14 @@ export class AnnotationSidebarView extends ItemView {
     const cards = this.filterCards(rawCards);
     const highlightCount = rawCards.filter((card) => card.kind === "highlight" && !card.orphaned).length;
     const noteCount = rawCards.filter((card) => card.note && !card.orphaned).length;
-    const scopeLabel = this.annotationScope === "all" ? `${documents.length} files` : "current file";
-    container.createDiv({ cls: "yh-ov-count", text: `${scopeLabel} · ${highlightCount} highlights · ${noteCount} notes` });
+    const scopeLabel = this.annotationScope === "all"
+      ? t("sidebar.scope.all")
+      : t("sidebar.scope.current");
+    container.createDiv({ cls: "book-note-ov-count", text: t("sidebar.count", { scope: scopeLabel, highlights: highlightCount, notes: noteCount }) });
 
-    const list = container.createDiv({ cls: "yh-ov-list" });
+    const list = container.createDiv({ cls: "book-note-ov-list" });
     if (!cards.length) {
-      list.createDiv({ cls: "yh-empty", text: "No matching annotations." });
+      list.createDiv({ cls: "book-note-empty", text: t("sidebar.noMatch") });
     } else {
       for (const card of cards) {
         this.renderCard(list, card);
@@ -167,7 +170,7 @@ export class AnnotationSidebarView extends ItemView {
    */
   private async refreshList(): Promise<void> {
     const root = this.containerEl.children[1] ?? this.containerEl;
-    const list = root.querySelector<HTMLElement>(".yh-ov-list");
+    const list = root.querySelector<HTMLElement>(".book-note-ov-list");
     if (!list) {
       await this.render();
       return;
@@ -186,19 +189,21 @@ export class AnnotationSidebarView extends ItemView {
 
     list.empty();
     if (!cards.length) {
-      list.createDiv({ cls: "yh-empty", text: "No matching annotations." });
+      list.createDiv({ cls: "book-note-empty", text: t("sidebar.noMatch") });
     } else {
       for (const card of cards) {
         this.renderCard(list, card);
       }
     }
 
-    const countEl = root.querySelector<HTMLElement>(".yh-ov-count");
+    const countEl = root.querySelector<HTMLElement>(".book-note-ov-count");
     if (countEl) {
       const highlightCount = rawCards.filter((card) => card.kind === "highlight" && !card.orphaned).length;
       const noteCount = rawCards.filter((card) => card.note && !card.orphaned).length;
-      const scopeLabel = this.annotationScope === "all" ? `${documents.length} files` : "current file";
-      countEl.textContent = `${scopeLabel} · ${highlightCount} highlights · ${noteCount} notes`;
+      const scopeLabel = this.annotationScope === "all"
+        ? t("sidebar.scope.all")
+        : t("sidebar.scope.current");
+      countEl.textContent = t("sidebar.count", { scope: scopeLabel, highlights: highlightCount, notes: noteCount });
     }
   }
 
@@ -389,20 +394,20 @@ export class AnnotationSidebarView extends ItemView {
   }
 
   private renderHeader(container: Element): void {
-    const header = container.createDiv({ cls: "yh-ov-head" });
-    header.createSpan({ cls: "yh-ov-title", text: "Inklight" });
-    const actions = header.createDiv({ cls: "yh-ov-head-actions" });
+    const header = container.createDiv({ cls: "book-note-ov-head" });
+    header.createSpan({ cls: "book-note-ov-title", text: t("sidebar.title") });
+    const actions = header.createDiv({ cls: "book-note-ov-head-actions" });
 
     const refresh = actions.createEl("button", {
-      cls: "yh-icon-btn yh-ov-refresh",
-      attr: { type: "button", title: "Refresh", "aria-label": "Refresh annotations" },
+      cls: "book-note-icon-btn book-note-ov-refresh",
+      attr: { type: "button", title: t("common.refresh"), "aria-label": t("aria.refreshAnnotations") },
     });
     setIcon(refresh, "refresh-cw");
     refresh.addEventListener("click", () => this.requestRender());
 
     const close = actions.createEl("button", {
-      cls: "yh-icon-btn yh-ov-close",
-      attr: { type: "button", title: "Close panel", "aria-label": "Close panel" },
+      cls: "book-note-icon-btn book-note-ov-close",
+      attr: { type: "button", title: t("aria.closePanel"), "aria-label": t("aria.closePanel") },
     });
     setIcon(close, "x");
     close.addEventListener("click", () => {
@@ -411,10 +416,10 @@ export class AnnotationSidebarView extends ItemView {
   }
 
   private renderControls(container: Element, cards: SidebarCard[]): void {
-    const searchRow = container.createDiv({ cls: "yh-ov-search-row" });
+    const searchRow = container.createDiv({ cls: "book-note-ov-search-row" });
     const search = searchRow.createEl("input", {
-      cls: "yh-ov-search",
-      attr: { type: "search", placeholder: "搜索批注..." },
+      cls: "book-note-ov-search",
+      attr: { type: "search", placeholder: t("sidebar.searchPlaceholder") },
     });
     search.value = this.query;
     let searchTimer: number | null = null;
@@ -429,21 +434,21 @@ export class AnnotationSidebarView extends ItemView {
       }, 200);
     });
 
-    const scope = searchRow.createEl("select", { cls: "yh-filter-select" });
-    scope.createEl("option", { text: "当前文件", value: "current" });
-    scope.createEl("option", { text: "全库", value: "all" });
+    const scope = searchRow.createEl("select", { cls: "book-note-filter-select" });
+    scope.createEl("option", { text: t("sidebar.scope.current"), value: "current" });
+    scope.createEl("option", { text: t("sidebar.scope.all"), value: "all" });
     scope.value = this.annotationScope;
     scope.addEventListener("change", async () => {
       this.annotationScope = scope.value as AnnotationScope;
       await this.render();
     });
 
-    const filterButton = searchRow.createEl("button", { cls: "yh-icon-btn", attr: { type: "button", title: "筛选" } });
+    const filterButton = searchRow.createEl("button", { cls: "book-note-icon-btn", attr: { type: "button", title: t("sidebar.filter") } });
     setIcon(filterButton, "filter");
 
-    const filterRow = container.createDiv({ cls: "yh-ov-filter-row" });
-    const color = filterRow.createEl("select", { cls: "yh-filter-select" });
-    color.createEl("option", { text: "全部颜色", value: "all" });
+    const filterRow = container.createDiv({ cls: "book-note-ov-filter-row" });
+    const color = filterRow.createEl("select", { cls: "book-note-filter-select" });
+    color.createEl("option", { text: t("sidebar.filterColor.all"), value: "all" });
     for (const item of ANNOTATION_COLORS) {
       color.createEl("option", { text: COLOR_LABELS[item], value: item });
     }
@@ -453,21 +458,21 @@ export class AnnotationSidebarView extends ItemView {
       await this.render();
     });
 
-    const type = filterRow.createEl("select", { cls: "yh-filter-select" });
-    type.createEl("option", { text: "全部类型", value: "all" });
-    type.createEl("option", { text: "高亮", value: "highlight" });
-    type.createEl("option", { text: "笔记", value: "note" });
+    const type = filterRow.createEl("select", { cls: "book-note-filter-select" });
+    type.createEl("option", { text: t("sidebar.filterType.all"), value: "all" });
+    type.createEl("option", { text: t("sidebar.filterType.highlight"), value: "highlight" });
+    type.createEl("option", { text: t("sidebar.filterType.note"), value: "note" });
     type.value = this.type;
     type.addEventListener("change", async () => {
       this.type = type.value as TypeFilter;
       await this.render();
     });
 
-    const tag = filterRow.createEl("select", { cls: "yh-filter-select", attr: { title: "按标签筛选" } });
-    tag.createEl("option", { text: "全部标签", value: ALL_TAGS_FILTER });
-    tag.createEl("option", { text: "未分类", value: UNTAGGED_FILTER });
+    const tag = filterRow.createEl("select", { cls: "book-note-filter-select", attr: { title: t("sidebar.filterTag") } });
+    tag.createEl("option", { text: t("sidebar.filterTag.all"), value: ALL_TAGS_FILTER });
+    tag.createEl("option", { text: t("common.untagged"), value: UNTAGGED_FILTER });
     for (const resolvedTag of this.availableTags(cards)) {
-      const suffix = resolvedTag.unavailable ? "（已停用）" : "";
+      const suffix = resolvedTag.unavailable ? t("modal.sticky.disabledSuffix") : "";
       tag.createEl("option", { text: `${resolvedTag.name}${suffix}`, value: resolvedTag.id });
     }
     if (![...tag.options].some((option) => option.value === this.tag)) {
@@ -479,8 +484,8 @@ export class AnnotationSidebarView extends ItemView {
       await this.render();
     });
 
-    const sort = filterRow.createEl("select", { cls: "yh-filter-select" });
-    const sortOptions = { document: "文档顺序", newest: "最新优先", oldest: "最早优先" } as const;
+    const sort = filterRow.createEl("select", { cls: "book-note-filter-select" });
+    const sortOptions = { document: t("sort.document"), newest: t("sort.newest"), oldest: t("sort.oldest") } as const;
     for (const item of ["document", "newest", "oldest"] as const) {
       sort.createEl("option", { text: sortOptions[item], value: item });
     }
@@ -490,11 +495,11 @@ export class AnnotationSidebarView extends ItemView {
       await this.render();
     });
 
-    const exportFormat = filterRow.createEl("select", { cls: "yh-filter-select" });
-    exportFormat.createEl("option", { text: "默认摘要", value: "summary" });
-    exportFormat.createEl("option", { text: "按颜色分组", value: "by-color" });
-    exportFormat.createEl("option", { text: "只导出笔记", value: "notes-only" });
-    exportFormat.createEl("option", { text: "阅读笔记", value: "reading-notes" });
+    const exportFormat = filterRow.createEl("select", { cls: "book-note-filter-select" });
+    exportFormat.createEl("option", { text: t("sidebar.export.summary"), value: "summary" });
+    exportFormat.createEl("option", { text: t("sidebar.export.byColor"), value: "by-color" });
+    exportFormat.createEl("option", { text: t("sidebar.export.notesOnly"), value: "notes-only" });
+    exportFormat.createEl("option", { text: t("sidebar.export.readingNotes"), value: "reading-notes" });
     exportFormat.value = this.exportFormat;
     exportFormat.addEventListener("change", async () => {
       this.exportFormat = exportFormat.value as AnnotationExportFormat;
@@ -505,44 +510,44 @@ export class AnnotationSidebarView extends ItemView {
   private renderCard(list: Element, cardData: SidebarCard): void {
     const file = this.fileForCard(cardData);
     const card = list.createDiv({
-      cls: `yh-ov-card yh-ov-card--${cardData.color}`,
+      cls: `book-note-ov-card book-note-ov-card--${cardData.color}`,
       attr: this.cardAttributes(cardData),
     });
     card.toggleClass("is-orphaned", !!cardData.orphaned);
 
-    const head = card.createDiv({ cls: "yh-ov-card-head" });
-    head.createSpan({ cls: `yh-ov-label yh-label--${cardData.color}`, text: COLOR_LABELS[cardData.color] });
-    head.createSpan({ cls: "yh-ov-meta", text: cardData.mode === "md" ? "Markdown" : cardData.mode === "pdf" ? "PDF" : "EPUB" });
-    head.createSpan({ cls: "yh-ov-dot", text: "·" });
+    const head = card.createDiv({ cls: "book-note-ov-card-head" });
+    head.createSpan({ cls: `book-note-ov-label book-note-label--${cardData.color}`, text: COLOR_LABELS[cardData.color] });
+    head.createSpan({ cls: "book-note-ov-meta", text: cardData.mode === "md" ? "Markdown" : cardData.mode === "pdf" ? "PDF" : "EPUB" });
+    head.createSpan({ cls: "book-note-ov-dot", text: "·" });
     const resolvedTag = this.cardTag(cardData);
-    const tag = head.createSpan({ cls: "yh-ov-tag", text: resolvedTag?.name ?? "未分类" });
+    const tag = head.createSpan({ cls: "book-note-ov-tag", text: resolvedTag?.name ?? t("common.untagged") });
     if (resolvedTag) {
       tag.dataset.tagId = resolvedTag.id;
       if (resolvedTag.unavailable) {
         tag.addClass("is-unavailable");
       }
       tag.empty();
-      const icon = tag.createSpan({ cls: "yh-ov-tag-icon" });
+      const icon = tag.createSpan({ cls: "book-note-ov-tag-icon" });
       setIcon(icon, resolvedTag.icon);
       tag.createSpan({ text: resolvedTag.name });
     }
-    head.createSpan({ cls: "yh-ov-time", text: formatTime(cardData.createdAt) });
+    head.createSpan({ cls: "book-note-ov-time", text: formatTime(cardData.createdAt) });
 
-    const quote = card.createDiv({ cls: "yh-ov-quote" });
+    const quote = card.createDiv({ cls: "book-note-ov-quote" });
     quote.textContent = cardData.text;
     quote.toggleClass("is-code", cardData.isCode || isCodeLikeText(cardData.text));
     this.addExpandToggle(quote, card);
     if (cardData.content) {
-      const content = card.createDiv({ cls: "yh-ov-content" });
+      const content = card.createDiv({ cls: "book-note-ov-content" });
       void MarkdownRenderer.render(this.app, cardData.content, content, cardData.sourcePath, this).then(() => {
         this.addExpandToggle(content, card);
       });
     }
 
-    const source = card.createDiv({ cls: "yh-ov-source" });
-    source.createSpan({ cls: "yh-ov-file", text: file?.name ?? cardData.sourcePath });
+    const source = card.createDiv({ cls: "book-note-ov-source" });
+    source.createSpan({ cls: "book-note-ov-file", text: file?.name ?? cardData.sourcePath });
     source.createSpan({
-      cls: "yh-ov-mode",
+      cls: "book-note-ov-mode",
       text: cardData.mode === "epub"
         ? (cardData.chapter ?? "EPUB")
         : cardData.pageNumber
@@ -550,11 +555,11 @@ export class AnnotationSidebarView extends ItemView {
           : "Markdown",
     });
 
-    const actions = card.createDiv({ cls: "yh-ov-actions" });
+    const actions = card.createDiv({ cls: "book-note-ov-actions" });
     if (cardData.note) {
       const edit = actions.createEl("button", {
-        cls: "yh-ov-btn yh-ov-btn--icon",
-        attr: { type: "button", title: "编辑笔记", "data-action": "edit-note" },
+        cls: "book-note-ov-btn book-note-ov-btn--icon",
+        attr: { type: "button", title: t("common.edit"), "data-action": "edit-note" },
       });
       setIcon(edit, "pencil");
       edit.disabled = !file;
@@ -565,8 +570,8 @@ export class AnnotationSidebarView extends ItemView {
       });
     } else if (cardData.highlight) {
       const addNote = actions.createEl("button", {
-        cls: "yh-ov-btn",
-        text: "添加笔记",
+        cls: "book-note-ov-btn",
+        text: t("common.addNote"),
         attr: { type: "button", "data-action": "add-note" },
       });
       addNote.disabled = !file;
@@ -579,8 +584,8 @@ export class AnnotationSidebarView extends ItemView {
     }
 
     const jump = actions.createEl("button", {
-      cls: "yh-ov-btn",
-      text: "跳转",
+      cls: "book-note-ov-btn",
+      text: t("common.jump"),
       attr: { type: "button", "data-action": "jump" },
     });
     jump.disabled = !file;
@@ -591,8 +596,8 @@ export class AnnotationSidebarView extends ItemView {
     });
 
     const more = actions.createEl("button", {
-      cls: "yh-ov-btn yh-ov-btn--icon",
-      attr: { type: "button", title: "More annotation actions", "aria-label": "More annotation actions" },
+      cls: "book-note-ov-btn book-note-ov-btn--icon",
+      attr: { type: "button", title: t("aria.moreActions"), "aria-label": t("aria.moreActions") },
     });
     setIcon(more, "ellipsis");
     more.disabled = !file;
@@ -610,16 +615,16 @@ export class AnnotationSidebarView extends ItemView {
       this.openCardMenu(file, cardData, event);
     });
 
-    const edit = card.createDiv({ cls: "yh-ov-edit hidden" });
-    const tagSelect = edit.createEl("select", { cls: "yh-ov-tag-select", attr: { "aria-label": "笔记标签" } });
+    const edit = card.createDiv({ cls: "book-note-ov-edit hidden" });
+    const tagSelect = edit.createEl("select", { cls: "book-note-ov-tag-select", attr: { "aria-label": t("sidebar.noteTag") } });
     tagSelect.addClass("hidden");
     const textarea = edit.createEl("textarea", {
-      cls: "yh-ov-textarea",
-      attr: { placeholder: "写下你的想法..." },
+      cls: "book-note-ov-textarea",
+      attr: { placeholder: t("sidebar.notePlaceholder") },
     });
-    const editActions = edit.createDiv({ cls: "yh-ov-edit-actions" });
-    editActions.createEl("button", { cls: "yh-ov-save", text: "保存", attr: { type: "button" } });
-    editActions.createEl("button", { cls: "yh-ov-cancel", text: "取消", attr: { type: "button" } });
+    const editActions = edit.createDiv({ cls: "book-note-ov-edit-actions" });
+    editActions.createEl("button", { cls: "book-note-ov-save", text: t("common.save"), attr: { type: "button" } });
+    editActions.createEl("button", { cls: "book-note-ov-cancel", text: t("common.cancel"), attr: { type: "button" } });
   }
 
   private cardAttributes(card: SidebarCard): Record<string, string> {
@@ -674,11 +679,11 @@ export class AnnotationSidebarView extends ItemView {
   }
 
   private openInlineEditor(card: HTMLElement, file: TFile, cardData: SidebarCard, initialValue: string): void {
-    const edit = card.querySelector<HTMLElement>(".yh-ov-edit");
-    const tagSelect = card.querySelector<HTMLSelectElement>(".yh-ov-tag-select");
-    const textarea = card.querySelector<HTMLTextAreaElement>(".yh-ov-textarea");
-    const save = card.querySelector<HTMLButtonElement>(".yh-ov-save");
-    const cancel = card.querySelector<HTMLButtonElement>(".yh-ov-cancel");
+    const edit = card.querySelector<HTMLElement>(".book-note-ov-edit");
+    const tagSelect = card.querySelector<HTMLSelectElement>(".book-note-ov-tag-select");
+    const textarea = card.querySelector<HTMLTextAreaElement>(".book-note-ov-textarea");
+    const save = card.querySelector<HTMLButtonElement>(".book-note-ov-save");
+    const cancel = card.querySelector<HTMLButtonElement>(".book-note-ov-cancel");
     const addNote = card.querySelector<HTMLElement>('[data-action="add-note"]');
     if (!edit || !textarea || !save || !cancel || !tagSelect) {
       return;
@@ -688,7 +693,7 @@ export class AnnotationSidebarView extends ItemView {
     const currentTag = this.cardTag(cardData);
     const selectableTags = this.plugin.settings.annotationTags.filter((tag) => tag.enabled || tag.id === currentTag?.id);
     for (const tag of selectableTags) {
-      const suffix = tag.enabled ? "" : "（已停用）";
+      const suffix = tag.enabled ? "" : t("modal.sticky.disabledSuffix");
       tagSelect.createEl("option", { text: `${tag.name}${suffix}`, value: tag.id });
     }
     tagSelect.value = currentTag?.id && selectableTags.some((tag) => tag.id === currentTag.id)
@@ -736,15 +741,15 @@ export class AnnotationSidebarView extends ItemView {
         }
 
         const button = document.createElement("span");
-        button.className = "yh-ov-expand-btn";
-        button.textContent = "展开";
+        button.className = "book-note-ov-expand-btn";
+        button.textContent = t("common.expand");
         button.tabIndex = 0;
         button.setAttribute("role", "button");
         contentEl.insertAdjacentElement("afterend", button);
         const toggle = (): void => {
           const expanded = contentEl.hasClass("expanded");
           contentEl.toggleClass("expanded", !expanded);
-          button.setText(expanded ? "展开" : "收起");
+          button.setText(expanded ? t("common.expand") : t("common.collapse"));
         };
         button.addEventListener("click", toggle);
         button.addEventListener("keydown", (event) => {
@@ -930,8 +935,8 @@ export class AnnotationSidebarView extends ItemView {
   }
 
   private renderExportFooter(container: Element, file: TFile | null): void {
-    const footer = container.createDiv({ cls: "yh-ov-foot" });
-    const exportButton = footer.createEl("button", { cls: "yh-export-btn", text: "↑ 导出批注", attr: { type: "button" } });
+    const footer = container.createDiv({ cls: "book-note-ov-foot" });
+    const exportButton = footer.createEl("button", { cls: "book-note-export-btn", text: t("sidebar.exportButton"), attr: { type: "button" } });
     exportButton.disabled = this.annotationScope === "current" && !file;
     exportButton.addEventListener("click", async () => {
       if (this.annotationScope === "current" && !file) {
@@ -941,17 +946,17 @@ export class AnnotationSidebarView extends ItemView {
         this.annotationScope === "all"
           ? await this.plugin.store.exportAllNotes(this.exportFormat)
           : await this.plugin.store.exportNotes(file!, this.exportFormat);
-      new Notice(`已导出笔记至 ${exported.path}`);
+      new Notice(t("notice.exported", { path: exported.path }));
     });
-    footer.createDiv({ cls: "yh-ov-export-note", text: this.exportFormatLabel() });
+    footer.createDiv({ cls: "book-note-ov-export-note", text: this.exportFormatLabel() });
   }
 
   private exportFormatLabel(): string {
     const labels: Record<AnnotationExportFormat, string> = {
-      summary: "导出为 Markdown 摘要",
-      "by-color": "按颜色分组导出",
-      "notes-only": "只导出带笔记的批注",
-      "reading-notes": "导出为阅读笔记格式",
+      summary: t("export.summary"),
+      "by-color": t("export.byColor"),
+      "notes-only": t("export.notesOnly"),
+      "reading-notes": t("export.readingNotes"),
     };
     return labels[this.exportFormat];
   }
@@ -974,7 +979,7 @@ export class AnnotationSidebarView extends ItemView {
 
     if (file.extension.toLowerCase() === "pdf") {
       window.setTimeout(() => {
-        document.dispatchEvent(new CustomEvent("yh-pdf-goto-page", { detail: { page: pageNumber } }));
+        document.dispatchEvent(new CustomEvent("book-note-pdf-goto-page", { detail: { page: pageNumber } }));
       }, 120);
       return;
     }
@@ -987,8 +992,8 @@ export class AnnotationSidebarView extends ItemView {
     const pos = view.editor.offsetToPos(offset);
     view.editor.setCursor(pos);
     view.editor.scrollIntoView({ from: pos, to: pos }, true);
-    view.containerEl.addClass("yh-flash-target");
-    window.setTimeout(() => view.containerEl.removeClass("yh-flash-target"), 850);
+    view.containerEl.addClass("book-note-flash-target");
+    window.setTimeout(() => view.containerEl.removeClass("book-note-flash-target"), 850);
   }
 }
 

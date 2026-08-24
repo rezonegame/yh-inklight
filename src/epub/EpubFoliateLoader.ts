@@ -50,7 +50,7 @@ export async function ensureFoliateViewRegistered(): Promise<void> {
   // ⚠️ 暂不装 sandbox patch：移除 allow-scripts 会让 foliate iframe 脚本不跑、内容空白。
   //    保留 allow-scripts 让 foliate 正常渲染（实测 v0.6.4 空白根因）。
   installFoliateBlobIframePatch((error) => {
-    console.warn("yh-inklight: foliate blob iframe 加载失败", error);
+    console.warn("book-note: foliate blob iframe 加载失败", error);
   });
   if (customElements.get("foliate-view")) {
     return;
@@ -213,7 +213,7 @@ async function transformFoliateMarkup(markup: string, mediaType: string): Promis
     try {
       const css = await normalizeFoliateCss(await readBlobUrlAsText(href));
       const style = doc.createElement("style");
-      style.setAttribute("data-yh-foliate-inlined", "1");
+      style.setAttribute("data-book-note-foliate-inlined", "1");
       style.textContent = css;
       link.replaceWith(style);
     } catch {

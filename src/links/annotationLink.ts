@@ -4,7 +4,7 @@ export interface AnnotationLinkParams {
 }
 
 export function createAnnotationUri(filePath: string, annotationId: string): string {
-  return `obsidian://inklight?file=${encodeURIComponent(filePath)}&id=${encodeURIComponent(annotationId)}`;
+  return `obsidian://book-note?file=${encodeURIComponent(filePath)}&id=${encodeURIComponent(annotationId)}`;
 }
 
 export function readProtocolParam(value: unknown): string {

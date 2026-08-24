@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { t } from "../src/i18n";
 import {
   cloneDefaultAnnotationTags,
   resolveAnnotationTag,
@@ -14,11 +15,11 @@ test("default annotation tags are valid", () => {
 test("tag names reject whitespace, case, and full-width duplicates", () => {
   const tags = cloneDefaultAnnotationTags();
   tags[1].name = "　洞见  ";
-  assert.equal(validateAnnotationTags(tags), "标签名称已存在。");
+  assert.equal(validateAnnotationTags(tags), t("tag.duplicateName"));
 
   tags[0].name = "Insight";
   tags[1].name = "INSIGHT";
-  assert.equal(validateAnnotationTags(tags), "标签名称已存在。");
+  assert.equal(validateAnnotationTags(tags), t("tag.duplicateName"));
 });
 
 test("only five annotation tags may be enabled", () => {
@@ -28,7 +29,7 @@ test("only five annotation tags may be enabled", () => {
     { id: "custom-b", name: "待办", icon: "flag", enabled: true },
     { id: "custom-c", name: "复习", icon: "star", enabled: true },
   );
-  assert.equal(validateAnnotationTags(tags), "最多只能启用 5 个标签。");
+  assert.equal(validateAnnotationTags(tags), t("tag.maxEnabled", { max: 5 }));
 });
 
 test("current tag definitions override old snapshots and legacy values", () => {

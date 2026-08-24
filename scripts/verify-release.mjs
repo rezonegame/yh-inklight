@@ -25,4 +25,4 @@ if (mismatches.length) {
   throw new Error(`Version mismatch for ${version}: ${mismatches.map(([name, value]) => `${name}=${value ?? "missing"}`).join(", ")}`);
 }
 
-console.info(`yh-inklight release metadata verified: ${version}`);
+console.info(`book-note release metadata verified: ${version}`);

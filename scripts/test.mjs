@@ -29,6 +29,10 @@ try {
     target: "node20",
     outExtension: { ".js": ".mjs" },
     logLevel: "silent",
+    // The real `obsidian` package ships type definitions only (no runtime
+    // entry), so it cannot be bundled for Node. Alias it to a minimal shim
+    // that the test graph (i18n + annotation-link service) actually touches.
+    alias: { obsidian: path.join(root, "tests", "obsidian-shim.ts") },
   });
 
   const files = (await readdir(outputDir))
@@ -37,5 +41,10 @@ try {
   const result = spawnSync(process.execPath, ["--test", ...files], { stdio: "inherit" });
   process.exitCode = result.status ?? 1;
 } finally {
-  await rm(outputDir, { recursive: true, force: true });
+  // Best-effort cleanup; never let a sandbox/safe-delete failure mask the result.
+  try {
+    await rm(outputDir, { recursive: true, force: true });
+  } catch {
+    /* ignore cleanup errors */
+  }
 }

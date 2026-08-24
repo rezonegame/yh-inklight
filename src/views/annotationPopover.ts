@@ -6,6 +6,7 @@
  */
 
 import { App, Component, MarkdownRenderer, setIcon } from "obsidian";
+import { t } from "../i18n";
 
 import { AnnotationColor, COLOR_LABELS, CommentAnnotation, HighlightAnnotation } from "../storage/types";
 
@@ -35,7 +36,7 @@ export class AnnotationPopover {
   private readonly element: HTMLElement;
 
   constructor(private readonly options: AnnotationPopoverOptions) {
-    this.element = document.body.createDiv({ cls: "yh-annotation-popover" });
+    this.element = document.body.createDiv({ cls: "book-note-annotation-popover" });
     this.element.addEventListener("click", (event) => event.stopPropagation());
     this.hide();
   }
@@ -48,16 +49,16 @@ export class AnnotationPopover {
     this.element.empty();
     this.element.toggleClass("is-visible", true);
 
-    const header = this.element.createDiv({ cls: "yh-popover-header" });
-    header.createSpan({ cls: "yh-popover-title", text: "批注" });
+    const header = this.element.createDiv({ cls: "book-note-popover-header" });
+    header.createSpan({ cls: "book-note-popover-title", text: t("popover.title") });
     const close = header.createEl("button", {
-      cls: "yh-icon-button",
-      attr: { type: "button", title: "关闭批注弹层" },
+      cls: "book-note-icon-button",
+      attr: { type: "button", title: t("aria.closePopover") },
     });
     setIcon(close, "x");
     close.addEventListener("click", () => this.hide());
 
-    const list = this.element.createDiv({ cls: "yh-popover-list" });
+    const list = this.element.createDiv({ cls: "book-note-popover-list" });
     for (const item of options.items) {
       this.renderItem(list, item, options.sourcePath);
     }
@@ -84,24 +85,24 @@ export class AnnotationPopover {
 
   private renderItem(container: HTMLElement, item: AnnotationPopoverItem, sourcePath: string): void {
     const card = container.createDiv({
-      cls: "yh-popover-card",
+      cls: "book-note-popover-card",
       attr: {
-        "data-yh-color": item.color,
-        "data-yh-id": item.id,
+        "data-book-note-color": item.color,
+        "data-book-note-id": item.id,
       },
     });
 
-    const meta = card.createDiv({ cls: "yh-popover-meta" });
-    meta.createSpan({ cls: "yh-color-chip", text: COLOR_LABELS[item.color], attr: { "data-yh-color": item.color } });
-    meta.createSpan({ text: item.kind === "comment" ? item.author ?? "读者" : "仅高亮" });
+    const meta = card.createDiv({ cls: "book-note-popover-meta" });
+    meta.createSpan({ cls: "book-note-color-chip", text: COLOR_LABELS[item.color], attr: { "data-book-note-color": item.color } });
+    meta.createSpan({ text: item.kind === "comment" ? item.author ?? t("common.reader") : t("popover.onlyHighlight") });
 
-    card.createDiv({ cls: "yh-popover-quote", text: item.quote });
+    card.createDiv({ cls: "book-note-popover-quote", text: item.quote });
     if (!item.content) {
-      card.createDiv({ cls: "yh-popover-empty", text: "暂无附加便签。" });
+      card.createDiv({ cls: "book-note-popover-empty", text: t("popover.emptyNote") });
       return;
     }
 
-    const body = card.createDiv({ cls: "yh-popover-body" });
+    const body = card.createDiv({ cls: "book-note-popover-body" });
     MarkdownRenderer.render(this.options.app, item.content, body, sourcePath, this.options.component);
   }
 

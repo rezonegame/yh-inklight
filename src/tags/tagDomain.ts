@@ -4,6 +4,8 @@
  * [POS]: Markdown、PDF、EPUB、侧栏与导出共用的语义标签真相源
  */
 
+import { t } from "../i18n";
+
 export interface AnnotationTagDefinition {
   id: string;
   name: string;
@@ -31,13 +33,13 @@ export const MAX_ENABLED_ANNOTATION_TAGS = 5;
 export const MAX_ANNOTATION_TAG_NAME_LENGTH = 20;
 
 export const TAG_ICON_OPTIONS = [
-  { id: "lightbulb", label: "灯泡" },
-  { id: "circle-help", label: "问号" },
-  { id: "bell", label: "铃铛" },
-  { id: "bookmark", label: "书签" },
-  { id: "star", label: "星标" },
-  { id: "flag", label: "旗帜" },
-  { id: "heart", label: "心形" },
+  { id: "lightbulb", label: t("icon.lightbulb") },
+  { id: "circle-help", label: t("icon.help") },
+  { id: "bell", label: t("icon.bell") },
+  { id: "bookmark", label: t("icon.bookmark") },
+  { id: "star", label: t("icon.star") },
+  { id: "flag", label: t("icon.flag") },
+  { id: "heart", label: t("icon.heart") },
 ] as const;
 
 export const DEFAULT_ANNOTATION_TAGS: AnnotationTagDefinition[] = [
@@ -84,42 +86,42 @@ export function enabledAnnotationTags(tags: AnnotationTagDefinition[]): Annotati
 
 export function validateAnnotationTags(tags: AnnotationTagDefinition[]): string | null {
   if (!tags.length) {
-    return "请至少保留一个标签。";
+    return t("tag.atLeastOne");
   }
 
   const enabledCount = enabledAnnotationTags(tags).length;
   if (enabledCount === 0) {
-    return "请至少启用一个标签。";
+    return t("tag.atLeastOneEnabled");
   }
   if (enabledCount > MAX_ENABLED_ANNOTATION_TAGS) {
-    return `最多只能启用 ${MAX_ENABLED_ANNOTATION_TAGS} 个标签。`;
+    return t("tag.maxEnabled", { max: MAX_ENABLED_ANNOTATION_TAGS });
   }
 
   const seenIds = new Set<string>();
   const seenNames = new Set<string>();
   for (const tag of tags) {
     if (!tag.id.trim()) {
-      return "标签 ID 无效。";
+      return t("tag.invalidId");
     }
     if (seenIds.has(tag.id)) {
-      return "标签 ID 重复。";
+      return t("tag.duplicateId");
     }
     seenIds.add(tag.id);
 
     const label = normalizeTagLabel(tag.name);
     if (!label) {
-      return "标签名称不能为空。";
+      return t("tag.emptyName");
     }
     if (Array.from(label).length > MAX_ANNOTATION_TAG_NAME_LENGTH) {
-      return `标签名称不能超过 ${MAX_ANNOTATION_TAG_NAME_LENGTH} 个字符。`;
+      return t("tag.nameTooLong", { max: MAX_ANNOTATION_TAG_NAME_LENGTH });
     }
     const nameKey = normalizeTagName(label);
     if (seenNames.has(nameKey)) {
-      return "标签名称已存在。";
+      return t("tag.duplicateName");
     }
     seenNames.add(nameKey);
     if (!isKnownTagIcon(tag.icon)) {
-      return "标签图标无效。";
+      return t("tag.invalidIcon");
     }
   }
   return null;
@@ -158,7 +160,7 @@ export function normalizeAnnotationTags(value: unknown): AnnotationTagDefinition
 export function createCustomAnnotationTag(id: string): AnnotationTagDefinition {
   return {
     id,
-    name: "新标签",
+    name: t("tag.newTagName"),
     icon: "bookmark",
     enabled: true,
   };

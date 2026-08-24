@@ -109,7 +109,7 @@ var init_epubcfi = __esm({
       }
       return tokens;
     };
-    findTokens = (tokens, x3) => findIndices(tokens, ([t3]) => t3 === x3);
+    findTokens = (tokens, x3) => findIndices(tokens, ([t4]) => t4 === x3);
     parser = (tokens) => {
       const parts = [];
       let state;
@@ -701,8 +701,8 @@ function d() {
     if (r3[0] == s3) return h4[0] = -1, _3[0] = 0, 0;
     for (z3 = _3[0], v3 = 1; v3 <= u && 0 === r3[v3]; v3++) ;
     for (S2 = v3, z3 < v3 && (z3 = v3), k3 = u; 0 !== k3 && 0 === r3[k3]; k3--) ;
-    for (y3 = k3, z3 > k3 && (z3 = k3), _3[0] = z3, T3 = 1 << v3; v3 < k3; v3++, T3 <<= 1) if ((T3 -= r3[v3]) < 0) return t;
-    if ((T3 -= r3[k3]) < 0) return t;
+    for (y3 = k3, z3 > k3 && (z3 = k3), _3[0] = z3, T3 = 1 << v3; v3 < k3; v3++, T3 <<= 1) if ((T3 -= r3[v3]) < 0) return t2;
+    if ((T3 -= r3[k3]) < 0) return t2;
     for (r3[k3] += T3, f3[1] = v3 = 0, U3 = 1, F2 = 2; 0 != --k3; ) f3[F2] = v3 += r3[U3], F2++, U3++;
     k3 = 0, U3 = 0;
     do {
@@ -711,7 +711,7 @@ function d() {
     for (s3 = f3[y3], f3[0] = k3 = 0, U3 = 0, x3 = -1, E3 = -z3, d2[0] = 0, D2 = 0, O2 = 0; S2 <= y3; S2++) for (m3 = r3[S2]; 0 != m3--; ) {
       for (; S2 > E3 + z3; ) {
         if (x3++, E3 += z3, O2 = y3 - E3, O2 = O2 > z3 ? z3 : O2, (g3 = 1 << (v3 = S2 - E3)) > m3 + 1 && (g3 -= m3 + 1, F2 = S2, v3 < O2)) for (; ++v3 < O2 && !((g3 <<= 1) <= r3[++F2]); ) g3 -= r3[F2];
-        if (O2 = 1 << v3, b3[0] + O2 > 1440) return t;
+        if (O2 = 1 << v3, b3[0] + O2 > 1440) return t2;
         d2[x3] = D2 = b3[0], b3[0] += O2, 0 !== x3 ? (f3[x3] = k3, a3[0] = v3, a3[1] = z3, v3 = k3 >>> E3 - z3, a3[2] = D2 - d2[x3 - 1] - v3, w2.set(a3, 3 * (d2[x3 - 1] + v3))) : h4[0] = D2;
       }
       for (a3[1] = S2 - E3, U3 >= s3 ? a3[0] = 192 : p3[U3] < o3 ? (a3[0] = p3[U3] < 256 ? 0 : 96, a3[2] = p3[U3++]) : (a3[0] = c2[p3[U3] - o3] + 16 + 64, a3[2] = l3[p3[U3++] - o3]), g3 = 1 << S2 - E3, v3 = k3 >>> E3; v3 < O2; v3 += g3) w2.set(a3, 3 * (D2 + v3));
@@ -720,19 +720,19 @@ function d() {
     }
     return 0 !== T3 && 1 != y3 ? n : 0;
   }
-  function _2(t3) {
+  function _2(t4) {
     let n3;
-    for (e3 || (e3 = [], i3 = [], r3 = new Int32Array(16), a3 = [], d2 = new Int32Array(u), f3 = new Int32Array(16)), i3.length < t3 && (i3 = []), n3 = 0; n3 < t3; n3++) i3[n3] = 0;
+    for (e3 || (e3 = [], i3 = [], r3 = new Int32Array(16), a3 = [], d2 = new Int32Array(u), f3 = new Int32Array(16)), i3.length < t4 && (i3 = []), n3 = 0; n3 < t4; n3++) i3[n3] = 0;
     for (n3 = 0; n3 < 16; n3++) r3[n3] = 0;
     for (n3 = 0; n3 < 3; n3++) a3[n3] = 0;
     d2.set(r3.subarray(0, u), 0), f3.set(r3.subarray(0, 16), 0);
   }
   this.inflate_trees_bits = function(r4, a4, s3, o3, l3) {
     let c2;
-    return _2(19), e3[0] = 0, c2 = h3(r4, 0, 19, 19, null, null, s3, a4, o3, e3, i3), c2 == t ? l3.msg = "oversubscribed dynamic bit lengths tree" : c2 != n && 0 !== a4[0] || (l3.msg = "incomplete dynamic bit lengths tree", c2 = t), c2;
+    return _2(19), e3[0] = 0, c2 = h3(r4, 0, 19, 19, null, null, s3, a4, o3, e3, i3), c2 == t2 ? l3.msg = "oversubscribed dynamic bit lengths tree" : c2 != n && 0 !== a4[0] || (l3.msg = "incomplete dynamic bit lengths tree", c2 = t2), c2;
   }, this.inflate_trees_dynamic = function(r4, a4, u2, d3, f4, w2, b3, p3, m3) {
     let g3;
-    return _2(288), e3[0] = 0, g3 = h3(u2, 0, r4, 257, s, o, w2, d3, p3, e3, i3), 0 != g3 || 0 === d3[0] ? (g3 == t ? m3.msg = "oversubscribed literal/length tree" : -4 != g3 && (m3.msg = "incomplete literal/length tree", g3 = t), g3) : (_2(288), g3 = h3(u2, r4, a4, 0, l, c, b3, f4, p3, e3, i3), 0 != g3 || 0 === f4[0] && r4 > 257 ? (g3 == t ? m3.msg = "oversubscribed distance tree" : g3 == n ? (m3.msg = "incomplete distance tree", g3 = t) : -4 != g3 && (m3.msg = "empty distance tree with lengths", g3 = t), g3) : 0);
+    return _2(288), e3[0] = 0, g3 = h3(u2, 0, r4, 257, s, o, w2, d3, p3, e3, i3), 0 != g3 || 0 === d3[0] ? (g3 == t2 ? m3.msg = "oversubscribed literal/length tree" : -4 != g3 && (m3.msg = "incomplete literal/length tree", g3 = t2), g3) : (_2(288), g3 = h3(u2, r4, a4, 0, l, c, b3, f4, p3, e3, i3), 0 != g3 || 0 === f4[0] && r4 > 257 ? (g3 == t2 ? m3.msg = "oversubscribed distance tree" : g3 == n ? (m3.msg = "incomplete distance tree", g3 = t2) : -4 != g3 && (m3.msg = "empty distance tree with lengths", g3 = t2), g3) : 0);
   };
 }
 function f() {
@@ -769,12 +769,12 @@ function f() {
               else l4.win.set(l4.win.subarray(S2, S2 + k3), m4), m4 += k3, S2 += k3, k3 = 0;
               break;
             }
-            if (64 & h4) return c3.msg = "invalid distance code", k3 = c3.avail_in - p4, k3 = w3 >> 3 < k3 ? w3 >> 3 : k3, p4 += k3, b4 -= k3, w3 -= k3 << 3, l4.bitb = _3, l4.bitk = w3, c3.avail_in = p4, c3.total_in += b4 - c3.next_in_index, c3.next_in_index = b4, l4.write = m4, t;
+            if (64 & h4) return c3.msg = "invalid distance code", k3 = c3.avail_in - p4, k3 = w3 >> 3 < k3 ? w3 >> 3 : k3, p4 += k3, b4 -= k3, w3 -= k3 << 3, l4.bitb = _3, l4.bitk = w3, c3.avail_in = p4, c3.total_in += b4 - c3.next_in_index, c3.next_in_index = b4, l4.write = m4, t2;
             u3 += d3[z3 + 2], u3 += _3 & i[h4], z3 = 3 * (f4 + u3), h4 = d3[z3];
           }
           break;
         }
-        if (64 & h4) return 32 & h4 ? (k3 = c3.avail_in - p4, k3 = w3 >> 3 < k3 ? w3 >> 3 : k3, p4 += k3, b4 -= k3, w3 -= k3 << 3, l4.bitb = _3, l4.bitk = w3, c3.avail_in = p4, c3.total_in += b4 - c3.next_in_index, c3.next_in_index = b4, l4.write = m4, 1) : (c3.msg = "invalid literal/length code", k3 = c3.avail_in - p4, k3 = w3 >> 3 < k3 ? w3 >> 3 : k3, p4 += k3, b4 -= k3, w3 -= k3 << 3, l4.bitb = _3, l4.bitk = w3, c3.avail_in = p4, c3.total_in += b4 - c3.next_in_index, c3.next_in_index = b4, l4.write = m4, t);
+        if (64 & h4) return 32 & h4 ? (k3 = c3.avail_in - p4, k3 = w3 >> 3 < k3 ? w3 >> 3 : k3, p4 += k3, b4 -= k3, w3 -= k3 << 3, l4.bitb = _3, l4.bitk = w3, c3.avail_in = p4, c3.total_in += b4 - c3.next_in_index, c3.next_in_index = b4, l4.write = m4, 1) : (c3.msg = "invalid literal/length code", k3 = c3.avail_in - p4, k3 = w3 >> 3 < k3 ? w3 >> 3 : k3, p4 += k3, b4 -= k3, w3 -= k3 << 3, l4.bitb = _3, l4.bitk = w3, c3.avail_in = p4, c3.total_in += b4 - c3.next_in_index, c3.next_in_index = b4, l4.write = m4, t2);
         if (u3 += d3[z3 + 2], u3 += _3 & i[h4], z3 = 3 * (f4 + u3), 0 === (h4 = d3[z3])) {
           _3 >>= d3[z3 + 1], w3 -= d3[z3 + 1], l4.win[m4++] = d3[z3 + 2], g3--;
           break;
@@ -784,8 +784,8 @@ function f() {
     } while (g3 >= 258 && p4 >= 10);
     return k3 = c3.avail_in - p4, k3 = w3 >> 3 < k3 ? w3 >> 3 : k3, p4 += k3, b4 -= k3, w3 -= k3 << 3, l4.bitb = _3, l4.bitk = w3, c3.avail_in = p4, c3.total_in += b4 - c3.next_in_index, c3.next_in_index = b4, l4.write = m4, 0;
   }
-  n3.init = function(e3, t3, n4, i3, l4, c3) {
-    r3 = 0, _2 = e3, w2 = t3, s3 = n4, b3 = i3, o3 = l4, p3 = c3, a3 = null;
+  n3.init = function(e3, t4, n4, i3, l4, c3) {
+    r3 = 0, _2 = e3, w2 = t4, s3 = n4, b3 = i3, o3 = l4, p3 = c3, a3 = null;
   }, n3.proc = function(n4, g3, y3) {
     let x3, k3, v3, S2, z3, A3, U3, D2 = 0, E3 = 0, F2 = 0;
     for (F2 = g3.next_in_index, S2 = g3.avail_in, D2 = n4.bitb, E3 = n4.bitk, z3 = n4.write, A3 = z3 < n4.read ? n4.read - z3 - 1 : n4.end - z3; ; ) switch (r3) {
@@ -816,7 +816,7 @@ function f() {
           r3 = 7;
           break;
         }
-        return r3 = 9, g3.msg = "invalid literal/length code", y3 = t, n4.bitb = D2, n4.bitk = E3, g3.avail_in = S2, g3.total_in += F2 - g3.next_in_index, g3.next_in_index = F2, n4.write = z3, n4.inflate_flush(g3, y3);
+        return r3 = 9, g3.msg = "invalid literal/length code", y3 = t2, n4.bitb = D2, n4.bitk = E3, g3.avail_in = S2, g3.total_in += F2 - g3.next_in_index, g3.next_in_index = F2, n4.write = z3, n4.inflate_flush(g3, y3);
       case 2:
         for (x3 = f3; E3 < x3; ) {
           if (0 === S2) return n4.bitb = D2, n4.bitk = E3, g3.avail_in = S2, g3.total_in += F2 - g3.next_in_index, g3.next_in_index = F2, n4.write = z3, n4.inflate_flush(g3, y3);
@@ -836,7 +836,7 @@ function f() {
           u2 = v3, c2 = k3 / 3 + a3[k3 + 2];
           break;
         }
-        return r3 = 9, g3.msg = "invalid distance code", y3 = t, n4.bitb = D2, n4.bitk = E3, g3.avail_in = S2, g3.total_in += F2 - g3.next_in_index, g3.next_in_index = F2, n4.write = z3, n4.inflate_flush(g3, y3);
+        return r3 = 9, g3.msg = "invalid distance code", y3 = t2, n4.bitb = D2, n4.bitk = E3, g3.avail_in = S2, g3.total_in += F2 - g3.next_in_index, g3.next_in_index = F2, n4.write = z3, n4.inflate_flush(g3, y3);
       case 4:
         for (x3 = f3; E3 < x3; ) {
           if (0 === S2) return n4.bitb = D2, n4.bitk = E3, g3.avail_in = S2, g3.total_in += F2 - g3.next_in_index, g3.next_in_index = F2, n4.write = z3, n4.inflate_flush(g3, y3);
@@ -861,7 +861,7 @@ function f() {
       case 8:
         return y3 = 1, n4.bitb = D2, n4.bitk = E3, g3.avail_in = S2, g3.total_in += F2 - g3.next_in_index, g3.next_in_index = F2, n4.write = z3, n4.inflate_flush(g3, y3);
       case 9:
-        return y3 = t, n4.bitb = D2, n4.bitk = E3, g3.avail_in = S2, g3.total_in += F2 - g3.next_in_index, g3.next_in_index = F2, n4.write = z3, n4.inflate_flush(g3, y3);
+        return y3 = t2, n4.bitb = D2, n4.bitk = E3, g3.avail_in = S2, g3.total_in += F2 - g3.next_in_index, g3.next_in_index = F2, n4.write = z3, n4.inflate_flush(g3, y3);
       default:
         return y3 = e, n4.bitb = D2, n4.bitk = E3, g3.avail_in = S2, g3.total_in += F2 - g3.next_in_index, g3.next_in_index = F2, n4.write = z3, n4.inflate_flush(g3, y3);
     }
@@ -874,11 +874,11 @@ function _(r3, a3) {
   const w2 = [0], b3 = [0], p3 = new f();
   let m3 = 0, g3 = new Int32Array(4320);
   const y3 = new d();
-  s3.bitk = 0, s3.bitb = 0, s3.win = new Uint8Array(a3), s3.end = a3, s3.read = 0, s3.write = 0, s3.reset = function(e3, t3) {
-    t3 && (t3[0] = 0), 6 == l3 && p3.free(e3), l3 = 0, s3.bitk = 0, s3.bitb = 0, s3.read = s3.write = 0;
-  }, s3.reset(r3, null), s3.inflate_flush = function(e3, t3) {
+  s3.bitk = 0, s3.bitb = 0, s3.win = new Uint8Array(a3), s3.end = a3, s3.read = 0, s3.write = 0, s3.reset = function(e3, t4) {
+    t4 && (t4[0] = 0), 6 == l3 && p3.free(e3), l3 = 0, s3.bitk = 0, s3.bitb = 0, s3.read = s3.write = 0;
+  }, s3.reset(r3, null), s3.inflate_flush = function(e3, t4) {
     let i3, r4, a4;
-    return r4 = e3.next_out_index, a4 = s3.read, i3 = (a4 <= s3.write ? s3.write : s3.end) - a4, i3 > e3.avail_out && (i3 = e3.avail_out), 0 !== i3 && t3 == n && (t3 = 0), e3.avail_out -= i3, e3.total_out += i3, e3.next_out.set(s3.win.subarray(a4, a4 + i3), r4), r4 += i3, a4 += i3, a4 == s3.end && (a4 = 0, s3.write == s3.end && (s3.write = 0), i3 = s3.write - a4, i3 > e3.avail_out && (i3 = e3.avail_out), 0 !== i3 && t3 == n && (t3 = 0), e3.avail_out -= i3, e3.total_out += i3, e3.next_out.set(s3.win.subarray(a4, a4 + i3), r4), r4 += i3, a4 += i3), e3.next_out_index = r4, s3.read = a4, t3;
+    return r4 = e3.next_out_index, a4 = s3.read, i3 = (a4 <= s3.write ? s3.write : s3.end) - a4, i3 > e3.avail_out && (i3 = e3.avail_out), 0 !== i3 && t4 == n && (t4 = 0), e3.avail_out -= i3, e3.total_out += i3, e3.next_out.set(s3.win.subarray(a4, a4 + i3), r4), r4 += i3, a4 += i3, a4 == s3.end && (a4 = 0, s3.write == s3.end && (s3.write = 0), i3 = s3.write - a4, i3 > e3.avail_out && (i3 = e3.avail_out), 0 !== i3 && t4 == n && (t4 = 0), e3.avail_out -= i3, e3.total_out += i3, e3.next_out.set(s3.win.subarray(a4, a4 + i3), r4), r4 += i3, a4 += i3), e3.next_out_index = r4, s3.read = a4, t4;
   }, s3.proc = function(n3, r4) {
     let a4, f3, x3, k3, v3, S2, z3, A3;
     for (k3 = n3.next_in_index, v3 = n3.avail_in, f3 = s3.bitb, x3 = s3.bitk, S2 = s3.write, z3 = S2 < s3.read ? s3.read - S2 - 1 : s3.end - S2; ; ) {
@@ -900,7 +900,7 @@ function _(r3, a3) {
               f3 >>>= 3, x3 -= 3, l3 = 3;
               break;
             case 3:
-              return f3 >>>= 3, x3 -= 3, l3 = 9, n3.msg = "invalid block type", r4 = t, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
+              return f3 >>>= 3, x3 -= 3, l3 = 9, n3.msg = "invalid block type", r4 = t2, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
           }
           break;
         case 1:
@@ -908,7 +908,7 @@ function _(r3, a3) {
             if (0 === v3) return s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
             r4 = 0, v3--, f3 |= (255 & n3.read_byte(k3++)) << x3, x3 += 8;
           }
-          if ((~f3 >>> 16 & 65535) != (65535 & f3)) return l3 = 9, n3.msg = "invalid stored block lengths", r4 = t, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
+          if ((~f3 >>> 16 & 65535) != (65535 & f3)) return l3 = 9, n3.msg = "invalid stored block lengths", r4 = t2, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
           c2 = 65535 & f3, f3 = x3 = 0, l3 = 0 !== c2 ? 2 : 0 !== m3 ? 7 : 0;
           break;
         case 2:
@@ -922,7 +922,7 @@ function _(r3, a3) {
             if (0 === v3) return s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
             r4 = 0, v3--, f3 |= (255 & n3.read_byte(k3++)) << x3, x3 += 8;
           }
-          if (u2 = a4 = 16383 & f3, (31 & a4) > 29 || (a4 >> 5 & 31) > 29) return l3 = 9, n3.msg = "too many length or distance symbols", r4 = t, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
+          if (u2 = a4 = 16383 & f3, (31 & a4) > 29 || (a4 >> 5 & 31) > 29) return l3 = 9, n3.msg = "too many length or distance symbols", r4 = t2, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
           if (a4 = 258 + (31 & a4) + (a4 >> 5 & 31), !o3 || o3.length < a4) o3 = [];
           else for (A3 = 0; A3 < a4; A3++) o3[A3] = 0;
           f3 >>>= 14, x3 -= 14, _2 = 0, l3 = 4;
@@ -935,7 +935,7 @@ function _(r3, a3) {
             o3[h[_2++]] = 7 & f3, f3 >>>= 3, x3 -= 3;
           }
           for (; _2 < 19; ) o3[h[_2++]] = 0;
-          if (w2[0] = 7, a4 = y3.inflate_trees_bits(o3, w2, b3, g3, n3), 0 != a4) return (r4 = a4) == t && (o3 = null, l3 = 9), s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
+          if (w2[0] = 7, a4 = y3.inflate_trees_bits(o3, w2, b3, g3, n3), 0 != a4) return (r4 = a4) == t2 && (o3 = null, l3 = 9), s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
           _2 = 0, l3 = 5;
         case 5:
           for (; a4 = u2, !(_2 >= 258 + (31 & a4) + (a4 >> 5 & 31)); ) {
@@ -950,7 +950,7 @@ function _(r3, a3) {
                 if (0 === v3) return s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
                 r4 = 0, v3--, f3 |= (255 & n3.read_byte(k3++)) << x3, x3 += 8;
               }
-              if (f3 >>>= a4, x3 -= a4, e3 += f3 & i[A3], f3 >>>= A3, x3 -= A3, A3 = _2, a4 = u2, A3 + e3 > 258 + (31 & a4) + (a4 >> 5 & 31) || 16 == c3 && A3 < 1) return o3 = null, l3 = 9, n3.msg = "invalid bit length repeat", r4 = t, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
+              if (f3 >>>= a4, x3 -= a4, e3 += f3 & i[A3], f3 >>>= A3, x3 -= A3, A3 = _2, a4 = u2, A3 + e3 > 258 + (31 & a4) + (a4 >> 5 & 31) || 16 == c3 && A3 < 1) return o3 = null, l3 = 9, n3.msg = "invalid bit length repeat", r4 = t2, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
               c3 = 16 == c3 ? o3[A3 - 1] : 0;
               do {
                 o3[A3++] = c3;
@@ -958,7 +958,7 @@ function _(r3, a3) {
               _2 = A3;
             }
           }
-          if (b3[0] = -1, T3 = [], O2 = [], C2 = [], W2 = [], T3[0] = 9, O2[0] = 6, a4 = u2, a4 = y3.inflate_trees_dynamic(257 + (31 & a4), 1 + (a4 >> 5 & 31), o3, T3, O2, C2, W2, g3, n3), 0 != a4) return a4 == t && (o3 = null, l3 = 9), r4 = a4, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
+          if (b3[0] = -1, T3 = [], O2 = [], C2 = [], W2 = [], T3[0] = 9, O2[0] = 6, a4 = u2, a4 = y3.inflate_trees_dynamic(257 + (31 & a4), 1 + (a4 >> 5 & 31), o3, T3, O2, C2, W2, g3, n3), 0 != a4) return a4 == t2 && (o3 = null, l3 = 9), r4 = a4, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
           p3.init(T3[0], O2[0], g3, C2[0], g3, W2[0]), l3 = 6;
         case 6:
           if (s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, 1 != (r4 = p3.proc(s3, n3, r4))) return s3.inflate_flush(n3, r4);
@@ -973,28 +973,28 @@ function _(r3, a3) {
         case 8:
           return r4 = 1, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
         case 9:
-          return r4 = t, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
+          return r4 = t2, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
         default:
           return r4 = e, s3.bitb = f3, s3.bitk = x3, n3.avail_in = v3, n3.total_in += k3 - n3.next_in_index, n3.next_in_index = k3, s3.write = S2, s3.inflate_flush(n3, r4);
       }
     }
   }, s3.free = function(e3) {
     s3.reset(e3, null), s3.win = null, g3 = null;
-  }, s3.set_dictionary = function(e3, t3, n3) {
-    s3.win.set(e3.subarray(t3, t3 + n3), 0), s3.read = s3.write = n3;
+  }, s3.set_dictionary = function(e3, t4, n3) {
+    s3.win.set(e3.subarray(t4, t4 + n3), 0), s3.read = s3.write = n3;
   }, s3.sync_point = function() {
     return 1 == l3 ? 1 : 0;
   };
 }
 function p() {
   const i3 = this;
-  function r3(t3) {
-    return t3 && t3.istate ? (t3.total_in = t3.total_out = 0, t3.msg = null, t3.istate.mode = 7, t3.istate.blocks.reset(t3, null), 0) : e;
+  function r3(t4) {
+    return t4 && t4.istate ? (t4.total_in = t4.total_out = 0, t4.msg = null, t4.istate.mode = 7, t4.istate.blocks.reset(t4, null), 0) : e;
   }
   i3.mode = 0, i3.method = 0, i3.was = [0], i3.need = 0, i3.marker = 0, i3.wbits = 0, i3.inflateEnd = function(e3) {
     return i3.blocks && i3.blocks.free(e3), i3.blocks = null, 0;
-  }, i3.inflateInit = function(t3, n3) {
-    return t3.msg = null, i3.blocks = null, n3 < 8 || n3 > 15 ? (i3.inflateEnd(t3), e) : (i3.wbits = n3, t3.istate.blocks = new _(t3, 1 << n3), r3(t3), 0);
+  }, i3.inflateInit = function(t4, n3) {
+    return t4.msg = null, i3.blocks = null, n3 < 8 || n3 > 15 ? (i3.inflateEnd(t4), e) : (i3.wbits = n3, t4.istate.blocks = new _(t4, 1 << n3), r3(t4), 0);
   }, i3.inflate = function(i4, r4) {
     let a3, s3;
     if (!i4 || !i4.istate || !i4.next_in) return e;
@@ -1036,7 +1036,7 @@ function p() {
       case 6:
         return o3.mode = w, i4.msg = "need dictionary", o3.marker = 0, e;
       case 7:
-        if (a3 = o3.blocks.proc(i4, a3), a3 == t) {
+        if (a3 = o3.blocks.proc(i4, a3), a3 == t2) {
           o3.mode = w, o3.marker = 0;
           break;
         }
@@ -1045,14 +1045,14 @@ function p() {
       case 12:
         return i4.avail_in = 0, 1;
       case w:
-        return t;
+        return t2;
       default:
         return e;
     }
-  }, i3.inflateSetDictionary = function(t3, n3, i4) {
+  }, i3.inflateSetDictionary = function(t4, n3, i4) {
     let r4 = 0, a3 = i4;
-    if (!t3 || !t3.istate || 6 != t3.istate.mode) return e;
-    const s3 = t3.istate;
+    if (!t4 || !t4.istate || 6 != t4.istate.mode) return e;
+    const s3 = t4.istate;
     return a3 >= 1 << s3.wbits && (a3 = (1 << s3.wbits) - 1, r4 = i4 - a3), s3.blocks.set_dictionary(n3, r4, a3), s3.mode = 7, 0;
   }, i3.inflateSync = function(i4) {
     let a3, s3, o3, l3, c2;
@@ -1060,115 +1060,115 @@ function p() {
     const u2 = i4.istate;
     if (u2.mode != w && (u2.mode = w, u2.marker = 0), 0 === (a3 = i4.avail_in)) return n;
     for (s3 = i4.next_in_index, o3 = u2.marker; 0 !== a3 && o3 < 4; ) i4.read_byte(s3) == b[o3] ? o3++ : o3 = 0 !== i4.read_byte(s3) ? 0 : 4 - o3, s3++, a3--;
-    return i4.total_in += s3 - i4.next_in_index, i4.next_in_index = s3, i4.avail_in = a3, u2.marker = o3, 4 != o3 ? t : (l3 = i4.total_in, c2 = i4.total_out, r3(i4), i4.total_in = l3, i4.total_out = c2, u2.mode = 7, 0);
-  }, i3.inflateSyncPoint = function(t3) {
-    return t3 && t3.istate && t3.istate.blocks ? t3.istate.blocks.sync_point() : e;
+    return i4.total_in += s3 - i4.next_in_index, i4.next_in_index = s3, i4.avail_in = a3, u2.marker = o3, 4 != o3 ? t2 : (l3 = i4.total_in, c2 = i4.total_out, r3(i4), i4.total_in = l3, i4.total_out = c2, u2.mode = 7, 0);
+  }, i3.inflateSyncPoint = function(t4) {
+    return t4 && t4.istate && t4.istate.blocks ? t4.istate.blocks.sync_point() : e;
   };
 }
 function m() {
 }
 function T(e3) {
-  const { baseURL: t3, chunkSize: n3, maxWorkers: i3, terminateWorkerTimeout: r3, useCompressionStream: a3, useWebWorkers: s3, Deflate: o3, Inflate: l3, CompressionStream: c2, DecompressionStream: u2, workerScripts: d2 } = e3;
-  if (O("baseURL", t3), O("chunkSize", n3), O("maxWorkers", i3), O("terminateWorkerTimeout", r3), O("useCompressionStream", a3), O("useWebWorkers", s3), o3 && (F.CompressionStream = new U(o3)), l3 && (F.DecompressionStream = new U(l3)), O("CompressionStream", c2), O("DecompressionStream", u2), d2 !== S) {
-    const { deflate: e4, inflate: t4 } = d2;
-    if ((e4 || t4) && (F.workerScripts || (F.workerScripts = {})), e4) {
+  const { baseURL: t4, chunkSize: n3, maxWorkers: i3, terminateWorkerTimeout: r3, useCompressionStream: a3, useWebWorkers: s3, Deflate: o3, Inflate: l3, CompressionStream: c2, DecompressionStream: u2, workerScripts: d2 } = e3;
+  if (O("baseURL", t4), O("chunkSize", n3), O("maxWorkers", i3), O("terminateWorkerTimeout", r3), O("useCompressionStream", a3), O("useWebWorkers", s3), o3 && (F.CompressionStream = new U(o3)), l3 && (F.DecompressionStream = new U(l3)), O("CompressionStream", c2), O("DecompressionStream", u2), d2 !== S) {
+    const { deflate: e4, inflate: t5 } = d2;
+    if ((e4 || t5) && (F.workerScripts || (F.workerScripts = {})), e4) {
       if (!Array.isArray(e4)) throw new Error("workerScripts.deflate must be an array");
       F.workerScripts.deflate = e4;
     }
-    if (t4) {
-      if (!Array.isArray(t4)) throw new Error("workerScripts.inflate must be an array");
-      F.workerScripts.inflate = t4;
+    if (t5) {
+      if (!Array.isArray(t5)) throw new Error("workerScripts.inflate must be an array");
+      F.workerScripts.inflate = t5;
     }
   }
 }
-function O(e3, t3) {
-  t3 !== S && (F[e3] = t3);
+function O(e3, t4) {
+  t4 !== S && (F[e3] = t4);
 }
 function Z(e3) {
   return V ? crypto.getRandomValues(e3) : B.getRandomValues(e3);
 }
-function _e(e3, t3, n3, i3, r3, a3) {
-  const { ctr: s3, hmac: o3, pending: l3 } = e3, c2 = t3.length - r3;
+function _e(e3, t4, n3, i3, r3, a3) {
+  const { ctr: s3, hmac: o3, pending: l3 } = e3, c2 = t4.length - r3;
   let u2;
-  for (l3.length && (t3 = pe(l3, t3), n3 = (function(e4, t4) {
-    if (t4 && t4 > e4.length) {
+  for (l3.length && (t4 = pe(l3, t4), n3 = (function(e4, t5) {
+    if (t5 && t5 > e4.length) {
       const n4 = e4;
-      (e4 = new Uint8Array(t4)).set(n4, 0);
+      (e4 = new Uint8Array(t5)).set(n4, 0);
     }
     return e4;
   })(n3, c2 - c2 % G)), u2 = 0; u2 <= c2 - G; u2 += G) {
-    const e4 = ye(se, me(t3, u2, u2 + G));
+    const e4 = ye(se, me(t4, u2, u2 + G));
     a3 && o3.update(e4);
     const r4 = s3.update(e4);
     a3 || o3.update(r4), n3.set(ge(se, r4), u2 + i3);
   }
-  return e3.pending = me(t3, u2), n3;
+  return e3.pending = me(t4, u2), n3;
 }
-async function we(e3, t3, n3, i3) {
+async function we(e3, t4, n3, i3) {
   e3.password = null;
-  const r3 = await (async function(e4, t4, n4, i4, r4) {
-    if (!ue) return N.importKey(t4);
+  const r3 = await (async function(e4, t5, n4, i4, r4) {
+    if (!ue) return N.importKey(t5);
     try {
-      return await re.importKey(e4, t4, n4, i4, r4);
+      return await re.importKey(e4, t5, n4, i4, r4);
     } catch (e5) {
-      return ue = false, N.importKey(t4);
+      return ue = false, N.importKey(t5);
     }
-  })("raw", n3, Q, false, Y), a3 = await (async function(e4, t4, n4) {
-    if (!de) return N.pbkdf2(t4, e4.salt, X.iterations, n4);
+  })("raw", n3, Q, false, Y), a3 = await (async function(e4, t5, n4) {
+    if (!de) return N.pbkdf2(t5, e4.salt, X.iterations, n4);
     try {
-      return await re.deriveBits(e4, t4, n4);
+      return await re.deriveBits(e4, t5, n4);
     } catch (i4) {
-      return de = false, N.pbkdf2(t4, e4.salt, X.iterations, n4);
+      return de = false, N.pbkdf2(t5, e4.salt, X.iterations, n4);
     }
-  })(Object.assign({ salt: i3 }, X), r3, 8 * (2 * ee[t3] + 2)), s3 = new Uint8Array(a3), o3 = ye(se, me(s3, 0, ee[t3])), l3 = ye(se, me(s3, ee[t3], 2 * ee[t3])), c2 = me(s3, 2 * ee[t3]);
+  })(Object.assign({ salt: i3 }, X), r3, 8 * (2 * ee[t4] + 2)), s3 = new Uint8Array(a3), o3 = ye(se, me(s3, 0, ee[t4])), l3 = ye(se, me(s3, ee[t4], 2 * ee[t4])), c2 = me(s3, 2 * ee[t4]);
   return Object.assign(e3, { keys: { key: o3, authentication: l3, passwordVerification: c2 }, ctr: new le(new oe(o3), Array.from(ne)), hmac: new ce(l3) }), c2;
 }
-function be(e3, t3) {
-  return t3 === S ? (function(e4) {
+function be(e3, t4) {
+  return t4 === S ? (function(e4) {
     if (typeof TextEncoder == z) {
       e4 = unescape(encodeURIComponent(e4));
-      const t4 = new Uint8Array(e4.length);
-      for (let n3 = 0; n3 < t4.length; n3++) t4[n3] = e4.charCodeAt(n3);
-      return t4;
+      const t5 = new Uint8Array(e4.length);
+      for (let n3 = 0; n3 < t5.length; n3++) t5[n3] = e4.charCodeAt(n3);
+      return t5;
     }
     return new TextEncoder().encode(e4);
-  })(e3) : t3;
+  })(e3) : t4;
 }
-function pe(e3, t3) {
+function pe(e3, t4) {
   let n3 = e3;
-  return e3.length + t3.length && (n3 = new Uint8Array(e3.length + t3.length), n3.set(e3, 0), n3.set(t3, e3.length)), n3;
+  return e3.length + t4.length && (n3 = new Uint8Array(e3.length + t4.length), n3.set(e3, 0), n3.set(t4, e3.length)), n3;
 }
-function me(e3, t3, n3) {
-  return e3.subarray(t3, n3);
+function me(e3, t4, n3) {
+  return e3.subarray(t4, n3);
 }
-function ge(e3, t3) {
-  return e3.fromBits(t3);
+function ge(e3, t4) {
+  return e3.fromBits(t4);
 }
-function ye(e3, t3) {
-  return e3.toBits(t3);
+function ye(e3, t4) {
+  return e3.toBits(t4);
 }
-function Se(e3, t3) {
-  const n3 = new Uint8Array(t3.length);
-  for (let i3 = 0; i3 < t3.length; i3++) n3[i3] = De(e3) ^ t3[i3], Ue(e3, n3[i3]);
+function Se(e3, t4) {
+  const n3 = new Uint8Array(t4.length);
+  for (let i3 = 0; i3 < t4.length; i3++) n3[i3] = De(e3) ^ t4[i3], Ue(e3, n3[i3]);
   return n3;
 }
-function ze(e3, t3) {
-  const n3 = new Uint8Array(t3.length);
-  for (let i3 = 0; i3 < t3.length; i3++) n3[i3] = De(e3) ^ t3[i3], Ue(e3, t3[i3]);
+function ze(e3, t4) {
+  const n3 = new Uint8Array(t4.length);
+  for (let i3 = 0; i3 < t4.length; i3++) n3[i3] = De(e3) ^ t4[i3], Ue(e3, t4[i3]);
   return n3;
 }
-function Ae(e3, t3) {
+function Ae(e3, t4) {
   const n3 = [305419896, 591751049, 878082192];
   Object.assign(e3, { keys: n3, crcKey0: new W(n3[0]), crcKey2: new W(n3[2]) });
-  for (let n4 = 0; n4 < t3.length; n4++) Ue(e3, t3.charCodeAt(n4));
+  for (let n4 = 0; n4 < t4.length; n4++) Ue(e3, t4.charCodeAt(n4));
 }
-function Ue(e3, t3) {
+function Ue(e3, t4) {
   let [n3, i3, r3] = e3.keys;
-  e3.crcKey0.append([t3]), n3 = ~e3.crcKey0.get(), i3 = Fe(Math.imul(Fe(i3 + Ee(n3)), 134775813) + 1), e3.crcKey2.append([i3 >>> 24]), r3 = ~e3.crcKey2.get(), e3.keys = [n3, i3, r3];
+  e3.crcKey0.append([t4]), n3 = ~e3.crcKey0.get(), i3 = Fe(Math.imul(Fe(i3 + Ee(n3)), 134775813) + 1), e3.crcKey2.append([i3 >>> 24]), r3 = ~e3.crcKey2.get(), e3.keys = [n3, i3, r3];
 }
 function De(e3) {
-  const t3 = 2 | e3.keys[2];
-  return Ee(Math.imul(t3, 1 ^ t3) >>> 8);
+  const t4 = 2 | e3.keys[2];
+  return Ee(Math.imul(t4, 1 ^ t4) >>> 8);
 }
 function Ee(e3) {
   return 255 & e3;
@@ -1177,59 +1177,59 @@ function Fe(e3) {
   return 4294967295 & e3;
 }
 function We(e3) {
-  return Le(e3, new TransformStream({ transform(e4, t3) {
-    e4 && e4.length && t3.enqueue(e4);
+  return Le(e3, new TransformStream({ transform(e4, t4) {
+    e4 && e4.length && t4.enqueue(e4);
   } }));
 }
-function je(e3, t3, n3) {
-  t3 = Le(t3, new TransformStream({ flush: n3 })), Object.defineProperty(e3, "readable", { get: () => t3 });
+function je(e3, t4, n3) {
+  t4 = Le(t4, new TransformStream({ flush: n3 })), Object.defineProperty(e3, "readable", { get: () => t4 });
 }
-function Me(e3, t3, n3, i3, r3) {
+function Me(e3, t4, n3, i3, r3) {
   try {
-    e3 = Le(e3, new (t3 && i3 ? i3 : r3)(Te, n3));
+    e3 = Le(e3, new (t4 && i3 ? i3 : r3)(Te, n3));
   } catch (i4) {
-    if (!t3) return e3;
+    if (!t4) return e3;
     try {
       e3 = Le(e3, new r3(Te, n3));
-    } catch (t4) {
+    } catch (t5) {
       return e3;
     }
   }
   return e3;
 }
-function Le(e3, t3) {
-  return e3.pipeThrough(t3);
+function Le(e3, t4) {
+  return e3.pipeThrough(t4);
 }
-async function Je(e3, ...t3) {
+async function Je(e3, ...t4) {
   try {
-    await e3(...t3);
+    await e3(...t4);
   } catch (e4) {
   }
 }
-function Qe(e3, t3) {
-  return { run: () => (async function({ options: e4, readable: t4, writable: n3, onTaskFinished: i3 }, r3) {
+function Qe(e3, t4) {
+  return { run: () => (async function({ options: e4, readable: t5, writable: n3, onTaskFinished: i3 }, r3) {
     try {
       const i4 = new qe(e4, r3);
-      await t4.pipeThrough(i4).pipeTo(n3, { preventClose: true, preventAbort: true });
+      await t5.pipeThrough(i4).pipeTo(n3, { preventClose: true, preventAbort: true });
       const { signature: a3, inputSize: s3, outputSize: o3 } = i4;
       return { signature: a3, inputSize: s3, outputSize: o3 };
     } finally {
       i3();
     }
-  })(e3, t3) };
+  })(e3, t4) };
 }
-function Xe(e3, t3) {
-  const { baseURL: n3, chunkSize: i3 } = t3;
+function Xe(e3, t4) {
+  const { baseURL: n3, chunkSize: i3 } = t4;
   if (!e3.interface) {
     let r3;
     try {
-      r3 = (function(e4, t4, n4) {
+      r3 = (function(e4, t5, n4) {
         const i4 = { type: "module" };
         let r4, a3;
         typeof e4 == A && (e4 = e4());
         try {
-          r4 = new URL(e4, t4);
-        } catch (t5) {
+          r4 = new URL(e4, t5);
+        } catch (t6) {
           r4 = e4;
         }
         if (Ye) try {
@@ -1238,46 +1238,46 @@ function Xe(e3, t3) {
           Ye = false, a3 = new Worker(r4, i4);
         }
         else a3 = new Worker(r4, i4);
-        return a3.addEventListener(Pe, ((e5) => (async function({ data: e6 }, t5) {
-          const { type: n5, value: i5, messageId: r5, result: a4, error: s3 } = e6, { reader: o3, writer: l3, resolveResult: c2, rejectResult: u2, onTaskFinished: d2 } = t5;
+        return a3.addEventListener(Pe, ((e5) => (async function({ data: e6 }, t6) {
+          const { type: n5, value: i5, messageId: r5, result: a4, error: s3 } = e6, { reader: o3, writer: l3, resolveResult: c2, rejectResult: u2, onTaskFinished: d2 } = t6;
           try {
             if (s3) {
-              const { message: e7, stack: t6, code: n6, name: i6 } = s3, r6 = new Error(e7);
-              Object.assign(r6, { stack: t6, code: n6, name: i6 }), f3(r6);
+              const { message: e7, stack: t7, code: n6, name: i6 } = s3, r6 = new Error(e7);
+              Object.assign(r6, { stack: t7, code: n6, name: i6 }), f3(r6);
             } else {
               if (n5 == Be) {
                 const { value: e7, done: n6 } = await o3.read();
-                et({ type: Ie, value: e7, done: n6, messageId: r5 }, t5);
+                et({ type: Ie, value: e7, done: n6, messageId: r5 }, t6);
               }
-              n5 == Ie && (await l3.ready, await l3.write(new Uint8Array(i5)), et({ type: "ack", messageId: r5 }, t5)), n5 == Ne && f3(null, a4);
+              n5 == Ie && (await l3.ready, await l3.write(new Uint8Array(i5)), et({ type: "ack", messageId: r5 }, t6)), n5 == Ne && f3(null, a4);
             }
           } catch (s4) {
-            et({ type: Ne, messageId: r5 }, t5), f3(s4);
+            et({ type: Ne, messageId: r5 }, t6), f3(s4);
           }
-          function f3(e7, t6) {
-            e7 ? u2(e7) : c2(t6), l3 && l3.releaseLock(), d2();
+          function f3(e7, t7) {
+            e7 ? u2(e7) : c2(t7), l3 && l3.releaseLock(), d2();
           }
         })(e5, n4))), a3;
       })(e3.scripts[0], n3, e3);
     } catch (n4) {
-      return Ke = false, Qe(e3, t3);
+      return Ke = false, Qe(e3, t4);
     }
-    Object.assign(e3, { worker: r3, interface: { run: () => (async function(e4, t4) {
+    Object.assign(e3, { worker: r3, interface: { run: () => (async function(e4, t5) {
       let n4, i4;
-      const r4 = new Promise(((e5, t5) => {
-        n4 = e5, i4 = t5;
+      const r4 = new Promise(((e5, t6) => {
+        n4 = e5, i4 = t6;
       }));
       Object.assign(e4, { reader: null, writer: null, resolveResult: n4, rejectResult: i4, result: r4 });
       const { readable: a3, options: s3, scripts: o3 } = e4, { writable: l3, closed: c2 } = (function(e5) {
-        let t5;
-        const n5 = new Promise(((e6) => t5 = e6)), i5 = new WritableStream({ async write(t6) {
+        let t6;
+        const n5 = new Promise(((e6) => t6 = e6)), i5 = new WritableStream({ async write(t7) {
           const n6 = e5.getWriter();
-          await n6.ready, await n6.write(t6), n6.releaseLock();
+          await n6.ready, await n6.write(t7), n6.releaseLock();
         }, close() {
-          t5();
-        }, abort: (t6) => e5.getWriter().abort(t6) });
+          t6();
+        }, abort: (t7) => e5.getWriter().abort(t7) });
         return { writable: i5, closed: n5 };
-      })(e4.writable), u2 = et({ type: Re, scripts: o3.slice(1), options: s3, config: t4, readable: a3, writable: l3 }, e4);
+      })(e4.writable), u2 = et({ type: Re, scripts: o3.slice(1), options: s3, config: t5, readable: a3, writable: l3 }, e4);
       u2 || Object.assign(e4, { reader: a3.getReader(), writer: l3.getWriter() });
       const d2 = await r4;
       u2 || await l3.getWriter().close();
@@ -1286,117 +1286,117 @@ function Xe(e3, t3) {
   }
   return e3.interface;
 }
-function et(e3, { worker: t3, writer: n3, onTaskFinished: i3, transferStreams: r3 }) {
+function et(e3, { worker: t4, writer: n3, onTaskFinished: i3, transferStreams: r3 }) {
   try {
     const { value: n4, readable: i4, writable: a3 } = e3, s3 = [];
     if (n4 && (n4.byteLength < n4.buffer.byteLength ? e3.value = n4.buffer.slice(0, n4.byteLength) : e3.value = n4.buffer, s3.push(e3.value)), r3 && $e ? (i4 && s3.push(i4), a3 && s3.push(a3)) : e3.readable = e3.writable = null, s3.length) try {
-      return t3.postMessage(e3, s3), true;
+      return t4.postMessage(e3, s3), true;
     } catch (n5) {
-      $e = false, e3.readable = e3.writable = null, t3.postMessage(e3);
+      $e = false, e3.readable = e3.writable = null, t4.postMessage(e3);
     }
-    else t3.postMessage(e3);
+    else t4.postMessage(e3);
   } catch (e4) {
     throw n3 && n3.releaseLock(), i3(), e4;
   }
 }
-async function rt(e3, t3) {
-  const { options: n3, config: i3 } = t3, { transferStreams: r3, useWebWorkers: a3, useCompressionStream: s3, codecType: o3, compressed: l3, signed: c2, encrypted: u2 } = n3, { workerScripts: d2, maxWorkers: f3 } = i3;
-  t3.transferStreams = r3 || r3 === S;
-  const h3 = !(l3 || c2 || u2 || t3.transferStreams);
-  return t3.useWebWorkers = !h3 && (a3 || a3 === S && i3.useWebWorkers), t3.scripts = t3.useWebWorkers && d2 ? d2[o3] : [], n3.useCompressionStream = s3 || s3 === S && i3.useCompressionStream, (await (async function() {
+async function rt(e3, t4) {
+  const { options: n3, config: i3 } = t4, { transferStreams: r3, useWebWorkers: a3, useCompressionStream: s3, codecType: o3, compressed: l3, signed: c2, encrypted: u2 } = n3, { workerScripts: d2, maxWorkers: f3 } = i3;
+  t4.transferStreams = r3 || r3 === S;
+  const h3 = !(l3 || c2 || u2 || t4.transferStreams);
+  return t4.useWebWorkers = !h3 && (a3 || a3 === S && i3.useWebWorkers), t4.scripts = t4.useWebWorkers && d2 ? d2[o3] : [], n3.useCompressionStream = s3 || s3 === S && i3.useCompressionStream, (await (async function() {
     const n4 = tt.find(((e4) => !e4.busy));
-    if (n4) return at(n4), new Ze(n4, e3, t3, _2);
+    if (n4) return at(n4), new Ze(n4, e3, t4, _2);
     if (tt.length < f3) {
       const n5 = { indexWorker: it };
-      return it++, tt.push(n5), new Ze(n5, e3, t3, _2);
+      return it++, tt.push(n5), new Ze(n5, e3, t4, _2);
     }
-    return new Promise(((n5) => nt.push({ resolve: n5, stream: e3, workerOptions: t3 })));
+    return new Promise(((n5) => nt.push({ resolve: n5, stream: e3, workerOptions: t4 })));
   })()).run();
   function _2(e4) {
     if (nt.length) {
-      const [{ resolve: t4, stream: n4, workerOptions: i4 }] = nt.splice(0, 1);
-      t4(new Ze(e4, n4, i4, _2));
-    } else e4.worker ? (at(e4), (function(e5, t4) {
-      const { config: n4 } = t4, { terminateWorkerTimeout: i4 } = n4;
+      const [{ resolve: t5, stream: n4, workerOptions: i4 }] = nt.splice(0, 1);
+      t5(new Ze(e4, n4, i4, _2));
+    } else e4.worker ? (at(e4), (function(e5, t5) {
+      const { config: n4 } = t5, { terminateWorkerTimeout: i4 } = n4;
       Number.isFinite(i4) && i4 >= 0 && (e5.terminated ? e5.terminated = false : e5.terminateTimeout = setTimeout((async () => {
-        tt = tt.filter(((t5) => t5 != e5));
+        tt = tt.filter(((t6) => t6 != e5));
         try {
           await e5.terminate();
         } catch (e6) {
         }
       }), i4));
-    })(e4, t3)) : tt = tt.filter(((t4) => t4 != e4));
+    })(e4, t4)) : tt = tt.filter(((t5) => t5 != e4));
   }
 }
 function at(e3) {
-  const { terminateTimeout: t3 } = e3;
-  t3 && (clearTimeout(t3), e3.terminateTimeout = null);
+  const { terminateTimeout: t4 } = e3;
+  t4 && (clearTimeout(t4), e3.terminateTimeout = null);
 }
-async function wt(e3, t3) {
+async function wt(e3, t4) {
   if (!e3.init || e3.initialized) return Promise.resolve();
-  await e3.init(t3);
+  await e3.init(t4);
 }
 function bt(e3) {
   return Array.isArray(e3) && (e3 = new ht(e3)), e3 instanceof ReadableStream && (e3 = { readable: e3 }), e3;
 }
-function pt(e3, t3, n3, i3) {
-  return e3.readUint8Array(t3, n3, i3);
+function pt(e3, t4, n3, i3) {
+  return e3.readUint8Array(t4, n3, i3);
 }
-function yt(e3, t3) {
-  return t3 && "cp437" == t3.trim().toLowerCase() ? (function(e4) {
+function yt(e3, t4) {
+  return t4 && "cp437" == t4.trim().toLowerCase() ? (function(e4) {
     if (gt) {
-      let t4 = "";
-      for (let n3 = 0; n3 < e4.length; n3++) t4 += mt[e4[n3]];
-      return t4;
+      let t5 = "";
+      for (let n3 = 0; n3 < e4.length; n3++) t5 += mt[e4[n3]];
+      return t5;
     }
     return new TextDecoder().decode(e4);
-  })(e3) : new TextDecoder(t3).decode(e3);
+  })(e3) : new TextDecoder(t4).decode(e3);
 }
-function Zt(e3, t3, n3) {
-  const i3 = e3.rawBitFlag = en(t3, n3 + 2), r3 = !(1 & ~i3), a3 = tn(t3, n3 + 6);
-  Object.assign(e3, { encrypted: r3, version: en(t3, n3), bitFlag: { level: (6 & i3) >> 1, dataDescriptor: !(8 & ~i3), languageEncodingFlag: !(2048 & ~i3) }, rawLastModDate: a3, lastModDate: Xt(a3), filenameLength: en(t3, n3 + 22), extraFieldLength: en(t3, n3 + 24) });
+function Zt(e3, t4, n3) {
+  const i3 = e3.rawBitFlag = en2(t4, n3 + 2), r3 = !(1 & ~i3), a3 = tn(t4, n3 + 6);
+  Object.assign(e3, { encrypted: r3, version: en2(t4, n3), bitFlag: { level: (6 & i3) >> 1, dataDescriptor: !(8 & ~i3), languageEncodingFlag: !(2048 & ~i3) }, rawLastModDate: a3, lastModDate: Xt(a3), filenameLength: en2(t4, n3 + 22), extraFieldLength: en2(t4, n3 + 24) });
 }
-function Gt(e3, t3, n3, i3, r3) {
-  const { rawExtraField: a3 } = t3, s3 = t3.extraField = /* @__PURE__ */ new Map(), o3 = rn(new Uint8Array(a3));
+function Gt(e3, t4, n3, i3, r3) {
+  const { rawExtraField: a3 } = t4, s3 = t4.extraField = /* @__PURE__ */ new Map(), o3 = rn(new Uint8Array(a3));
   let l3 = 0;
   try {
     for (; l3 < a3.length; ) {
-      const e4 = en(o3, l3), t4 = en(o3, l3 + 2);
-      s3.set(e4, { type: e4, data: a3.slice(l3 + 4, l3 + 4 + t4) }), l3 += 4 + t4;
+      const e4 = en2(o3, l3), t5 = en2(o3, l3 + 2);
+      s3.set(e4, { type: e4, data: a3.slice(l3 + 4, l3 + 4 + t5) }), l3 += 4 + t5;
     }
   } catch (e4) {
   }
-  const c2 = en(n3, i3 + 4);
-  Object.assign(t3, { signature: tn(n3, i3 + 10), uncompressedSize: tn(n3, i3 + 18), compressedSize: tn(n3, i3 + 14) });
+  const c2 = en2(n3, i3 + 4);
+  Object.assign(t4, { signature: tn(n3, i3 + 10), uncompressedSize: tn(n3, i3 + 18), compressedSize: tn(n3, i3 + 14) });
   const u2 = s3.get(1);
-  u2 && (!(function(e4, t4) {
-    t4.zip64 = true;
-    const n4 = rn(e4.data), i4 = Vt.filter((([e5, n5]) => t4[e5] == n5));
+  u2 && (!(function(e4, t5) {
+    t5.zip64 = true;
+    const n4 = rn(e4.data), i4 = Vt.filter((([e5, n5]) => t5[e5] == n5));
     for (let r4 = 0, a4 = 0; r4 < i4.length; r4++) {
       const [s4, o4] = i4[r4];
-      if (t4[s4] == o4) {
+      if (t5[s4] == o4) {
         const i5 = qt[o4];
-        t4[s4] = e4[s4] = i5.getValue(n4, a4), a4 += i5.bytes;
+        t5[s4] = e4[s4] = i5.getValue(n4, a4), a4 += i5.bytes;
       } else if (e4[s4]) throw new Error(Pt);
     }
-  })(u2, t3), t3.extraFieldZip64 = u2);
+  })(u2, t4), t4.extraFieldZip64 = u2);
   const d2 = s3.get(28789);
-  d2 && (Jt(d2, xt, kt, t3, e3), t3.extraFieldUnicodePath = d2);
+  d2 && (Jt(d2, xt, kt, t4, e3), t4.extraFieldUnicodePath = d2);
   const f3 = s3.get(25461);
-  f3 && (Jt(f3, vt, St, t3, e3), t3.extraFieldUnicodeComment = f3);
+  f3 && (Jt(f3, vt, St, t4, e3), t4.extraFieldUnicodeComment = f3);
   const h3 = s3.get(39169);
-  h3 ? (!(function(e4, t4, n4) {
+  h3 ? (!(function(e4, t5, n4) {
     const i4 = rn(e4.data), r4 = $t(i4, 4);
-    Object.assign(e4, { vendorVersion: $t(i4, 0), vendorId: $t(i4, 2), strength: r4, originalCompressionMethod: n4, compressionMethod: en(i4, 5) }), t4.compressionMethod = e4.compressionMethod;
-  })(h3, t3, c2), t3.extraFieldAES = h3) : t3.compressionMethod = c2;
+    Object.assign(e4, { vendorVersion: $t(i4, 0), vendorId: $t(i4, 2), strength: r4, originalCompressionMethod: n4, compressionMethod: en2(i4, 5) }), t5.compressionMethod = e4.compressionMethod;
+  })(h3, t4, c2), t4.extraFieldAES = h3) : t4.compressionMethod = c2;
   const _2 = s3.get(10);
-  _2 && (!(function(e4, t4) {
+  _2 && (!(function(e4, t5) {
     const n4 = rn(e4.data);
     let i4, r4 = 4;
     try {
       for (; r4 < e4.data.length && !i4; ) {
-        const t5 = en(n4, r4), a4 = en(n4, r4 + 2);
-        1 == t5 && (i4 = e4.data.slice(r4 + 4, r4 + 4 + a4)), r4 += 4 + a4;
+        const t6 = en2(n4, r4), a4 = en2(n4, r4 + 2);
+        1 == t6 && (i4 = e4.data.slice(r4 + 4, r4 + 4 + a4)), r4 += 4 + a4;
       }
     } catch (e5) {
     }
@@ -1405,70 +1405,70 @@ function Gt(e3, t3, n3, i3, r3) {
         const n5 = rn(i4), r5 = n5.getBigUint64(0, true), a4 = n5.getBigUint64(8, true), s4 = n5.getBigUint64(16, true);
         Object.assign(e4, { rawLastModDate: r5, rawLastAccessDate: a4, rawCreationDate: s4 });
         const o4 = Yt(r5), l4 = Yt(a4), c3 = { lastModDate: o4, lastAccessDate: l4, creationDate: Yt(s4) };
-        Object.assign(e4, c3), Object.assign(t4, c3);
+        Object.assign(e4, c3), Object.assign(t5, c3);
       }
     } catch (e5) {
     }
-  })(_2, t3), t3.extraFieldNTFS = _2);
+  })(_2, t4), t4.extraFieldNTFS = _2);
   const w2 = s3.get(21589);
-  w2 && (!(function(e4, t4, n4) {
+  w2 && (!(function(e4, t5, n4) {
     const i4 = rn(e4.data), r4 = $t(i4, 0), a4 = [], s4 = [];
     n4 ? (1 & ~r4 || (a4.push(Et), s4.push(Ft)), 2 & ~r4 || (a4.push(Tt), s4.push(Ot)), 4 & ~r4 || (a4.push(Ct), s4.push(Wt))) : e4.data.length >= 5 && (a4.push(Et), s4.push(Ft));
     let o4 = 1;
     a4.forEach(((n5, r5) => {
       if (e4.data.length >= o4 + 4) {
         const a5 = tn(i4, o4);
-        t4[n5] = e4[n5] = new Date(1e3 * a5);
+        t5[n5] = e4[n5] = new Date(1e3 * a5);
         const l4 = s4[r5];
         e4[l4] = a5;
       }
       o4 += 4;
     }));
-  })(w2, t3, r3), t3.extraFieldExtendedTimestamp = w2);
+  })(w2, t4, r3), t4.extraFieldExtendedTimestamp = w2);
   const b3 = s3.get(6534);
-  b3 && (t3.extraFieldUSDZ = b3);
+  b3 && (t4.extraFieldUSDZ = b3);
 }
-function Jt(e3, t3, n3, i3, r3) {
+function Jt(e3, t4, n3, i3, r3) {
   const a3 = rn(e3.data), s3 = new W();
   s3.append(r3[n3]);
   const o3 = rn(new Uint8Array(4));
   o3.setUint32(0, s3.get(), true);
   const l3 = tn(a3, 1);
-  Object.assign(e3, { version: $t(a3, 0), [t3]: yt(e3.data.subarray(5)), valid: !r3.bitFlag.languageEncodingFlag && l3 == tn(o3, 0) }), e3.valid && (i3[t3] = e3[t3], i3[t3 + "UTF8"] = true);
+  Object.assign(e3, { version: $t(a3, 0), [t4]: yt(e3.data.subarray(5)), valid: !r3.bitFlag.languageEncodingFlag && l3 == tn(o3, 0) }), e3.valid && (i3[t4] = e3[t4], i3[t4 + "UTF8"] = true);
 }
-function Qt(e3, t3, n3) {
-  return t3[n3] === S ? e3.options[n3] : t3[n3];
+function Qt(e3, t4, n3) {
+  return t4[n3] === S ? e3.options[n3] : t4[n3];
 }
 function Xt(e3) {
-  const t3 = (4294901760 & e3) >> 16, n3 = 65535 & e3;
+  const t4 = (4294901760 & e3) >> 16, n3 = 65535 & e3;
   try {
-    return new Date(1980 + ((65024 & t3) >> 9), ((480 & t3) >> 5) - 1, 31 & t3, (63488 & n3) >> 11, (2016 & n3) >> 5, 2 * (31 & n3), 0);
+    return new Date(1980 + ((65024 & t4) >> 9), ((480 & t4) >> 5) - 1, 31 & t4, (63488 & n3) >> 11, (2016 & n3) >> 5, 2 * (31 & n3), 0);
   } catch (e4) {
   }
 }
 function Yt(e3) {
   return new Date(Number(e3 / BigInt(1e4) - BigInt(116444736e5)));
 }
-function $t(e3, t3) {
-  return e3.getUint8(t3);
+function $t(e3, t4) {
+  return e3.getUint8(t4);
 }
-function en(e3, t3) {
-  return e3.getUint16(t3, true);
+function en2(e3, t4) {
+  return e3.getUint16(t4, true);
 }
-function tn(e3, t3) {
-  return e3.getUint32(t3, true);
+function tn(e3, t4) {
+  return e3.getUint32(t4, true);
 }
-function nn(e3, t3) {
-  return Number(e3.getBigUint64(t3, true));
+function nn(e3, t4) {
+  return Number(e3.getBigUint64(t4, true));
 }
 function rn(e3) {
   return new DataView(e3.buffer);
 }
-var e, t, n, i, r, a, s, o, l, c, u, h, w, b, g, y, x, k, v, S, z, A, U, D, E, F, C, W, j, M, L, P, R, B, I, N, V, q, H, K, G, J, Q, X, Y, $, ee, te, ne, ie, re, ae, se, oe, le, ce, ue, de, fe, he, xe, ke, ve, Te, Oe, Ce, Pe, Re, Be, Ie, Ne, Ve, qe, He, Ke, Ze, Ge, Ye, $e, tt, nt, it, st, ot, lt, ct, ut, dt, ft, ht, _t, mt, gt, xt, kt, vt, St, zt, At, Ut, Dt, Et, Ft, Tt, Ot, Ct, Wt, jt, Mt, Lt, Pt, Rt, Bt, It, Nt, Vt, qt, Ht, Kt;
+var e, t2, n, i, r, a, s, o, l, c, u, h, w, b, g, y, x, k, v, S, z, A, U, D, E, F, C, W, j, M, L, P, R, B, I, N, V, q, H, K, G, J, Q, X, Y, $, ee, te, ne, ie, re, ae, se, oe, le, ce, ue, de, fe, he, xe, ke, ve, Te, Oe, Ce, Pe, Re, Be, Ie, Ne, Ve, qe, He, Ke, Ze, Ge, Ye, $e, tt, nt, it, st, ot, lt, ct, ut, dt, ft, ht, _t, mt, gt, xt, kt, vt, St, zt, At, Ut, Dt, Et, Ft, Tt, Ot, Ct, Wt, jt, Mt, Lt, Pt, Rt, Bt, It, Nt, Vt, qt, Ht, Kt;
 var init_zip = __esm({
   "node_modules/foliate-js/vendor/zip.js"() {
     e = -2;
-    t = -3;
+    t2 = -3;
     n = -5;
     i = [0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047, 4095, 8191, 16383, 32767, 65535];
     r = [96, 7, 256, 0, 8, 80, 0, 8, 16, 84, 8, 115, 82, 7, 31, 0, 8, 112, 0, 8, 48, 0, 9, 192, 80, 7, 10, 0, 8, 96, 0, 8, 32, 0, 9, 160, 0, 8, 0, 0, 8, 128, 0, 8, 64, 0, 9, 224, 80, 7, 6, 0, 8, 88, 0, 8, 24, 0, 9, 144, 83, 7, 59, 0, 8, 120, 0, 8, 56, 0, 9, 208, 81, 7, 17, 0, 8, 104, 0, 8, 40, 0, 9, 176, 0, 8, 8, 0, 8, 136, 0, 8, 72, 0, 9, 240, 80, 7, 4, 0, 8, 84, 0, 8, 20, 85, 8, 227, 83, 7, 43, 0, 8, 116, 0, 8, 52, 0, 9, 200, 81, 7, 13, 0, 8, 100, 0, 8, 36, 0, 9, 168, 0, 8, 4, 0, 8, 132, 0, 8, 68, 0, 9, 232, 80, 7, 8, 0, 8, 92, 0, 8, 28, 0, 9, 152, 84, 7, 83, 0, 8, 124, 0, 8, 60, 0, 9, 216, 82, 7, 23, 0, 8, 108, 0, 8, 44, 0, 9, 184, 0, 8, 12, 0, 8, 140, 0, 8, 76, 0, 9, 248, 80, 7, 3, 0, 8, 82, 0, 8, 18, 85, 8, 163, 83, 7, 35, 0, 8, 114, 0, 8, 50, 0, 9, 196, 81, 7, 11, 0, 8, 98, 0, 8, 34, 0, 9, 164, 0, 8, 2, 0, 8, 130, 0, 8, 66, 0, 9, 228, 80, 7, 7, 0, 8, 90, 0, 8, 26, 0, 9, 148, 84, 7, 67, 0, 8, 122, 0, 8, 58, 0, 9, 212, 82, 7, 19, 0, 8, 106, 0, 8, 42, 0, 9, 180, 0, 8, 10, 0, 8, 138, 0, 8, 74, 0, 9, 244, 80, 7, 5, 0, 8, 86, 0, 8, 22, 192, 8, 0, 83, 7, 51, 0, 8, 118, 0, 8, 54, 0, 9, 204, 81, 7, 15, 0, 8, 102, 0, 8, 38, 0, 9, 172, 0, 8, 6, 0, 8, 134, 0, 8, 70, 0, 9, 236, 80, 7, 9, 0, 8, 94, 0, 8, 30, 0, 9, 156, 84, 7, 99, 0, 8, 126, 0, 8, 62, 0, 9, 220, 82, 7, 27, 0, 8, 110, 0, 8, 46, 0, 9, 188, 0, 8, 14, 0, 8, 142, 0, 8, 78, 0, 9, 252, 96, 7, 256, 0, 8, 81, 0, 8, 17, 85, 8, 131, 82, 7, 31, 0, 8, 113, 0, 8, 49, 0, 9, 194, 80, 7, 10, 0, 8, 97, 0, 8, 33, 0, 9, 162, 0, 8, 1, 0, 8, 129, 0, 8, 65, 0, 9, 226, 80, 7, 6, 0, 8, 89, 0, 8, 25, 0, 9, 146, 83, 7, 59, 0, 8, 121, 0, 8, 57, 0, 9, 210, 81, 7, 17, 0, 8, 105, 0, 8, 41, 0, 9, 178, 0, 8, 9, 0, 8, 137, 0, 8, 73, 0, 9, 242, 80, 7, 4, 0, 8, 85, 0, 8, 21, 80, 8, 258, 83, 7, 43, 0, 8, 117, 0, 8, 53, 0, 9, 202, 81, 7, 13, 0, 8, 101, 0, 8, 37, 0, 9, 170, 0, 8, 5, 0, 8, 133, 0, 8, 69, 0, 9, 234, 80, 7, 8, 0, 8, 93, 0, 8, 29, 0, 9, 154, 84, 7, 83, 0, 8, 125, 0, 8, 61, 0, 9, 218, 82, 7, 23, 0, 8, 109, 0, 8, 45, 0, 9, 186, 0, 8, 13, 0, 8, 141, 0, 8, 77, 0, 9, 250, 80, 7, 3, 0, 8, 83, 0, 8, 19, 85, 8, 195, 83, 7, 35, 0, 8, 115, 0, 8, 51, 0, 9, 198, 81, 7, 11, 0, 8, 99, 0, 8, 35, 0, 9, 166, 0, 8, 3, 0, 8, 131, 0, 8, 67, 0, 9, 230, 80, 7, 7, 0, 8, 91, 0, 8, 27, 0, 9, 150, 84, 7, 67, 0, 8, 123, 0, 8, 59, 0, 9, 214, 82, 7, 19, 0, 8, 107, 0, 8, 43, 0, 9, 182, 0, 8, 11, 0, 8, 139, 0, 8, 75, 0, 9, 246, 80, 7, 5, 0, 8, 87, 0, 8, 23, 192, 8, 0, 83, 7, 51, 0, 8, 119, 0, 8, 55, 0, 9, 206, 81, 7, 15, 0, 8, 103, 0, 8, 39, 0, 9, 174, 0, 8, 7, 0, 8, 135, 0, 8, 71, 0, 9, 238, 80, 7, 9, 0, 8, 95, 0, 8, 31, 0, 9, 158, 84, 7, 99, 0, 8, 127, 0, 8, 63, 0, 9, 222, 82, 7, 27, 0, 8, 111, 0, 8, 47, 0, 9, 190, 0, 8, 15, 0, 8, 143, 0, 8, 79, 0, 9, 254, 96, 7, 256, 0, 8, 80, 0, 8, 16, 84, 8, 115, 82, 7, 31, 0, 8, 112, 0, 8, 48, 0, 9, 193, 80, 7, 10, 0, 8, 96, 0, 8, 32, 0, 9, 161, 0, 8, 0, 0, 8, 128, 0, 8, 64, 0, 9, 225, 80, 7, 6, 0, 8, 88, 0, 8, 24, 0, 9, 145, 83, 7, 59, 0, 8, 120, 0, 8, 56, 0, 9, 209, 81, 7, 17, 0, 8, 104, 0, 8, 40, 0, 9, 177, 0, 8, 8, 0, 8, 136, 0, 8, 72, 0, 9, 241, 80, 7, 4, 0, 8, 84, 0, 8, 20, 85, 8, 227, 83, 7, 43, 0, 8, 116, 0, 8, 52, 0, 9, 201, 81, 7, 13, 0, 8, 100, 0, 8, 36, 0, 9, 169, 0, 8, 4, 0, 8, 132, 0, 8, 68, 0, 9, 233, 80, 7, 8, 0, 8, 92, 0, 8, 28, 0, 9, 153, 84, 7, 83, 0, 8, 124, 0, 8, 60, 0, 9, 217, 82, 7, 23, 0, 8, 108, 0, 8, 44, 0, 9, 185, 0, 8, 12, 0, 8, 140, 0, 8, 76, 0, 9, 249, 80, 7, 3, 0, 8, 82, 0, 8, 18, 85, 8, 163, 83, 7, 35, 0, 8, 114, 0, 8, 50, 0, 9, 197, 81, 7, 11, 0, 8, 98, 0, 8, 34, 0, 9, 165, 0, 8, 2, 0, 8, 130, 0, 8, 66, 0, 9, 229, 80, 7, 7, 0, 8, 90, 0, 8, 26, 0, 9, 149, 84, 7, 67, 0, 8, 122, 0, 8, 58, 0, 9, 213, 82, 7, 19, 0, 8, 106, 0, 8, 42, 0, 9, 181, 0, 8, 10, 0, 8, 138, 0, 8, 74, 0, 9, 245, 80, 7, 5, 0, 8, 86, 0, 8, 22, 192, 8, 0, 83, 7, 51, 0, 8, 118, 0, 8, 54, 0, 9, 205, 81, 7, 15, 0, 8, 102, 0, 8, 38, 0, 9, 173, 0, 8, 6, 0, 8, 134, 0, 8, 70, 0, 9, 237, 80, 7, 9, 0, 8, 94, 0, 8, 30, 0, 9, 157, 84, 7, 99, 0, 8, 126, 0, 8, 62, 0, 9, 221, 82, 7, 27, 0, 8, 110, 0, 8, 46, 0, 9, 189, 0, 8, 14, 0, 8, 142, 0, 8, 78, 0, 9, 253, 96, 7, 256, 0, 8, 81, 0, 8, 17, 85, 8, 131, 82, 7, 31, 0, 8, 113, 0, 8, 49, 0, 9, 195, 80, 7, 10, 0, 8, 97, 0, 8, 33, 0, 9, 163, 0, 8, 1, 0, 8, 129, 0, 8, 65, 0, 9, 227, 80, 7, 6, 0, 8, 89, 0, 8, 25, 0, 9, 147, 83, 7, 59, 0, 8, 121, 0, 8, 57, 0, 9, 211, 81, 7, 17, 0, 8, 105, 0, 8, 41, 0, 9, 179, 0, 8, 9, 0, 8, 137, 0, 8, 73, 0, 9, 243, 80, 7, 4, 0, 8, 85, 0, 8, 21, 80, 8, 258, 83, 7, 43, 0, 8, 117, 0, 8, 53, 0, 9, 203, 81, 7, 13, 0, 8, 101, 0, 8, 37, 0, 9, 171, 0, 8, 5, 0, 8, 133, 0, 8, 69, 0, 9, 235, 80, 7, 8, 0, 8, 93, 0, 8, 29, 0, 9, 155, 84, 7, 83, 0, 8, 125, 0, 8, 61, 0, 9, 219, 82, 7, 23, 0, 8, 109, 0, 8, 45, 0, 9, 187, 0, 8, 13, 0, 8, 141, 0, 8, 77, 0, 9, 251, 80, 7, 3, 0, 8, 83, 0, 8, 19, 85, 8, 195, 83, 7, 35, 0, 8, 115, 0, 8, 51, 0, 9, 199, 81, 7, 11, 0, 8, 99, 0, 8, 35, 0, 9, 167, 0, 8, 3, 0, 8, 131, 0, 8, 67, 0, 9, 231, 80, 7, 7, 0, 8, 91, 0, 8, 27, 0, 9, 151, 84, 7, 67, 0, 8, 123, 0, 8, 59, 0, 9, 215, 82, 7, 19, 0, 8, 107, 0, 8, 43, 0, 9, 183, 0, 8, 11, 0, 8, 139, 0, 8, 75, 0, 9, 247, 80, 7, 5, 0, 8, 87, 0, 8, 23, 192, 8, 0, 83, 7, 51, 0, 8, 119, 0, 8, 55, 0, 9, 207, 81, 7, 15, 0, 8, 103, 0, 8, 39, 0, 9, 175, 0, 8, 7, 0, 8, 135, 0, 8, 71, 0, 9, 239, 80, 7, 9, 0, 8, 95, 0, 8, 31, 0, 9, 159, 84, 7, 99, 0, 8, 127, 0, 8, 63, 0, 9, 223, 82, 7, 27, 0, 8, 111, 0, 8, 47, 0, 9, 191, 0, 8, 15, 0, 8, 143, 0, 8, 79, 0, 9, 255];
@@ -1478,33 +1478,33 @@ var init_zip = __esm({
     l = [1, 2, 3, 4, 5, 7, 9, 13, 17, 25, 33, 49, 65, 97, 129, 193, 257, 385, 513, 769, 1025, 1537, 2049, 3073, 4097, 6145, 8193, 12289, 16385, 24577];
     c = [0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13];
     u = 15;
-    d.inflate_trees_fixed = function(e3, t3, n3, i3) {
-      return e3[0] = 9, t3[0] = 5, n3[0] = r, i3[0] = a, 0;
+    d.inflate_trees_fixed = function(e3, t4, n3, i3) {
+      return e3[0] = 9, t4[0] = 5, n3[0] = r, i3[0] = a, 0;
     };
     h = [16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15];
     w = 13;
     b = [0, 0, 255, 255];
     m.prototype = { inflateInit(e3) {
-      const t3 = this;
-      return t3.istate = new p(), e3 || (e3 = 15), t3.istate.inflateInit(t3, e3);
-    }, inflate(t3) {
+      const t4 = this;
+      return t4.istate = new p(), e3 || (e3 = 15), t4.istate.inflateInit(t4, e3);
+    }, inflate(t4) {
       const n3 = this;
-      return n3.istate ? n3.istate.inflate(n3, t3) : e;
+      return n3.istate ? n3.istate.inflate(n3, t4) : e;
     }, inflateEnd() {
-      const t3 = this;
-      if (!t3.istate) return e;
-      const n3 = t3.istate.inflateEnd(t3);
-      return t3.istate = null, n3;
+      const t4 = this;
+      if (!t4.istate) return e;
+      const n3 = t4.istate.inflateEnd(t4);
+      return t4.istate = null, n3;
     }, inflateSync() {
-      const t3 = this;
-      return t3.istate ? t3.istate.inflateSync(t3) : e;
-    }, inflateSetDictionary(t3, n3) {
+      const t4 = this;
+      return t4.istate ? t4.istate.inflateSync(t4) : e;
+    }, inflateSetDictionary(t4, n3) {
       const i3 = this;
-      return i3.istate ? i3.istate.inflateSetDictionary(i3, t3, n3) : e;
+      return i3.istate ? i3.istate.inflateSetDictionary(i3, t4, n3) : e;
     }, read_byte(e3) {
       return this.next_in[e3];
-    }, read_buf(e3, t3) {
-      return this.next_in.subarray(e3, e3 + t3);
+    }, read_buf(e3, t4) {
+      return this.next_in.subarray(e3, e3 + t4);
     } };
     g = 4294967295;
     y = 65535;
@@ -1517,13 +1517,13 @@ var init_zip = __esm({
     U = class {
       constructor(e3) {
         return class extends TransformStream {
-          constructor(t3, n3) {
+          constructor(t4, n3) {
             const i3 = new e3(n3);
-            super({ transform(e4, t4) {
-              t4.enqueue(i3.append(e4));
+            super({ transform(e4, t5) {
+              t5.enqueue(i3.append(e4));
             }, flush(e4) {
-              const t4 = i3.flush();
-              t4 && e4.enqueue(t4);
+              const t5 = i3.flush();
+              t5 && e4.enqueue(t5);
             } });
           }
         };
@@ -1538,18 +1538,18 @@ var init_zip = __esm({
     F = Object.assign({}, E);
     C = [];
     for (let e3 = 0; e3 < 256; e3++) {
-      let t3 = e3;
-      for (let e4 = 0; e4 < 8; e4++) 1 & t3 ? t3 = t3 >>> 1 ^ 3988292384 : t3 >>>= 1;
-      C[e3] = t3;
+      let t4 = e3;
+      for (let e4 = 0; e4 < 8; e4++) 1 & t4 ? t4 = t4 >>> 1 ^ 3988292384 : t4 >>>= 1;
+      C[e3] = t4;
     }
     W = class {
       constructor(e3) {
         this.crc = e3 || -1;
       }
       append(e3) {
-        let t3 = 0 | this.crc;
-        for (let n3 = 0, i3 = 0 | e3.length; n3 < i3; n3++) t3 = t3 >>> 8 ^ C[255 & (t3 ^ e3[n3])];
-        this.crc = t3;
+        let t4 = 0 | this.crc;
+        for (let n3 = 0, i3 = 0 | e3.length; n3 < i3; n3++) t4 = t4 >>> 8 ^ C[255 & (t4 ^ e3[n3])];
+        this.crc = t4;
       }
       get() {
         return ~this.crc;
@@ -1558,106 +1558,106 @@ var init_zip = __esm({
     j = class extends TransformStream {
       constructor() {
         let e3;
-        const t3 = new W();
+        const t4 = new W();
         super({ transform(e4, n3) {
-          t3.append(e4), n3.enqueue(e4);
+          t4.append(e4), n3.enqueue(e4);
         }, flush() {
           const n3 = new Uint8Array(4);
-          new DataView(n3.buffer).setUint32(0, t3.get()), e3.value = n3;
+          new DataView(n3.buffer).setUint32(0, t4.get()), e3.value = n3;
         } }), e3 = this;
       }
     };
-    M = { concat(e3, t3) {
-      if (0 === e3.length || 0 === t3.length) return e3.concat(t3);
+    M = { concat(e3, t4) {
+      if (0 === e3.length || 0 === t4.length) return e3.concat(t4);
       const n3 = e3[e3.length - 1], i3 = M.getPartial(n3);
-      return 32 === i3 ? e3.concat(t3) : M._shiftRight(t3, i3, 0 | n3, e3.slice(0, e3.length - 1));
+      return 32 === i3 ? e3.concat(t4) : M._shiftRight(t4, i3, 0 | n3, e3.slice(0, e3.length - 1));
     }, bitLength(e3) {
-      const t3 = e3.length;
-      if (0 === t3) return 0;
-      const n3 = e3[t3 - 1];
-      return 32 * (t3 - 1) + M.getPartial(n3);
-    }, clamp(e3, t3) {
-      if (32 * e3.length < t3) return e3;
-      const n3 = (e3 = e3.slice(0, Math.ceil(t3 / 32))).length;
-      return t3 &= 31, n3 > 0 && t3 && (e3[n3 - 1] = M.partial(t3, e3[n3 - 1] & 2147483648 >> t3 - 1, 1)), e3;
-    }, partial: (e3, t3, n3) => 32 === e3 ? t3 : (n3 ? 0 | t3 : t3 << 32 - e3) + 1099511627776 * e3, getPartial: (e3) => Math.round(e3 / 1099511627776) || 32, _shiftRight(e3, t3, n3, i3) {
-      for (void 0 === i3 && (i3 = []); t3 >= 32; t3 -= 32) i3.push(n3), n3 = 0;
-      if (0 === t3) return i3.concat(e3);
-      for (let r4 = 0; r4 < e3.length; r4++) i3.push(n3 | e3[r4] >>> t3), n3 = e3[r4] << 32 - t3;
+      const t4 = e3.length;
+      if (0 === t4) return 0;
+      const n3 = e3[t4 - 1];
+      return 32 * (t4 - 1) + M.getPartial(n3);
+    }, clamp(e3, t4) {
+      if (32 * e3.length < t4) return e3;
+      const n3 = (e3 = e3.slice(0, Math.ceil(t4 / 32))).length;
+      return t4 &= 31, n3 > 0 && t4 && (e3[n3 - 1] = M.partial(t4, e3[n3 - 1] & 2147483648 >> t4 - 1, 1)), e3;
+    }, partial: (e3, t4, n3) => 32 === e3 ? t4 : (n3 ? 0 | t4 : t4 << 32 - e3) + 1099511627776 * e3, getPartial: (e3) => Math.round(e3 / 1099511627776) || 32, _shiftRight(e3, t4, n3, i3) {
+      for (void 0 === i3 && (i3 = []); t4 >= 32; t4 -= 32) i3.push(n3), n3 = 0;
+      if (0 === t4) return i3.concat(e3);
+      for (let r4 = 0; r4 < e3.length; r4++) i3.push(n3 | e3[r4] >>> t4), n3 = e3[r4] << 32 - t4;
       const r3 = e3.length ? e3[e3.length - 1] : 0, a3 = M.getPartial(r3);
-      return i3.push(M.partial(t3 + a3 & 31, t3 + a3 > 32 ? n3 : i3.pop(), 1)), i3;
+      return i3.push(M.partial(t4 + a3 & 31, t4 + a3 > 32 ? n3 : i3.pop(), 1)), i3;
     } };
     L = { bytes: { fromBits(e3) {
-      const t3 = M.bitLength(e3) / 8, n3 = new Uint8Array(t3);
+      const t4 = M.bitLength(e3) / 8, n3 = new Uint8Array(t4);
       let i3;
-      for (let r3 = 0; r3 < t3; r3++) 3 & r3 || (i3 = e3[r3 / 4]), n3[r3] = i3 >>> 24, i3 <<= 8;
+      for (let r3 = 0; r3 < t4; r3++) 3 & r3 || (i3 = e3[r3 / 4]), n3[r3] = i3 >>> 24, i3 <<= 8;
       return n3;
     }, toBits(e3) {
-      const t3 = [];
+      const t4 = [];
       let n3, i3 = 0;
-      for (n3 = 0; n3 < e3.length; n3++) i3 = i3 << 8 | e3[n3], 3 & ~n3 || (t3.push(i3), i3 = 0);
-      return 3 & n3 && t3.push(M.partial(8 * (3 & n3), i3)), t3;
+      for (n3 = 0; n3 < e3.length; n3++) i3 = i3 << 8 | e3[n3], 3 & ~n3 || (t4.push(i3), i3 = 0);
+      return 3 & n3 && t4.push(M.partial(8 * (3 & n3), i3)), t4;
     } } };
     P = { sha1: class {
       constructor(e3) {
-        const t3 = this;
-        t3.blockSize = 512, t3._init = [1732584193, 4023233417, 2562383102, 271733878, 3285377520], t3._key = [1518500249, 1859775393, 2400959708, 3395469782], e3 ? (t3._h = e3._h.slice(0), t3._buffer = e3._buffer.slice(0), t3._length = e3._length) : t3.reset();
+        const t4 = this;
+        t4.blockSize = 512, t4._init = [1732584193, 4023233417, 2562383102, 271733878, 3285377520], t4._key = [1518500249, 1859775393, 2400959708, 3395469782], e3 ? (t4._h = e3._h.slice(0), t4._buffer = e3._buffer.slice(0), t4._length = e3._length) : t4.reset();
       }
       reset() {
         const e3 = this;
         return e3._h = e3._init.slice(0), e3._buffer = [], e3._length = 0, e3;
       }
       update(e3) {
-        const t3 = this;
+        const t4 = this;
         "string" == typeof e3 && (e3 = L.utf8String.toBits(e3));
-        const n3 = t3._buffer = M.concat(t3._buffer, e3), i3 = t3._length, r3 = t3._length = i3 + M.bitLength(e3);
+        const n3 = t4._buffer = M.concat(t4._buffer, e3), i3 = t4._length, r3 = t4._length = i3 + M.bitLength(e3);
         if (r3 > 9007199254740991) throw new Error("Cannot hash more than 2^53 - 1 bits");
         const a3 = new Uint32Array(n3);
         let s3 = 0;
-        for (let e4 = t3.blockSize + i3 - (t3.blockSize + i3 & t3.blockSize - 1); e4 <= r3; e4 += t3.blockSize) t3._block(a3.subarray(16 * s3, 16 * (s3 + 1))), s3 += 1;
-        return n3.splice(0, 16 * s3), t3;
+        for (let e4 = t4.blockSize + i3 - (t4.blockSize + i3 & t4.blockSize - 1); e4 <= r3; e4 += t4.blockSize) t4._block(a3.subarray(16 * s3, 16 * (s3 + 1))), s3 += 1;
+        return n3.splice(0, 16 * s3), t4;
       }
       finalize() {
         const e3 = this;
-        let t3 = e3._buffer;
+        let t4 = e3._buffer;
         const n3 = e3._h;
-        t3 = M.concat(t3, [M.partial(1, 1)]);
-        for (let e4 = t3.length + 2; 15 & e4; e4++) t3.push(0);
-        for (t3.push(Math.floor(e3._length / 4294967296)), t3.push(0 | e3._length); t3.length; ) e3._block(t3.splice(0, 16));
+        t4 = M.concat(t4, [M.partial(1, 1)]);
+        for (let e4 = t4.length + 2; 15 & e4; e4++) t4.push(0);
+        for (t4.push(Math.floor(e3._length / 4294967296)), t4.push(0 | e3._length); t4.length; ) e3._block(t4.splice(0, 16));
         return e3.reset(), n3;
       }
-      _f(e3, t3, n3, i3) {
-        return e3 <= 19 ? t3 & n3 | ~t3 & i3 : e3 <= 39 ? t3 ^ n3 ^ i3 : e3 <= 59 ? t3 & n3 | t3 & i3 | n3 & i3 : e3 <= 79 ? t3 ^ n3 ^ i3 : void 0;
+      _f(e3, t4, n3, i3) {
+        return e3 <= 19 ? t4 & n3 | ~t4 & i3 : e3 <= 39 ? t4 ^ n3 ^ i3 : e3 <= 59 ? t4 & n3 | t4 & i3 | n3 & i3 : e3 <= 79 ? t4 ^ n3 ^ i3 : void 0;
       }
-      _S(e3, t3) {
-        return t3 << e3 | t3 >>> 32 - e3;
+      _S(e3, t4) {
+        return t4 << e3 | t4 >>> 32 - e3;
       }
       _block(e3) {
-        const t3 = this, n3 = t3._h, i3 = Array(80);
-        for (let t4 = 0; t4 < 16; t4++) i3[t4] = e3[t4];
+        const t4 = this, n3 = t4._h, i3 = Array(80);
+        for (let t5 = 0; t5 < 16; t5++) i3[t5] = e3[t5];
         let r3 = n3[0], a3 = n3[1], s3 = n3[2], o3 = n3[3], l3 = n3[4];
         for (let e4 = 0; e4 <= 79; e4++) {
-          e4 >= 16 && (i3[e4] = t3._S(1, i3[e4 - 3] ^ i3[e4 - 8] ^ i3[e4 - 14] ^ i3[e4 - 16]));
-          const n4 = t3._S(5, r3) + t3._f(e4, a3, s3, o3) + l3 + i3[e4] + t3._key[Math.floor(e4 / 20)] | 0;
-          l3 = o3, o3 = s3, s3 = t3._S(30, a3), a3 = r3, r3 = n4;
+          e4 >= 16 && (i3[e4] = t4._S(1, i3[e4 - 3] ^ i3[e4 - 8] ^ i3[e4 - 14] ^ i3[e4 - 16]));
+          const n4 = t4._S(5, r3) + t4._f(e4, a3, s3, o3) + l3 + i3[e4] + t4._key[Math.floor(e4 / 20)] | 0;
+          l3 = o3, o3 = s3, s3 = t4._S(30, a3), a3 = r3, r3 = n4;
         }
         n3[0] = n3[0] + r3 | 0, n3[1] = n3[1] + a3 | 0, n3[2] = n3[2] + s3 | 0, n3[3] = n3[3] + o3 | 0, n3[4] = n3[4] + l3 | 0;
       }
     } };
     R = { aes: class {
       constructor(e3) {
-        const t3 = this;
-        t3._tables = [[[], [], [], [], []], [[], [], [], [], []]], t3._tables[0][0][0] || t3._precompute();
-        const n3 = t3._tables[0][4], i3 = t3._tables[1], r3 = e3.length;
+        const t4 = this;
+        t4._tables = [[[], [], [], [], []], [[], [], [], [], []]], t4._tables[0][0][0] || t4._precompute();
+        const n3 = t4._tables[0][4], i3 = t4._tables[1], r3 = e3.length;
         let a3, s3, o3, l3 = 1;
         if (4 !== r3 && 6 !== r3 && 8 !== r3) throw new Error("invalid aes key size");
-        for (t3._key = [s3 = e3.slice(0), o3 = []], a3 = r3; a3 < 4 * r3 + 28; a3++) {
+        for (t4._key = [s3 = e3.slice(0), o3 = []], a3 = r3; a3 < 4 * r3 + 28; a3++) {
           let e4 = s3[a3 - 1];
           (a3 % r3 == 0 || 8 === r3 && a3 % r3 == 4) && (e4 = n3[e4 >>> 24] << 24 ^ n3[e4 >> 16 & 255] << 16 ^ n3[e4 >> 8 & 255] << 8 ^ n3[255 & e4], a3 % r3 == 0 && (e4 = e4 << 8 ^ e4 >>> 24 ^ l3 << 24, l3 = l3 << 1 ^ 283 * (l3 >> 7))), s3[a3] = s3[a3 - r3] ^ e4;
         }
         for (let e4 = 0; a3; e4++, a3--) {
-          const t4 = s3[3 & e4 ? a3 : a3 - 4];
-          o3[e4] = a3 <= 4 || e4 < 4 ? t4 : i3[0][n3[t4 >>> 24]] ^ i3[1][n3[t4 >> 16 & 255]] ^ i3[2][n3[t4 >> 8 & 255]] ^ i3[3][n3[255 & t4]];
+          const t5 = s3[3 & e4 ? a3 : a3 - 4];
+          o3[e4] = a3 <= 4 || e4 < 4 ? t5 : i3[0][n3[t5 >>> 24]] ^ i3[1][n3[t5 >> 16 & 255]] ^ i3[2][n3[t5 >> 8 & 255]] ^ i3[3][n3[255 & t5]];
         }
       }
       encrypt(e3) {
@@ -1667,44 +1667,44 @@ var init_zip = __esm({
         return this._crypt(e3, 1);
       }
       _precompute() {
-        const e3 = this._tables[0], t3 = this._tables[1], n3 = e3[4], i3 = t3[4], r3 = [], a3 = [];
+        const e3 = this._tables[0], t4 = this._tables[1], n3 = e3[4], i3 = t4[4], r3 = [], a3 = [];
         let s3, o3, l3, c2;
         for (let e4 = 0; e4 < 256; e4++) a3[(r3[e4] = e4 << 1 ^ 283 * (e4 >> 7)) ^ e4] = e4;
         for (let u2 = s3 = 0; !n3[u2]; u2 ^= o3 || 1, s3 = a3[s3] || 1) {
           let a4 = s3 ^ s3 << 1 ^ s3 << 2 ^ s3 << 3 ^ s3 << 4;
           a4 = a4 >> 8 ^ 255 & a4 ^ 99, n3[u2] = a4, i3[a4] = u2, c2 = r3[l3 = r3[o3 = r3[u2]]];
           let d2 = 16843009 * c2 ^ 65537 * l3 ^ 257 * o3 ^ 16843008 * u2, f3 = 257 * r3[a4] ^ 16843008 * a4;
-          for (let n4 = 0; n4 < 4; n4++) e3[n4][u2] = f3 = f3 << 24 ^ f3 >>> 8, t3[n4][a4] = d2 = d2 << 24 ^ d2 >>> 8;
+          for (let n4 = 0; n4 < 4; n4++) e3[n4][u2] = f3 = f3 << 24 ^ f3 >>> 8, t4[n4][a4] = d2 = d2 << 24 ^ d2 >>> 8;
         }
-        for (let n4 = 0; n4 < 5; n4++) e3[n4] = e3[n4].slice(0), t3[n4] = t3[n4].slice(0);
+        for (let n4 = 0; n4 < 5; n4++) e3[n4] = e3[n4].slice(0), t4[n4] = t4[n4].slice(0);
       }
-      _crypt(e3, t3) {
+      _crypt(e3, t4) {
         if (4 !== e3.length) throw new Error("invalid aes block size");
-        const n3 = this._key[t3], i3 = n3.length / 4 - 2, r3 = [0, 0, 0, 0], a3 = this._tables[t3], s3 = a3[0], o3 = a3[1], l3 = a3[2], c2 = a3[3], u2 = a3[4];
-        let d2, f3, h3, _2 = e3[0] ^ n3[0], w2 = e3[t3 ? 3 : 1] ^ n3[1], b3 = e3[2] ^ n3[2], p3 = e3[t3 ? 1 : 3] ^ n3[3], m3 = 4;
+        const n3 = this._key[t4], i3 = n3.length / 4 - 2, r3 = [0, 0, 0, 0], a3 = this._tables[t4], s3 = a3[0], o3 = a3[1], l3 = a3[2], c2 = a3[3], u2 = a3[4];
+        let d2, f3, h3, _2 = e3[0] ^ n3[0], w2 = e3[t4 ? 3 : 1] ^ n3[1], b3 = e3[2] ^ n3[2], p3 = e3[t4 ? 1 : 3] ^ n3[3], m3 = 4;
         for (let e4 = 0; e4 < i3; e4++) d2 = s3[_2 >>> 24] ^ o3[w2 >> 16 & 255] ^ l3[b3 >> 8 & 255] ^ c2[255 & p3] ^ n3[m3], f3 = s3[w2 >>> 24] ^ o3[b3 >> 16 & 255] ^ l3[p3 >> 8 & 255] ^ c2[255 & _2] ^ n3[m3 + 1], h3 = s3[b3 >>> 24] ^ o3[p3 >> 16 & 255] ^ l3[_2 >> 8 & 255] ^ c2[255 & w2] ^ n3[m3 + 2], p3 = s3[p3 >>> 24] ^ o3[_2 >> 16 & 255] ^ l3[w2 >> 8 & 255] ^ c2[255 & b3] ^ n3[m3 + 3], m3 += 4, _2 = d2, w2 = f3, b3 = h3;
-        for (let e4 = 0; e4 < 4; e4++) r3[t3 ? 3 & -e4 : e4] = u2[_2 >>> 24] << 24 ^ u2[w2 >> 16 & 255] << 16 ^ u2[b3 >> 8 & 255] << 8 ^ u2[255 & p3] ^ n3[m3++], d2 = _2, _2 = w2, w2 = b3, b3 = p3, p3 = d2;
+        for (let e4 = 0; e4 < 4; e4++) r3[t4 ? 3 & -e4 : e4] = u2[_2 >>> 24] << 24 ^ u2[w2 >> 16 & 255] << 16 ^ u2[b3 >> 8 & 255] << 8 ^ u2[255 & p3] ^ n3[m3++], d2 = _2, _2 = w2, w2 = b3, b3 = p3, p3 = d2;
         return r3;
       }
     } };
     B = { getRandomValues(e3) {
-      const t3 = new Uint32Array(e3.buffer), n3 = (e4) => {
-        let t4 = 987654321;
+      const t4 = new Uint32Array(e3.buffer), n3 = (e4) => {
+        let t5 = 987654321;
         const n4 = 4294967295;
         return function() {
-          t4 = 36969 * (65535 & t4) + (t4 >> 16) & n4;
-          return (((t4 << 16) + (e4 = 18e3 * (65535 & e4) + (e4 >> 16) & n4) & n4) / 4294967296 + 0.5) * (Math.random() > 0.5 ? 1 : -1);
+          t5 = 36969 * (65535 & t5) + (t5 >> 16) & n4;
+          return (((t5 << 16) + (e4 = 18e3 * (65535 & e4) + (e4 >> 16) & n4) & n4) / 4294967296 + 0.5) * (Math.random() > 0.5 ? 1 : -1);
         };
       };
       for (let i3, r3 = 0; r3 < e3.length; r3 += 4) {
         const e4 = n3(4294967296 * (i3 || Math.random()));
-        i3 = 987654071 * e4(), t3[r3 / 4] = 4294967296 * e4() | 0;
+        i3 = 987654071 * e4(), t4[r3 / 4] = 4294967296 * e4() | 0;
       }
       return e3;
     } };
     I = { ctrGladman: class {
-      constructor(e3, t3) {
-        this._prf = e3, this._initIv = t3, this._iv = t3;
+      constructor(e3, t4) {
+        this._prf = e3, this._initIv = t4, this._iv = t4;
       }
       reset() {
         this._iv = this._initIv;
@@ -1715,46 +1715,46 @@ var init_zip = __esm({
       incWord(e3) {
         if (255 & ~(e3 >> 24)) e3 += 1 << 24;
         else {
-          let t3 = e3 >> 16 & 255, n3 = e3 >> 8 & 255, i3 = 255 & e3;
-          255 === t3 ? (t3 = 0, 255 === n3 ? (n3 = 0, 255 === i3 ? i3 = 0 : ++i3) : ++n3) : ++t3, e3 = 0, e3 += t3 << 16, e3 += n3 << 8, e3 += i3;
+          let t4 = e3 >> 16 & 255, n3 = e3 >> 8 & 255, i3 = 255 & e3;
+          255 === t4 ? (t4 = 0, 255 === n3 ? (n3 = 0, 255 === i3 ? i3 = 0 : ++i3) : ++n3) : ++t4, e3 = 0, e3 += t4 << 16, e3 += n3 << 8, e3 += i3;
         }
         return e3;
       }
       incCounter(e3) {
         0 === (e3[0] = this.incWord(e3[0])) && (e3[1] = this.incWord(e3[1]));
       }
-      calculate(e3, t3, n3) {
+      calculate(e3, t4, n3) {
         let i3;
-        if (!(i3 = t3.length)) return [];
-        const r3 = M.bitLength(t3);
+        if (!(i3 = t4.length)) return [];
+        const r3 = M.bitLength(t4);
         for (let r4 = 0; r4 < i3; r4 += 4) {
           this.incCounter(n3);
           const i4 = e3.encrypt(n3);
-          t3[r4] ^= i4[0], t3[r4 + 1] ^= i4[1], t3[r4 + 2] ^= i4[2], t3[r4 + 3] ^= i4[3];
+          t4[r4] ^= i4[0], t4[r4 + 1] ^= i4[1], t4[r4 + 2] ^= i4[2], t4[r4 + 3] ^= i4[3];
         }
-        return M.clamp(t3, r3);
+        return M.clamp(t4, r3);
       }
     } };
-    N = { importKey: (e3) => new N.hmacSha1(L.bytes.toBits(e3)), pbkdf2(e3, t3, n3, i3) {
+    N = { importKey: (e3) => new N.hmacSha1(L.bytes.toBits(e3)), pbkdf2(e3, t4, n3, i3) {
       if (n3 = n3 || 1e4, i3 < 0 || n3 < 0) throw new Error("invalid params to pbkdf2");
       const r3 = 1 + (i3 >> 5) << 2;
       let a3, s3, o3, l3, c2;
       const u2 = new ArrayBuffer(r3), d2 = new DataView(u2);
       let f3 = 0;
       const h3 = M;
-      for (t3 = L.bytes.toBits(t3), c2 = 1; f3 < (r3 || 1); c2++) {
-        for (a3 = s3 = e3.encrypt(h3.concat(t3, [c2])), o3 = 1; o3 < n3; o3++) for (s3 = e3.encrypt(s3), l3 = 0; l3 < s3.length; l3++) a3[l3] ^= s3[l3];
+      for (t4 = L.bytes.toBits(t4), c2 = 1; f3 < (r3 || 1); c2++) {
+        for (a3 = s3 = e3.encrypt(h3.concat(t4, [c2])), o3 = 1; o3 < n3; o3++) for (s3 = e3.encrypt(s3), l3 = 0; l3 < s3.length; l3++) a3[l3] ^= s3[l3];
         for (o3 = 0; f3 < (r3 || 1) && o3 < a3.length; o3++) d2.setInt32(f3, a3[o3]), f3 += 4;
       }
       return u2.slice(0, i3 / 8);
     }, hmacSha1: class {
       constructor(e3) {
-        const t3 = this, n3 = t3._hash = P.sha1, i3 = [[], []];
-        t3._baseHash = [new n3(), new n3()];
-        const r3 = t3._baseHash[0].blockSize / 32;
+        const t4 = this, n3 = t4._hash = P.sha1, i3 = [[], []];
+        t4._baseHash = [new n3(), new n3()];
+        const r3 = t4._baseHash[0].blockSize / 32;
         e3.length > r3 && (e3 = new n3().update(e3).finalize());
-        for (let t4 = 0; t4 < r3; t4++) i3[0][t4] = 909522486 ^ e3[t4], i3[1][t4] = 1549556828 ^ e3[t4];
-        t3._baseHash[0].update(i3[0]), t3._baseHash[1].update(i3[1]), t3._resultHash = new n3(t3._baseHash[0]);
+        for (let t5 = 0; t5 < r3; t5++) i3[0][t5] = 909522486 ^ e3[t5], i3[1][t5] = 1549556828 ^ e3[t5];
+        t4._baseHash[0].update(i3[0]), t4._baseHash[1].update(i3[1]), t4._resultHash = new n3(t4._baseHash[0]);
       }
       reset() {
         const e3 = this;
@@ -1764,7 +1764,7 @@ var init_zip = __esm({
         this._updated = true, this._resultHash.update(e3);
       }
       digest() {
-        const e3 = this, t3 = e3._resultHash.finalize(), n3 = new e3._hash(e3._baseHash[1]).update(t3).finalize();
+        const e3 = this, t4 = e3._resultHash.finalize(), n3 = new e3._hash(e3._baseHash[1]).update(t4).finalize();
         return e3.reset(), n3;
       }
       encrypt(e3) {
@@ -1795,19 +1795,19 @@ var init_zip = __esm({
     ue = ie && ae && typeof re.importKey == A;
     de = ie && ae && typeof re.deriveBits == A;
     fe = class extends TransformStream {
-      constructor({ password: e3, rawPassword: t3, signed: n3, encryptionStrength: i3, checkPasswordOnly: r3 }) {
+      constructor({ password: e3, rawPassword: t4, signed: n3, encryptionStrength: i3, checkPasswordOnly: r3 }) {
         super({ start() {
-          Object.assign(this, { ready: new Promise(((e4) => this.resolveReady = e4)), password: be(e3, t3), signed: n3, strength: i3 - 1, pending: new Uint8Array() });
-        }, async transform(e4, t4) {
+          Object.assign(this, { ready: new Promise(((e4) => this.resolveReady = e4)), password: be(e3, t4), signed: n3, strength: i3 - 1, pending: new Uint8Array() });
+        }, async transform(e4, t5) {
           const n4 = this, { password: i4, strength: a3, resolveReady: s3, ready: o3 } = n4;
-          i4 ? (await (async function(e5, t5, n5, i5) {
-            const r4 = await we(e5, t5, n5, me(i5, 0, $[t5])), a4 = me(i5, $[t5]);
+          i4 ? (await (async function(e5, t6, n5, i5) {
+            const r4 = await we(e5, t6, n5, me(i5, 0, $[t6])), a4 = me(i5, $[t6]);
             if (r4[0] != a4[0] || r4[1] != a4[1]) throw new Error(q);
-          })(n4, a3, i4, me(e4, 0, $[a3] + 2)), e4 = me(e4, $[a3] + 2), r3 ? t4.error(new Error(K)) : s3()) : await o3;
+          })(n4, a3, i4, me(e4, 0, $[a3] + 2)), e4 = me(e4, $[a3] + 2), r3 ? t5.error(new Error(K)) : s3()) : await o3;
           const l3 = new Uint8Array(e4.length - te - (e4.length - te) % G);
-          t4.enqueue(_e(n4, e4, l3, 0, te, true));
+          t5.enqueue(_e(n4, e4, l3, 0, te, true));
         }, async flush(e4) {
-          const { signed: t4, ctr: n4, hmac: i4, pending: r4, ready: a3 } = this;
+          const { signed: t5, ctr: n4, hmac: i4, pending: r4, ready: a3 } = this;
           if (i4 && n4) {
             await a3;
             const s3 = me(r4, 0, r4.length - te), o3 = me(r4, r4.length - te);
@@ -1815,12 +1815,12 @@ var init_zip = __esm({
             if (s3.length) {
               const e5 = ye(se, s3);
               i4.update(e5);
-              const t5 = n4.update(e5);
-              l3 = ge(se, t5);
+              const t6 = n4.update(e5);
+              l3 = ge(se, t6);
             }
-            if (t4) {
+            if (t5) {
               const e5 = me(ge(se, i4.digest()), 0, te);
-              for (let t5 = 0; t5 < te; t5++) if (e5[t5] != o3[t5]) throw new Error(H);
+              for (let t6 = 0; t6 < te; t6++) if (e5[t6] != o3[t6]) throw new Error(H);
             }
             e4.enqueue(l3);
           }
@@ -1828,26 +1828,26 @@ var init_zip = __esm({
       }
     };
     he = class extends TransformStream {
-      constructor({ password: e3, rawPassword: t3, encryptionStrength: n3 }) {
+      constructor({ password: e3, rawPassword: t4, encryptionStrength: n3 }) {
         let i3;
         super({ start() {
-          Object.assign(this, { ready: new Promise(((e4) => this.resolveReady = e4)), password: be(e3, t3), strength: n3 - 1, pending: new Uint8Array() });
-        }, async transform(e4, t4) {
+          Object.assign(this, { ready: new Promise(((e4) => this.resolveReady = e4)), password: be(e3, t4), strength: n3 - 1, pending: new Uint8Array() });
+        }, async transform(e4, t5) {
           const n4 = this, { password: i4, strength: r3, resolveReady: a3, ready: s3 } = n4;
           let o3 = new Uint8Array();
-          i4 ? (o3 = await (async function(e5, t5, n5) {
-            const i5 = Z(new Uint8Array($[t5])), r4 = await we(e5, t5, n5, i5);
+          i4 ? (o3 = await (async function(e5, t6, n5) {
+            const i5 = Z(new Uint8Array($[t6])), r4 = await we(e5, t6, n5, i5);
             return pe(i5, r4);
           })(n4, r3, i4), a3()) : await s3;
           const l3 = new Uint8Array(o3.length + e4.length - e4.length % G);
-          l3.set(o3, 0), t4.enqueue(_e(n4, e4, l3, o3.length, 0));
+          l3.set(o3, 0), t5.enqueue(_e(n4, e4, l3, o3.length, 0));
         }, async flush(e4) {
-          const { ctr: t4, hmac: n4, pending: r3, ready: a3 } = this;
-          if (n4 && t4) {
+          const { ctr: t5, hmac: n4, pending: r3, ready: a3 } = this;
+          if (n4 && t5) {
             await a3;
             let s3 = new Uint8Array();
             if (r3.length) {
-              const e5 = t4.update(ye(se, r3));
+              const e5 = t5.update(ye(se, r3));
               n4.update(e5), s3 = ge(se, e5);
             }
             i3.signature = ge(se, n4.digest()).slice(0, te), e4.enqueue(pe(s3, i3.signature));
@@ -1857,54 +1857,54 @@ var init_zip = __esm({
     };
     xe = 12;
     ke = class extends TransformStream {
-      constructor({ password: e3, passwordVerification: t3, checkPasswordOnly: n3 }) {
+      constructor({ password: e3, passwordVerification: t4, checkPasswordOnly: n3 }) {
         super({ start() {
-          Object.assign(this, { password: e3, passwordVerification: t3 }), Ae(this, e3);
-        }, transform(e4, t4) {
+          Object.assign(this, { password: e3, passwordVerification: t4 }), Ae(this, e3);
+        }, transform(e4, t5) {
           const i3 = this;
           if (i3.password) {
-            const t5 = Se(i3, e4.subarray(0, xe));
-            if (i3.password = null, t5[11] != i3.passwordVerification) throw new Error(q);
+            const t6 = Se(i3, e4.subarray(0, xe));
+            if (i3.password = null, t6[11] != i3.passwordVerification) throw new Error(q);
             e4 = e4.subarray(xe);
           }
-          n3 ? t4.error(new Error(K)) : t4.enqueue(Se(i3, e4));
+          n3 ? t5.error(new Error(K)) : t5.enqueue(Se(i3, e4));
         } });
       }
     };
     ve = class extends TransformStream {
-      constructor({ password: e3, passwordVerification: t3 }) {
+      constructor({ password: e3, passwordVerification: t4 }) {
         super({ start() {
-          Object.assign(this, { password: e3, passwordVerification: t3 }), Ae(this, e3);
-        }, transform(e4, t4) {
+          Object.assign(this, { password: e3, passwordVerification: t4 }), Ae(this, e3);
+        }, transform(e4, t5) {
           const n3 = this;
           let i3, r3;
           if (n3.password) {
             n3.password = null;
-            const t5 = Z(new Uint8Array(xe));
-            t5[11] = n3.passwordVerification, i3 = new Uint8Array(e4.length + t5.length), i3.set(ze(n3, t5), 0), r3 = xe;
+            const t6 = Z(new Uint8Array(xe));
+            t6[11] = n3.passwordVerification, i3 = new Uint8Array(e4.length + t6.length), i3.set(ze(n3, t6), 0), r3 = xe;
           } else i3 = new Uint8Array(e4.length), r3 = 0;
-          i3.set(ze(n3, e4), r3), t4.enqueue(i3);
+          i3.set(ze(n3, e4), r3), t5.enqueue(i3);
         } });
       }
     };
     Te = "deflate-raw";
     Oe = class extends TransformStream {
-      constructor(e3, { chunkSize: t3, CompressionStream: n3, CompressionStreamNative: i3 }) {
+      constructor(e3, { chunkSize: t4, CompressionStream: n3, CompressionStreamNative: i3 }) {
         super({});
         const { compressed: r3, encrypted: a3, useCompressionStream: s3, zipCrypto: o3, signed: l3, level: c2 } = e3, u2 = this;
         let d2, f3, h3 = We(super.readable);
-        a3 && !o3 || !l3 || (d2 = new j(), h3 = Le(h3, d2)), r3 && (h3 = Me(h3, s3, { level: c2, chunkSize: t3 }, i3, n3)), a3 && (o3 ? h3 = Le(h3, new ve(e3)) : (f3 = new he(e3), h3 = Le(h3, f3))), je(u2, h3, (() => {
+        a3 && !o3 || !l3 || (d2 = new j(), h3 = Le(h3, d2)), r3 && (h3 = Me(h3, s3, { level: c2, chunkSize: t4 }, i3, n3)), a3 && (o3 ? h3 = Le(h3, new ve(e3)) : (f3 = new he(e3), h3 = Le(h3, f3))), je(u2, h3, (() => {
           let e4;
           a3 && !o3 && (e4 = f3.signature), a3 && !o3 || !l3 || (e4 = new DataView(d2.value.buffer).getUint32(0)), u2.signature = e4;
         }));
       }
     };
     Ce = class extends TransformStream {
-      constructor(e3, { chunkSize: t3, DecompressionStream: n3, DecompressionStreamNative: i3 }) {
+      constructor(e3, { chunkSize: t4, DecompressionStream: n3, DecompressionStreamNative: i3 }) {
         super({});
         const { zipCrypto: r3, encrypted: a3, signed: s3, signature: o3, compressed: l3, useCompressionStream: c2 } = e3;
         let u2, d2, f3 = We(super.readable);
-        a3 && (r3 ? f3 = Le(f3, new ke(e3)) : (d2 = new fe(e3), f3 = Le(f3, d2))), l3 && (f3 = Me(f3, c2, { chunkSize: t3 }, i3, n3)), a3 && !r3 || !s3 || (u2 = new j(), f3 = Le(f3, u2)), je(this, f3, (() => {
+        a3 && (r3 ? f3 = Le(f3, new ke(e3)) : (d2 = new fe(e3), f3 = Le(f3, d2))), l3 && (f3 = Me(f3, c2, { chunkSize: t4 }, i3, n3)), a3 && !r3 || !s3 || (u2 = new j(), f3 = Le(f3, u2)), je(this, f3, (() => {
           if ((!a3 || r3) && s3) {
             const e4 = new DataView(u2.value.buffer);
             if (o3 != e4.getUint32(0, false)) throw new Error(H);
@@ -1919,18 +1919,18 @@ var init_zip = __esm({
     Ne = "close";
     Ve = "inflate";
     qe = class extends TransformStream {
-      constructor(e3, t3) {
+      constructor(e3, t4) {
         super({});
         const n3 = this, { codecType: i3 } = e3;
         let r3;
         i3.startsWith("deflate") ? r3 = Oe : i3.startsWith(Ve) && (r3 = Ce);
         let a3 = 0, s3 = 0;
-        const o3 = new r3(e3, t3), l3 = super.readable, c2 = new TransformStream({ transform(e4, t4) {
-          e4 && e4.length && (s3 += e4.length, t4.enqueue(e4));
+        const o3 = new r3(e3, t4), l3 = super.readable, c2 = new TransformStream({ transform(e4, t5) {
+          e4 && e4.length && (s3 += e4.length, t5.enqueue(e4));
         }, flush() {
           Object.assign(n3, { inputSize: s3 });
-        } }), u2 = new TransformStream({ transform(e4, t4) {
-          e4 && e4.length && (a3 += e4.length, t4.enqueue(e4));
+        } }), u2 = new TransformStream({ transform(e4, t5) {
+          e4 && e4.length && (a3 += e4.length, t5.enqueue(e4));
         }, flush() {
           const { signature: e4 } = o3;
           Object.assign(n3, { signature: e4, outputSize: a3, inputSize: s3 });
@@ -1940,38 +1940,38 @@ var init_zip = __esm({
     };
     He = class extends TransformStream {
       constructor(e3) {
-        let t3;
+        let t4;
         super({ transform: function n3(i3, r3) {
-          if (t3) {
-            const e4 = new Uint8Array(t3.length + i3.length);
-            e4.set(t3), e4.set(i3, t3.length), i3 = e4, t3 = null;
+          if (t4) {
+            const e4 = new Uint8Array(t4.length + i3.length);
+            e4.set(t4), e4.set(i3, t4.length), i3 = e4, t4 = null;
           }
-          i3.length > e3 ? (r3.enqueue(i3.slice(0, e3)), n3(i3.slice(e3), r3)) : t3 = i3;
+          i3.length > e3 ? (r3.enqueue(i3.slice(0, e3)), n3(i3.slice(e3), r3)) : t4 = i3;
         }, flush(e4) {
-          t3 && t3.length && e4.enqueue(t3);
+          t4 && t4.length && e4.enqueue(t4);
         } });
       }
     };
     Ke = typeof Worker != z;
     Ze = class {
-      constructor(e3, { readable: t3, writable: n3 }, { options: i3, config: r3, streamOptions: a3, useWebWorkers: s3, transferStreams: o3, scripts: l3 }, c2) {
+      constructor(e3, { readable: t4, writable: n3 }, { options: i3, config: r3, streamOptions: a3, useWebWorkers: s3, transferStreams: o3, scripts: l3 }, c2) {
         const { signal: u2 } = a3;
-        return Object.assign(e3, { busy: true, readable: t3.pipeThrough(new He(r3.chunkSize)).pipeThrough(new Ge(t3, a3), { signal: u2 }), writable: n3, options: Object.assign({}, i3), scripts: l3, transferStreams: o3, terminate: () => new Promise(((t4) => {
+        return Object.assign(e3, { busy: true, readable: t4.pipeThrough(new He(r3.chunkSize)).pipeThrough(new Ge(t4, a3), { signal: u2 }), writable: n3, options: Object.assign({}, i3), scripts: l3, transferStreams: o3, terminate: () => new Promise(((t5) => {
           const { worker: n4, busy: i4 } = e3;
-          n4 ? (i4 ? e3.resolveTerminated = t4 : (n4.terminate(), t4()), e3.interface = null) : t4();
+          n4 ? (i4 ? e3.resolveTerminated = t5 : (n4.terminate(), t5()), e3.interface = null) : t5();
         })), onTaskFinished() {
-          const { resolveTerminated: t4 } = e3;
-          t4 && (e3.resolveTerminated = null, e3.terminated = true, e3.worker.terminate(), t4()), e3.busy = false, c2(e3);
+          const { resolveTerminated: t5 } = e3;
+          t5 && (e3.resolveTerminated = null, e3.terminated = true, e3.worker.terminate(), t5()), e3.busy = false, c2(e3);
         } }), (s3 && Ke ? Xe : Qe)(e3, r3);
       }
     };
     Ge = class extends TransformStream {
-      constructor(e3, { onstart: t3, onprogress: n3, size: i3, onend: r3 }) {
+      constructor(e3, { onstart: t4, onprogress: n3, size: i3, onend: r3 }) {
         let a3 = 0;
         super({ async start() {
-          t3 && await Je(t3, i3);
-        }, async transform(e4, t4) {
-          a3 += e4.length, n3 && await Je(n3, a3, i3), t4.enqueue(e4);
+          t4 && await Je(t4, i3);
+        }, async transform(e4, t5) {
+          a3 += e4.length, n3 && await Je(n3, a3, i3), t5.enqueue(e4);
         }, async flush() {
           e3.size = a3, r3 && await Je(r3, a3);
         } });
@@ -1994,11 +1994,11 @@ var init_zip = __esm({
     };
     ct = class extends lt {
       get readable() {
-        const e3 = this, { chunkSize: t3 = st } = e3, n3 = new ReadableStream({ start() {
+        const e3 = this, { chunkSize: t4 = st } = e3, n3 = new ReadableStream({ start() {
           this.chunkOffset = 0;
         }, async pull(i3) {
-          const { offset: r3 = 0, size: a3, diskNumberStart: s3 } = n3, { chunkOffset: o3 } = this, l3 = a3 === S ? t3 : Math.min(t3, a3 - o3), c2 = await pt(e3, r3 + o3, l3, s3);
-          i3.enqueue(c2), o3 + t3 > a3 || a3 === S && !c2.length && l3 ? i3.close() : this.chunkOffset += t3;
+          const { offset: r3 = 0, size: a3, diskNumberStart: s3 } = n3, { chunkOffset: o3 } = this, l3 = a3 === S ? t4 : Math.min(t4, a3 - o3), c2 = await pt(e3, r3 + o3, l3, s3);
+          i3.enqueue(c2), o3 + t4 > a3 || a3 === S && !c2.length && l3 ? i3.close() : this.chunkOffset += t4;
         } });
         return n3;
       }
@@ -2007,17 +2007,17 @@ var init_zip = __esm({
       constructor(e3) {
         super(), Object.assign(this, { blob: e3, size: e3.size });
       }
-      async readUint8Array(e3, t3) {
-        const n3 = this, i3 = e3 + t3, r3 = e3 || i3 < n3.size ? n3.blob.slice(e3, i3) : n3.blob;
+      async readUint8Array(e3, t4) {
+        const n3 = this, i3 = e3 + t4, r3 = e3 || i3 < n3.size ? n3.blob.slice(e3, i3) : n3.blob;
         let a3 = await r3.arrayBuffer();
-        return a3.byteLength > t3 && (a3 = a3.slice(e3, i3)), new Uint8Array(a3);
+        return a3.byteLength > t4 && (a3 = a3.slice(e3, i3)), new Uint8Array(a3);
       }
     };
     dt = class extends lt {
       constructor(e3) {
         super();
-        const t3 = new TransformStream(), n3 = [];
-        e3 && n3.push(["Content-Type", e3]), Object.defineProperty(this, ot, { get: () => t3.writable }), this.blob = new Response(t3.readable, { headers: n3 }).blob();
+        const t4 = new TransformStream(), n3 = [];
+        e3 && n3.push(["Content-Type", e3]), Object.defineProperty(this, ot, { get: () => t4.writable }), this.blob = new Response(t4.readable, { headers: n3 }).blob();
       }
       getData() {
         return this.blob;
@@ -2028,12 +2028,12 @@ var init_zip = __esm({
         super(e3), Object.assign(this, { encoding: e3, utf8: !e3 || "utf-8" == e3.toLowerCase() });
       }
       async getData() {
-        const { encoding: e3, utf8: t3 } = this, n3 = await super.getData();
-        if (n3.text && t3) return n3.text();
+        const { encoding: e3, utf8: t4 } = this, n3 = await super.getData();
+        if (n3.text && t4) return n3.text();
         {
-          const t4 = new FileReader();
+          const t5 = new FileReader();
           return new Promise(((i3, r3) => {
-            Object.assign(t4, { onload: ({ target: e4 }) => i3(e4.result), onerror: () => r3(t4.error) }), t4.readAsText(n3, e3);
+            Object.assign(t5, { onload: ({ target: e4 }) => i3(e4.result), onerror: () => r3(t5.error) }), t5.readAsText(n3, e3);
           }));
         }
       }
@@ -2043,46 +2043,46 @@ var init_zip = __esm({
         super(), this.readers = e3;
       }
       async init() {
-        const e3 = this, { readers: t3 } = e3;
-        e3.lastDiskNumber = 0, e3.lastDiskOffset = 0, await Promise.all(t3.map((async (n3, i3) => {
-          await n3.init(), i3 != t3.length - 1 && (e3.lastDiskOffset += n3.size), e3.size += n3.size;
+        const e3 = this, { readers: t4 } = e3;
+        e3.lastDiskNumber = 0, e3.lastDiskOffset = 0, await Promise.all(t4.map((async (n3, i3) => {
+          await n3.init(), i3 != t4.length - 1 && (e3.lastDiskOffset += n3.size), e3.size += n3.size;
         }))), super.init();
       }
-      async readUint8Array(e3, t3, n3 = 0) {
+      async readUint8Array(e3, t4, n3 = 0) {
         const i3 = this, { readers: r3 } = this;
         let a3, s3 = n3;
         -1 == s3 && (s3 = r3.length - 1);
         let o3 = e3;
         for (; o3 >= r3[s3].size; ) o3 -= r3[s3].size, s3++;
         const l3 = r3[s3], c2 = l3.size;
-        if (o3 + t3 <= c2) a3 = await pt(l3, o3, t3);
+        if (o3 + t4 <= c2) a3 = await pt(l3, o3, t4);
         else {
           const r4 = c2 - o3;
-          a3 = new Uint8Array(t3), a3.set(await pt(l3, o3, r4)), a3.set(await i3.readUint8Array(e3 + r4, t3 - r4, n3), r4);
+          a3 = new Uint8Array(t4), a3.set(await pt(l3, o3, r4)), a3.set(await i3.readUint8Array(e3 + r4, t4 - r4, n3), r4);
         }
         return i3.lastDiskNumber = Math.max(s3, i3.lastDiskNumber), a3;
       }
     };
     _t = class extends lt {
-      constructor(e3, t3 = 4294967295) {
+      constructor(e3, t4 = 4294967295) {
         super();
         const n3 = this;
         let i3, r3, a3;
-        Object.assign(n3, { diskNumber: 0, diskOffset: 0, size: 0, maxSize: t3, availableSize: t3 });
-        const s3 = new WritableStream({ async write(t4) {
+        Object.assign(n3, { diskNumber: 0, diskOffset: 0, size: 0, maxSize: t4, availableSize: t4 });
+        const s3 = new WritableStream({ async write(t5) {
           const { availableSize: s4 } = n3;
-          if (a3) t4.length >= s4 ? (await o3(t4.slice(0, s4)), await l3(), n3.diskOffset += i3.size, n3.diskNumber++, a3 = null, await this.write(t4.slice(s4))) : await o3(t4);
+          if (a3) t5.length >= s4 ? (await o3(t5.slice(0, s4)), await l3(), n3.diskOffset += i3.size, n3.diskNumber++, a3 = null, await this.write(t5.slice(s4))) : await o3(t5);
           else {
             const { value: s5, done: o4 } = await e3.next();
             if (o4 && !s5) throw new Error("Writer iterator completed too soon");
-            i3 = s5, i3.size = 0, i3.maxSize && (n3.maxSize = i3.maxSize), n3.availableSize = n3.maxSize, await wt(i3), r3 = s5.writable, a3 = r3.getWriter(), await this.write(t4);
+            i3 = s5, i3.size = 0, i3.maxSize && (n3.maxSize = i3.maxSize), n3.availableSize = n3.maxSize, await wt(i3), r3 = s5.writable, a3 = r3.getWriter(), await this.write(t5);
           }
         }, async close() {
           await a3.ready, await l3();
         } });
         async function o3(e4) {
-          const t4 = e4.length;
-          t4 && (await a3.ready, await a3.write(e4), i3.size += t4, n3.size += t4, n3.availableSize -= t4);
+          const t5 = e4.length;
+          t5 && (await a3.ready, await a3.write(e4), i3.size += t5, n3.size += t5, n3.availableSize -= t5);
         }
         async function l3() {
           r3.size = i3.size, await a3.close();
@@ -2109,7 +2109,7 @@ var init_zip = __esm({
     jt = [xt, kt, At, zt, Et, Ft, vt, St, Tt, Ct, Ut, Dt, Dt, "internalFileAttribute", "internalFileAttributes", "externalFileAttribute", "externalFileAttributes", "msDosCompatible", "zip64", "encrypted", "version", "versionMadeBy", "zipCrypto", "directory", "executable", "bitFlag", "signature", "filenameUTF8", "commentUTF8", "compressionMethod", "extraField", "rawExtraField", "extraFieldZip64", "extraFieldUnicodePath", "extraFieldUnicodeComment", "extraFieldAES", "extraFieldNTFS", "extraFieldExtendedTimestamp"];
     Mt = class {
       constructor(e3) {
-        jt.forEach(((t3) => this[t3] = e3[t3]));
+        jt.forEach(((t4) => this[t4] = e3[t4]));
       }
     };
     Lt = "File format is not recognized";
@@ -2121,26 +2121,26 @@ var init_zip = __esm({
     Vt = [[zt, g], [At, g], [Ut, g], [Dt, y]];
     qt = { [y]: { getValue: tn, bytes: 4 }, [g]: { getValue: nn, bytes: 8 } };
     Ht = class {
-      constructor(e3, t3 = {}) {
-        Object.assign(this, { reader: bt(e3), options: t3, config: F });
+      constructor(e3, t4 = {}) {
+        Object.assign(this, { reader: bt(e3), options: t4, config: F });
       }
       async *getEntriesGenerator(e3 = {}) {
-        const t3 = this;
-        let { reader: n3 } = t3;
-        const { config: i3 } = t3;
+        const t4 = this;
+        let { reader: n3 } = t4;
+        const { config: i3 } = t4;
         if (await wt(n3), n3.size !== S && n3.readUint8Array || (n3 = new ut(await new Response(n3.readable).blob()), await wt(n3)), n3.size < v) throw new Error(Lt);
         n3.chunkSize = (function(e4) {
           return Math.max(e4.chunkSize, 64);
         })(i3);
-        const r3 = await (async function(e4, t4, n4, i4, r4) {
+        const r3 = await (async function(e4, t5, n4, i4, r4) {
           const a4 = new Uint8Array(4);
-          !(function(e5, t5, n5) {
-            e5.setUint32(t5, n5, true);
-          })(rn(a4), 0, t4);
+          !(function(e5, t6, n5) {
+            e5.setUint32(t6, n5, true);
+          })(rn(a4), 0, t5);
           const s4 = i4 + r4;
           return await o4(i4) || await o4(Math.min(s4, n4));
-          async function o4(t5) {
-            const r5 = n4 - t5, s5 = await pt(e4, r5, t5);
+          async function o4(t6) {
+            const r5 = n4 - t6, s5 = await pt(e4, r5, t6);
             for (let e5 = s5.length - i4; e5 >= 0; e5--) if (s5[e5] == a4[0] && s5[e5 + 1] == a4[1] && s5[e5 + 2] == a4[2] && s5[e5 + 3] == a4[3]) return { offset: r5 + e5, buffer: s5.slice(e5, e5 + i4).buffer };
           }
         })(n3, 101010256, n3.size, v, 1048560);
@@ -2149,19 +2149,19 @@ var init_zip = __esm({
         }
         const a3 = rn(r3);
         let s3 = tn(a3, 12), o3 = tn(a3, 16);
-        const l3 = r3.offset, c2 = en(a3, 20), u2 = l3 + v + c2;
-        let d2 = en(a3, 4);
+        const l3 = r3.offset, c2 = en2(a3, 20), u2 = l3 + v + c2;
+        let d2 = en2(a3, 4);
         const f3 = n3.lastDiskNumber || 0;
-        let h3 = en(a3, 6), _2 = en(a3, 8), w2 = 0, b3 = 0;
+        let h3 = en2(a3, 6), _2 = en2(a3, 8), w2 = 0, b3 = 0;
         if (o3 == g || s3 == g || _2 == y || h3 == y) {
           const e4 = rn(await pt(n3, r3.offset - 20, 20));
           if (117853008 == tn(e4, 0)) {
             o3 = nn(e4, 8);
-            let t4 = await pt(n3, o3, 56, -1), i4 = rn(t4);
+            let t5 = await pt(n3, o3, 56, -1), i4 = rn(t5);
             const a4 = r3.offset - 20 - 56;
             if (tn(i4, 0) != k && o3 != a4) {
               const e5 = o3;
-              o3 = a4, w2 = o3 - e5, t4 = await pt(n3, o3, 56, -1), i4 = rn(t4);
+              o3 = a4, w2 = o3 - e5, t5 = await pt(n3, o3, 56, -1), i4 = rn(t5);
             }
             if (tn(i4, 0) != k) throw new Error("End of Zip64 central directory locator not found");
             d2 == y && (d2 = tn(i4, 16)), h3 == y && (h3 = tn(i4, 20)), _2 == y && (_2 = nn(i4, 32)), s3 == g && (s3 = nn(i4, 40)), o3 -= s3;
@@ -2173,26 +2173,26 @@ var init_zip = __esm({
         if (s3) {
           const e4 = r3.offset - s3;
           if (tn(z3, p3) != x && o3 != e4) {
-            const t4 = o3;
-            o3 = e4, w2 += o3 - t4, m3 = await pt(n3, o3, s3, h3), z3 = rn(m3);
+            const t5 = o3;
+            o3 = e4, w2 += o3 - t5, m3 = await pt(n3, o3, s3, h3), z3 = rn(m3);
           }
         }
         const A3 = r3.offset - o3 - (n3.lastDiskOffset || 0);
         if (s3 != A3 && A3 >= 0 && (s3 = A3, m3 = await pt(n3, o3, s3, h3), z3 = rn(m3)), o3 < 0 || o3 >= n3.size) throw new Error(Lt);
-        const U3 = Qt(t3, e3, "filenameEncoding"), D2 = Qt(t3, e3, "commentEncoding");
+        const U3 = Qt(t4, e3, "filenameEncoding"), D2 = Qt(t4, e3, "commentEncoding");
         for (let r4 = 0; r4 < _2; r4++) {
-          const a4 = new Kt(n3, i3, t3.options);
+          const a4 = new Kt(n3, i3, t4.options);
           if (tn(z3, p3) != x) throw new Error("Central directory header not found");
           Zt(a4, z3, p3 + 6);
-          const s4 = Boolean(a4.bitFlag.languageEncodingFlag), o4 = p3 + 46, l4 = o4 + a4.filenameLength, c3 = l4 + a4.extraFieldLength, u3 = en(z3, p3 + 4), d3 = !(u3 >> 8), f4 = u3 >> 8 == 3, h4 = m3.subarray(o4, l4), g3 = en(z3, p3 + 32), y3 = c3 + g3, k3 = m3.subarray(c3, y3), v3 = s4, A4 = s4, E4 = tn(z3, p3 + 38), F3 = d3 && !(16 & ~$t(z3, p3 + 38)) || f4 && !(16384 & ~(E4 >> 16)) || h4.length && h4[h4.length - 1] == "/".charCodeAt(0), T3 = f4 && !(73 & ~(E4 >> 16)), O2 = tn(z3, p3 + 42) + w2;
-          Object.assign(a4, { versionMadeBy: u3, msDosCompatible: d3, compressedSize: 0, uncompressedSize: 0, commentLength: g3, directory: F3, offset: O2, diskNumberStart: en(z3, p3 + 34), internalFileAttributes: en(z3, p3 + 36), externalFileAttributes: E4, rawFilename: h4, filenameUTF8: v3, commentUTF8: A4, rawExtraField: m3.subarray(l4, c3), executable: T3 }), a4.internalFileAttribute = a4.internalFileAttributes, a4.externalFileAttribute = a4.externalFileAttributes;
-          const C2 = Qt(t3, e3, "decodeText") || yt, W2 = v3 ? It : U3 || Nt, j2 = A4 ? It : D2 || Nt;
+          const s4 = Boolean(a4.bitFlag.languageEncodingFlag), o4 = p3 + 46, l4 = o4 + a4.filenameLength, c3 = l4 + a4.extraFieldLength, u3 = en2(z3, p3 + 4), d3 = !(u3 >> 8), f4 = u3 >> 8 == 3, h4 = m3.subarray(o4, l4), g3 = en2(z3, p3 + 32), y3 = c3 + g3, k3 = m3.subarray(c3, y3), v3 = s4, A4 = s4, E4 = tn(z3, p3 + 38), F3 = d3 && !(16 & ~$t(z3, p3 + 38)) || f4 && !(16384 & ~(E4 >> 16)) || h4.length && h4[h4.length - 1] == "/".charCodeAt(0), T3 = f4 && !(73 & ~(E4 >> 16)), O2 = tn(z3, p3 + 42) + w2;
+          Object.assign(a4, { versionMadeBy: u3, msDosCompatible: d3, compressedSize: 0, uncompressedSize: 0, commentLength: g3, directory: F3, offset: O2, diskNumberStart: en2(z3, p3 + 34), internalFileAttributes: en2(z3, p3 + 36), externalFileAttributes: E4, rawFilename: h4, filenameUTF8: v3, commentUTF8: A4, rawExtraField: m3.subarray(l4, c3), executable: T3 }), a4.internalFileAttribute = a4.internalFileAttributes, a4.externalFileAttribute = a4.externalFileAttributes;
+          const C2 = Qt(t4, e3, "decodeText") || yt, W2 = v3 ? It : U3 || Nt, j2 = A4 ? It : D2 || Nt;
           let M2 = C2(h4, W2);
           M2 === S && (M2 = yt(h4, W2));
           let L2 = C2(k3, j2);
           L2 === S && (L2 = yt(k3, j2)), Object.assign(a4, { rawComment: k3, filename: M2, comment: L2, directory: F3 || M2.endsWith("/") }), b3 = Math.max(O2, b3), Gt(a4, a4, z3, p3 + 6), a4.zipCrypto = a4.encrypted && !a4.extraFieldAES;
           const P2 = new Mt(a4);
-          P2.getData = (e4, t4) => a4.getData(e4, P2, t4), p3 = y3;
+          P2.getData = (e4, t5) => a4.getData(e4, P2, t5), p3 = y3;
           const { onprogress: R2 } = e3;
           if (R2) try {
             await R2(r4 + 1, _2, new Mt(a4));
@@ -2200,31 +2200,31 @@ var init_zip = __esm({
           }
           yield P2;
         }
-        const E3 = Qt(t3, e3, "extractPrependedData"), F2 = Qt(t3, e3, "extractAppendedData");
-        return E3 && (t3.prependedData = b3 > 0 ? await pt(n3, 0, b3) : new Uint8Array()), t3.comment = c2 ? await pt(n3, l3 + v, c2) : new Uint8Array(), F2 && (t3.appendedData = u2 < n3.size ? await pt(n3, u2, n3.size - u2) : new Uint8Array()), true;
+        const E3 = Qt(t4, e3, "extractPrependedData"), F2 = Qt(t4, e3, "extractAppendedData");
+        return E3 && (t4.prependedData = b3 > 0 ? await pt(n3, 0, b3) : new Uint8Array()), t4.comment = c2 ? await pt(n3, l3 + v, c2) : new Uint8Array(), F2 && (t4.appendedData = u2 < n3.size ? await pt(n3, u2, n3.size - u2) : new Uint8Array()), true;
       }
       async getEntries(e3 = {}) {
-        const t3 = [];
-        for await (const n3 of this.getEntriesGenerator(e3)) t3.push(n3);
-        return t3;
+        const t4 = [];
+        for await (const n3 of this.getEntriesGenerator(e3)) t4.push(n3);
+        return t4;
       }
       async close() {
       }
     };
     Kt = class {
-      constructor(e3, t3, n3) {
-        Object.assign(this, { reader: e3, config: t3, options: n3 });
+      constructor(e3, t4, n3) {
+        Object.assign(this, { reader: e3, config: t4, options: n3 });
       }
-      async getData(e3, t3, n3 = {}) {
-        const i3 = this, { reader: r3, offset: a3, diskNumberStart: s3, extraFieldAES: o3, compressionMethod: l3, config: c2, bitFlag: u2, signature: d2, rawLastModDate: f3, uncompressedSize: h3, compressedSize: _2 } = i3, w2 = t3.localDirectory = {}, b3 = rn(await pt(r3, a3, 30, s3));
+      async getData(e3, t4, n3 = {}) {
+        const i3 = this, { reader: r3, offset: a3, diskNumberStart: s3, extraFieldAES: o3, compressionMethod: l3, config: c2, bitFlag: u2, signature: d2, rawLastModDate: f3, uncompressedSize: h3, compressedSize: _2 } = i3, w2 = t4.localDirectory = {}, b3 = rn(await pt(r3, a3, 30, s3));
         let p3 = Qt(i3, n3, "password"), m3 = Qt(i3, n3, "rawPassword");
         const g3 = Qt(i3, n3, "passThrough");
         if (p3 = p3 && p3.length && p3, m3 = m3 && m3.length && m3, o3 && 99 != o3.originalCompressionMethod) throw new Error(Rt);
         if (0 != l3 && 8 != l3 && !g3) throw new Error(Rt);
         if (67324752 != tn(b3, 0)) throw new Error("Local file header not found");
-        Zt(w2, b3, 4), w2.rawExtraField = w2.extraFieldLength ? await pt(r3, a3 + 30 + w2.filenameLength, w2.extraFieldLength, s3) : new Uint8Array(), Gt(i3, w2, b3, 4, true), Object.assign(t3, { lastAccessDate: w2.lastAccessDate, creationDate: w2.creationDate });
+        Zt(w2, b3, 4), w2.rawExtraField = w2.extraFieldLength ? await pt(r3, a3 + 30 + w2.filenameLength, w2.extraFieldLength, s3) : new Uint8Array(), Gt(i3, w2, b3, 4, true), Object.assign(t4, { lastAccessDate: w2.lastAccessDate, creationDate: w2.creationDate });
         const y3 = i3.encrypted && w2.encrypted && !g3, x3 = y3 && !o3;
-        if (g3 || (t3.zipCrypto = x3), y3) {
+        if (g3 || (t4.zipCrypto = x3), y3) {
           if (!x3 && o3.strength === S) throw new Error("Encryption method not supported");
           if (!p3 && !m3) throw new Error("File contains encrypted entry");
         }
@@ -2233,8 +2233,8 @@ var init_zip = __esm({
         const U3 = Qt(i3, n3, "signal"), D2 = Qt(i3, n3, "checkPasswordOnly");
         D2 && (e3 = new WritableStream()), e3 = (function(e4) {
           e4.writable === S && typeof e4.next == A && (e4 = new _t(e4)), e4 instanceof WritableStream && (e4 = { writable: e4 });
-          const { writable: t4 } = e4;
-          return t4.size === S && (t4.size = 0), e4 instanceof _t || Object.assign(e4, { diskNumber: 0, diskOffset: 0, availableSize: 1 / 0, maxSize: 1 / 0 }), e4;
+          const { writable: t5 } = e4;
+          return t5.size === S && (t5.size = 0), e4 instanceof _t || Object.assign(e4, { diskNumber: 0, diskOffset: 0, availableSize: 1 / 0, maxSize: 1 / 0 }), e4;
         })(e3), await wt(e3, g3 ? _2 : h3);
         const { writable: E3 } = e3, { onstart: F2, onprogress: T3, onend: O2 } = n3, C2 = { options: { codecType: Ve, password: p3, rawPassword: m3, zipCrypto: x3, encryptionStrength: o3 && o3.strength, signed: Qt(i3, n3, "checkSignature") && !g3, passwordVerification: x3 && (u2.dataDescriptor ? f3 >>> 8 & 255 : d2 >>> 24 & 255), signature: d2, compressed: 0 != l3 && !g3, encrypted: i3.encrypted && !g3, useWebWorkers: Qt(i3, n3, "useWebWorkers"), useCompressionStream: Qt(i3, n3, "useCompressionStream"), transferStreams: Qt(i3, n3, "transferStreams"), checkPasswordOnly: D2 }, config: c2, streamOptions: { signal: U3, size: v3, onstart: F2, onprogress: T3, onend: O2 } };
         let W2 = 0;
@@ -2250,26 +2250,26 @@ var init_zip = __esm({
       }
     };
     T({ Inflate: function(e3) {
-      const t3 = new m(), i3 = e3 && e3.chunkSize ? Math.floor(2 * e3.chunkSize) : 131072, r3 = new Uint8Array(i3);
+      const t4 = new m(), i3 = e3 && e3.chunkSize ? Math.floor(2 * e3.chunkSize) : 131072, r3 = new Uint8Array(i3);
       let a3 = false;
-      t3.inflateInit(), t3.next_out = r3, this.append = function(e4, s3) {
+      t4.inflateInit(), t4.next_out = r3, this.append = function(e4, s3) {
         const o3 = [];
         let l3, c2, u2 = 0, d2 = 0, f3 = 0;
         if (0 !== e4.length) {
-          t3.next_in_index = 0, t3.next_in = e4, t3.avail_in = e4.length;
+          t4.next_in_index = 0, t4.next_in = e4, t4.avail_in = e4.length;
           do {
-            if (t3.next_out_index = 0, t3.avail_out = i3, 0 !== t3.avail_in || a3 || (t3.next_in_index = 0, a3 = true), l3 = t3.inflate(0), a3 && l3 === n) {
-              if (0 !== t3.avail_in) throw new Error("inflating: bad input");
-            } else if (0 !== l3 && 1 !== l3) throw new Error("inflating: " + t3.msg);
-            if ((a3 || 1 === l3) && t3.avail_in === e4.length) throw new Error("inflating: bad input");
-            t3.next_out_index && (t3.next_out_index === i3 ? o3.push(new Uint8Array(r3)) : o3.push(r3.subarray(0, t3.next_out_index))), f3 += t3.next_out_index, s3 && t3.next_in_index > 0 && t3.next_in_index != u2 && (s3(t3.next_in_index), u2 = t3.next_in_index);
-          } while (t3.avail_in > 0 || 0 === t3.avail_out);
+            if (t4.next_out_index = 0, t4.avail_out = i3, 0 !== t4.avail_in || a3 || (t4.next_in_index = 0, a3 = true), l3 = t4.inflate(0), a3 && l3 === n) {
+              if (0 !== t4.avail_in) throw new Error("inflating: bad input");
+            } else if (0 !== l3 && 1 !== l3) throw new Error("inflating: " + t4.msg);
+            if ((a3 || 1 === l3) && t4.avail_in === e4.length) throw new Error("inflating: bad input");
+            t4.next_out_index && (t4.next_out_index === i3 ? o3.push(new Uint8Array(r3)) : o3.push(r3.subarray(0, t4.next_out_index))), f3 += t4.next_out_index, s3 && t4.next_in_index > 0 && t4.next_in_index != u2 && (s3(t4.next_in_index), u2 = t4.next_in_index);
+          } while (t4.avail_in > 0 || 0 === t4.avail_out);
           return o3.length > 1 ? (c2 = new Uint8Array(f3), o3.forEach((function(e5) {
             c2.set(e5, d2), d2 += e5.length;
           }))) : c2 = o3[0] ? new Uint8Array(o3[0]) : new Uint8Array(), c2;
         }
       }, this.flush = function() {
-        t3.inflateEnd();
+        t4.inflateEnd();
       };
     } });
   }
@@ -2727,9 +2727,9 @@ var init_epub = __esm({
       audio.playbackRate = __privateGet(this, _rate);
       audio.addEventListener("timeupdate", () => {
         if (audio.paused) return;
-        const t3 = audio.currentTime;
+        const t4 = audio.currentTime;
         const { items } = __privateGet(this, _MediaOverlay_instances, activeAudio_get);
-        if (t3 > __privateGet(this, _MediaOverlay_instances, activeItem_get)?.end) {
+        if (t4 > __privateGet(this, _MediaOverlay_instances, activeItem_get)?.end) {
           __privateMethod(this, _MediaOverlay_instances, unhighlight_fn).call(this);
           if (__privateGet(this, _itemIndex) === items.length - 1) {
             __privateMethod(this, _MediaOverlay_instances, play_fn).call(this, __privateGet(this, _audioIndex) + 1, 0).catch((e3) => __privateMethod(this, _MediaOverlay_instances, error_fn).call(this, e3));
@@ -2737,7 +2737,7 @@ var init_epub = __esm({
           }
         }
         const oldIndex = __privateGet(this, _itemIndex);
-        while (items[__privateGet(this, _itemIndex) + 1]?.begin <= t3) __privateWrapper(this, _itemIndex)._++;
+        while (items[__privateGet(this, _itemIndex) + 1]?.begin <= t4) __privateWrapper(this, _itemIndex)._++;
         if (__privateGet(this, _itemIndex) !== oldIndex) __privateMethod(this, _MediaOverlay_instances, highlight_fn).call(this);
       });
       audio.addEventListener("error", () => __privateMethod(this, _MediaOverlay_instances, error_fn).call(this, new Error(`Failed to load ${src}`)));
@@ -4847,7 +4847,7 @@ function A2(r3, a3) {
   return E2(r3.subarray((e3 = r3, n3 = a3 && a3.dictionary, (8 != (15 & e3[0]) || e3[0] >> 4 > 7 || (e3[0] << 8 | e3[1]) % 31) && T2(6, "invalid zlib data"), (e3[1] >> 5 & 1) == +!n3 && T2(6, "invalid zlib data: " + (32 & e3[1] ? "need" : "unexpected") + " dictionary"), 2 + (e3[1] >> 3 & 4)), -4), { i: 2 }, a3 && a3.out, a3 && a3.dictionary);
   var e3, n3;
 }
-var r2, a2, e2, n2, i2, t2, f2, o2, v2, l2, w2, u2, c2, d2, b2, s2, h2, y2, g2, p2, k2, m2, x2, T2, E2, z2, U2;
+var r2, a2, e2, n2, i2, t3, f2, o2, v2, l2, w2, u2, c2, d2, b2, s2, h2, y2, g2, p2, k2, m2, x2, T2, E2, z2, U2;
 var init_fflate = __esm({
   "node_modules/foliate-js/vendor/fflate.js"() {
     r2 = Uint8Array;
@@ -4855,11 +4855,11 @@ var init_fflate = __esm({
     e2 = Int32Array;
     n2 = new r2([0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 0, 0, 0, 0]);
     i2 = new r2([0, 0, 0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10, 11, 11, 12, 12, 13, 13, 0, 0]);
-    t2 = new r2([16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]);
+    t3 = new r2([16, 17, 18, 0, 8, 7, 9, 6, 10, 5, 11, 4, 12, 3, 13, 2, 14, 1, 15]);
     f2 = function(r3, n3) {
-      for (var i3 = new a2(31), t3 = 0; t3 < 31; ++t3) i3[t3] = n3 += 1 << r3[t3 - 1];
+      for (var i3 = new a2(31), t4 = 0; t4 < 31; ++t4) i3[t4] = n3 += 1 << r3[t4 - 1];
       var f3 = new e2(i3[30]);
-      for (t3 = 1; t3 < 30; ++t3) for (var o3 = i3[t3]; o3 < i3[t3 + 1]; ++o3) f3[o3] = o3 - i3[t3] << 5 | t3;
+      for (t4 = 1; t4 < 30; ++t4) for (var o3 = i3[t4]; o3 < i3[t4 + 1]; ++o3) f3[o3] = o3 - i3[t4] << 5 | t4;
       return { b: i3, r: f3 };
     };
     o2 = f2(n2, 2);
@@ -4871,14 +4871,14 @@ var init_fflate = __esm({
       w2 = (61680 & (w2 = (52428 & w2) >> 2 | (13107 & w2) << 2)) >> 4 | (3855 & w2) << 4, c2[d2] = ((65280 & w2) >> 8 | (255 & w2) << 8) >> 1;
     }
     b2 = function(r3, e3, n3) {
-      for (var i3 = r3.length, t3 = 0, f3 = new a2(e3); t3 < i3; ++t3) r3[t3] && ++f3[r3[t3] - 1];
+      for (var i3 = r3.length, t4 = 0, f3 = new a2(e3); t4 < i3; ++t4) r3[t4] && ++f3[r3[t4] - 1];
       var o3, v3 = new a2(e3);
-      for (t3 = 1; t3 < e3; ++t3) v3[t3] = v3[t3 - 1] + f3[t3 - 1] << 1;
+      for (t4 = 1; t4 < e3; ++t4) v3[t4] = v3[t4 - 1] + f3[t4 - 1] << 1;
       if (n3) {
         o3 = new a2(1 << e3);
         var l3 = 15 - e3;
-        for (t3 = 0; t3 < i3; ++t3) if (r3[t3]) for (var u2 = t3 << 4 | r3[t3], d2 = e3 - r3[t3], w2 = v3[r3[t3] - 1]++ << d2, b3 = w2 | (1 << d2) - 1; w2 <= b3; ++w2) o3[c2[w2] >> l3] = u2;
-      } else for (o3 = new a2(i3), t3 = 0; t3 < i3; ++t3) r3[t3] && (o3[t3] = c2[v3[r3[t3] - 1]++] >> 15 - r3[t3]);
+        for (t4 = 0; t4 < i3; ++t4) if (r3[t4]) for (var u2 = t4 << 4 | r3[t4], d2 = e3 - r3[t4], w2 = v3[r3[t4] - 1]++ << d2, b3 = w2 | (1 << d2) - 1; w2 <= b3; ++w2) o3[c2[w2] >> l3] = u2;
+      } else for (o3 = new a2(i3), t4 = 0; t4 < i3; ++t4) r3[t4] && (o3[t4] = c2[v3[r3[t4] - 1]++] >> 15 - r3[t4]);
       return o3;
     };
     s2 = new r2(288);
@@ -4937,7 +4937,7 @@ var init_fflate = __esm({
           else if (2 == S2) {
             var j2 = k2(a3, E3, 31) + 257, q2 = k2(a3, E3 + 10, 15) + 4, B2 = j2 + k2(a3, E3 + 5, 31) + 1;
             E3 += 14;
-            for (var C2 = new r2(B2), G2 = new r2(19), H2 = 0; H2 < q2; ++H2) G2[t2[H2]] = k2(a3, E3 + 3 * H2, 7);
+            for (var C2 = new r2(B2), G2 = new r2(19), H2 = 0; H2 < q2; ++H2) G2[t3[H2]] = k2(a3, E3 + 3 * H2, 7);
             E3 += 3 * q2;
             var J2 = p2(G2), K2 = (1 << J2) - 1, L2 = b2(G2, J2, 1);
             for (H2 = 0; H2 < B2; ) {
@@ -7374,10 +7374,10 @@ var init_view = __esm({
       if (!lang) return {};
       try {
         const canonical = Intl.getCanonicalLocales(lang)[0];
-        const locale = new Intl.Locale(canonical);
-        const isCJK = ["zh", "ja", "kr"].includes(locale.language);
-        const direction = (locale.getTextInfo?.() ?? locale.textInfo)?.direction;
-        return { canonical, locale, isCJK, direction };
+        const locale2 = new Intl.Locale(canonical);
+        const isCJK = ["zh", "ja", "kr"].includes(locale2.language);
+        const direction = (locale2.getTextInfo?.() ?? locale2.textInfo)?.direction;
+        return { canonical, locale: locale2, isCJK, direction };
       } catch (e3) {
         console.warn(e3);
         return {};
@@ -7760,6 +7760,521 @@ __export(main_exports, {
 module.exports = __toCommonJS(main_exports);
 var import_obsidian15 = require("obsidian");
 
+// src/i18n/index.ts
+var import_obsidian = require("obsidian");
+var locale = import_obsidian.moment.locale();
+var isZh = locale === "zh-cn" || locale === "zh" || locale.startsWith("zh");
+var en = {
+  // Commands
+  "command.highlight": "Highlight selection",
+  "command.addNote": "Add sticky note to selection",
+  "command.openSidebar": "Open annotation overview",
+  "command.openBookshelf": "Open EPUB bookshelf",
+  "command.showPdfOutline": "Show PDF outline",
+  "command.testStorage": "Test Book Note storage",
+  // Ribbon
+  "ribbon.open": "Open Book Note",
+  // Common
+  "common.save": "Save",
+  "common.cancel": "Cancel",
+  "common.close": "Close",
+  "common.refresh": "Refresh",
+  "common.moveUp": "Move up",
+  "common.moveDown": "Move down",
+  "common.edit": "Edit note",
+  "common.addNote": "Add note",
+  "common.jump": "Jump",
+  "common.more": "More",
+  "common.copyLink": "Copy annotation link",
+  "common.delete": "Delete annotation",
+  "common.untagged": "Untagged",
+  "common.reader": "Reader",
+  "common.tag": "Tag",
+  "common.unknownChapter": "Unknown chapter",
+  "common.copy": "Copy",
+  "common.openOverview": "Open overview",
+  "common.expand": "Expand",
+  "common.collapse": "Collapse",
+  // Settings
+  "settings.header": "Book Note",
+  "settings.defaultColor": "Default highlight color",
+  "settings.defaultAuthor": "Default author",
+  "settings.migrateOnRename": "Migrate annotations on rename",
+  "settings.showRibbonIcon.name": "Show ribbon icon",
+  "settings.showRibbonIcon.desc": "Show the highlighter icon in the left ribbon to open the Book Note sidebar.",
+  "settings.tags.heading": "Annotation tags",
+  "settings.tags.desc": "Tags categorize notes and ideas. Up to {{max}} can be enabled; renaming syncs instantly without rewriting annotation files.",
+  "settings.tags.add": "Add tag",
+  "settings.tags.reset": "Reset to default tags",
+  "settings.tags.save": "Save tags",
+  "settings.tags.saved": "Annotation tags saved",
+  "settings.tags.resetConfirm": "Reset default tag names, icons and order? Custom tags are kept.",
+  "settings.epub.heading": "EPUB reading",
+  "settings.epub.fontSize.name": "Reading font size",
+  "settings.epub.fontSize.desc": "Base font size (px) for EPUB body text. Reopen the book to apply.",
+  "settings.epub.theme.name": "Reading theme",
+  "settings.epub.theme.desc": "Background and text colors of the EPUB reading area.",
+  "settings.epub.flow.name": "Page mode",
+  "settings.epub.flow.desc": "Paginated shows one page; scrolled is continuous.",
+  "settings.epub.highlightStyle.name": "Highlight style",
+  "settings.epub.highlightStyle.desc": "Default appearance of EPUB text annotations.",
+  "settings.pdf.heading": "PDF reading",
+  "settings.pdf.progress.name": "Track PDF reading progress",
+  "settings.pdf.progress.desc": "Saves current page and progress; existing progress is kept after closing.",
+  "settings.storage.heading": "Storage",
+  "settings.storagePath.name": "Storage folder (vault-relative)",
+  "settings.storagePath.desc": "Folder inside the vault for sidecar files. Leave empty for the default booknote directory. Only vault-relative paths are allowed.",
+  "settings.storagePath.placeholder": "e.g. booknote",
+  "settings.sidecarLocation.name": "Sidecar location",
+  "settings.sidecarLocation.desc": "Where annotation sidecars are stored. 'Next to source' keeps each sidecar beside its source file; 'Specified folder' collects them under the storage folder above.",
+  "settings.sidecarLocation.specifiedFolder": "Specified folder",
+  "settings.sidecarLocation.sameFolder": "Next to source file",
+  "settings.storage.test": "Test write access",
+  "settings.storage.migrate": "Migrate data",
+  "settings.storage.migrate.desc": "Move existing annotation sidecars to the current folder. Click the button on the right to run.",
+  // Sidebar
+  "sidebar.emptyHint": "Open a Markdown or PDF file to inspect annotations.",
+  "sidebar.noMatch": "No matching annotations.",
+  "sidebar.title": "Book Note",
+  "sidebar.searchPlaceholder": "Search annotations...",
+  "sidebar.scope.current": "Current file",
+  "sidebar.scope.all": "All vault",
+  "sidebar.filter": "Filter",
+  "sidebar.filterColor.all": "All colors",
+  "sidebar.filterType.all": "All types",
+  "sidebar.filterType.highlight": "Highlight",
+  "sidebar.filterType.note": "Note",
+  "sidebar.filterTag": "Filter by tag",
+  "sidebar.filterTag.all": "All tags",
+  "sidebar.export.summary": "Default summary",
+  "sidebar.export.byColor": "Group by color",
+  "sidebar.export.notesOnly": "Notes only",
+  "sidebar.export.readingNotes": "Reading notes",
+  "sidebar.exportButton": "\u2191 Export annotations",
+  "sidebar.noteTag": "Note tag",
+  "sidebar.notePlaceholder": "Write your thoughts...",
+  "sidebar.count": "{{scope}} \xB7 {{highlights}} highlights \xB7 {{notes}} notes",
+  // aria-labels
+  "aria.refreshAnnotations": "Refresh annotations",
+  "aria.closePanel": "Close panel",
+  "aria.tagIcon": "{{name}} icon",
+  "aria.tagName": "Tag name",
+  "aria.tagEnabled": "{{name}} enabled",
+  "aria.colorHighlight": "{{color}} highlight",
+  "aria.addAnnotation": "Add annotation",
+  "aria.moreActions": "More annotation actions",
+  "aria.theme": "Theme: {{label}}",
+  "aria.closePopover": "Close annotation popover",
+  "aria.searchFull": "Search full text",
+  "aria.toggleSidebar": "Toggle sidebar",
+  "aria.decreaseFont": "Decrease font size",
+  "aria.increaseFont": "Increase font size",
+  "aria.prevPage": "Previous page",
+  "aria.nextPage": "Next page",
+  "aria.searchPlaceholder": "Search full text\u2026",
+  "aria.searchBody": "Search body\u2026",
+  // EPUB reader
+  "epub.toc": "Contents",
+  "epub.emptyToc": "No table of contents found.",
+  "epub.searchEmpty": "No matches found",
+  "epub.searchUnsupported": "Search not supported",
+  "epub.searching": "Searching...",
+  "epub.searchProgress": "Searching {{percent}}%",
+  "epub.searchNoMatch": "No matching content found",
+  "epub.loadFailed": "Book Note EPUB failed to load: {{error}}",
+  "epub.highlightAdded": "Added {{color}} highlight",
+  "epub.highlightCreateFailed": "Failed to create highlight",
+  "epub.noteAdded": "Annotation added",
+  "epub.noteCreateFailed": "Failed to create annotation",
+  "epub.noteDeleted": "Annotation deleted",
+  "epub.noteDeleteFailed": "Failed to delete annotation",
+  "epub.tapPageOn": "Tap-to-page enabled",
+  "epub.swipePageOn": "Swipe-to-page enabled",
+  "epub.keyboardPageOn": "Keyboard paging enabled",
+  "epub.scrollPageOn": "Scroll paging enabled",
+  "epub.toggleScroll": "Switch to scroll",
+  "epub.togglePaginate": "Switch to paginated",
+  "epub.readDone": "Finished",
+  "epub.remainingLessThanMinute": "Less than 1 minute remaining",
+  "epub.toggleToSwipe": "Switch to swipe paging",
+  "epub.toggleToTap": "Switch to tap paging",
+  "epub.toggleToWheel": "Switch to wheel paging",
+  "epub.toggleToKeyboard": "Switch to keyboard paging",
+  // EPUB note modal
+  "epubNote.color": "Highlight color",
+  "epubNote.style": "Annotation style",
+  "epubNote.title": "Write your thoughts",
+  "epubNote.placeholder": "Write down your thoughts or associations here\u2026",
+  // PDF
+  "pdf.selectTextFirst": "Select text in the PDF first.",
+  "pdf.popoverTitle": "PDF page {{page}}",
+  // Bookshelf
+  "bookshelf.title": "\u{1F4DA} E-book bookshelf",
+  "bookshelf.empty": "No e-book files found in the vault.",
+  "bookshelf.lastRead": "Last read: {{chapter}} \xB7 {{date}}",
+  "bookshelf.readTime": "Read {{time}}",
+  "bookshelf.remaining": "About {{minutes}} min left",
+  "bookshelf.displayName": "EPUB Library",
+  "bookshelf.hours": "{{count}} h",
+  "bookshelf.minutes": "{{count}} m",
+  "bookshelf.seconds": "{{count}} s",
+  // Popover
+  "popover.title": "Annotation",
+  "popover.emptyNote": "No attached note yet.",
+  "popover.onlyHighlight": "Highlight only",
+  // Selection toolbar
+  "selection.highlight": "Highlight {{color}}",
+  // Comment modal
+  "modal.sticky.title": "Sticky note",
+  "modal.sticky.note": "Note",
+  "modal.sticky.placeholder": "Write your thoughts...",
+  "modal.sticky.disabledSuffix": " (disabled)",
+  // Notices
+  "notice.pageNotFound": "Page {{page}} not found",
+  "notice.openPdfFirst": "Open a PDF file first",
+  "notice.pdfNoOutline": "This PDF has no outline",
+  "notice.pdfOutline": "PDF outline ({{count}} items):\n{{lines}}",
+  "notice.selectTextFirst": "Select some text first.",
+  "notice.annotationLinkCopied": "Annotation link copied",
+  "notice.pdfViewNotReady": "PDF reader did not become ready in time",
+  "notice.epubFileNotFound": "Could not find the e-book file",
+  "notice.epubSourceMissing": "Could not find the corresponding e-book file",
+  "notice.epubViewNotReady": "E-book reader did not become ready in time",
+  "notice.selectionCopied": "Selection copied",
+  "notice.invalidLink": "Invalid Book Note link",
+  "notice.multipleSameId": "Multiple annotations share this ID; navigation stopped to protect data",
+  "notice.annotationGone": "Annotation deleted or not yet synced",
+  "notice.onlyPdfEpubAnnotations": "Book Note annotations are available for PDF and EPUB files only.",
+  "notice.sourceFileMissing": "Source file of the annotation not found",
+  "notice.originalChanged": "Original text changed; cannot reliably locate this annotation",
+  "notice.unableResolve": "Unable to resolve source annotation",
+  "notice.exported": "Exported notes to {{path}}",
+  "notice.resetTagsFailed": "Cannot reset tags: {{validation}}",
+  "notice.notSaved": "Book Note failed to save; check write permission or sync status: {{path}}",
+  "notice.storageTestFailed": "Book Note storage test failed: {{path}}",
+  "notice.cannotRead": "Book Note cannot read {{path}}; writing stopped to protect annotation data.",
+  "notice.storageWritable": "Book Note storage is writable: {{path}}",
+  "notice.storageNotWritable": "Book Note storage is not writable. Check the booknote directory permissions or sync status.",
+  "notice.storageMigrated": "Migrated {{count}} annotation file(s) to the new storage.",
+  "notice.storageMigratePartial": "Migrated {{migrated}} file(s); {{failed}} failed.",
+  "notice.storageMigrateFailed": "Failed to migrate annotations: {{error}}",
+  // Tag validation
+  "tag.atLeastOne": "Keep at least one tag.",
+  "tag.atLeastOneEnabled": "Enable at least one tag.",
+  "tag.invalidId": "Invalid tag ID.",
+  "tag.duplicateId": "Duplicate tag ID.",
+  "tag.emptyName": "Tag name cannot be empty.",
+  "tag.duplicateName": "Tag name already exists.",
+  "tag.invalidIcon": "Invalid tag icon.",
+  "tag.maxEnabled": "At most {{max}} tags can be enabled.",
+  "tag.nameTooLong": "Tag name cannot exceed {{max}} characters.",
+  "tag.newTagName": "New tag",
+  // Export
+  "export.heading": "Book Note All Notes Summary",
+  "export.summary": "Export as Markdown summary",
+  "export.byColor": "Export grouped by color",
+  "export.notesOnly": "Export annotations with notes only",
+  "export.readingNotes": "Export as reading-notes format",
+  // Colors
+  "color.yellow": "Yellow",
+  "color.green": "Green",
+  "color.blue": "Blue",
+  "color.pink": "Pink",
+  "color.orange": "Orange",
+  "color.purple": "Purple",
+  // Themes
+  "theme.follow": "Follow Obsidian",
+  "theme.white": "White",
+  "theme.warm": "Warm",
+  "theme.green": "Eye-care green",
+  "theme.sepia": "Sepia",
+  "theme.dark": "Dark",
+  // Highlight styles
+  "style.fill": "Fill",
+  "style.underline": "Underline",
+  "style.wavy": "Wavy",
+  // Tag icons
+  "icon.lightbulb": "Light bulb",
+  "icon.help": "Question",
+  "icon.bell": "Bell",
+  "icon.bookmark": "Bookmark",
+  "icon.star": "Star",
+  "icon.flag": "Flag",
+  "icon.heart": "Heart",
+  // Sort
+  "sort.document": "Document order",
+  "sort.newest": "Newest first",
+  "sort.oldest": "Oldest first",
+  // Storage / export format headings
+  "storage.section.highlight": "Highlights",
+  "storage.section.note": "Notes",
+  "storage.backToSource": "Back to source",
+  "storage.noteLabel": "Note",
+  "storage.tagLabel": "Tag",
+  "storage.noNotesFound": "No notes found.",
+  "storage.notesOnlyHeading": "Notes"
+};
+var zh = {
+  // Commands
+  "command.highlight": "\u9AD8\u4EAE\u9009\u4E2D\u6587\u672C",
+  "command.addNote": "\u4E3A\u9009\u4E2D\u6587\u672C\u6DFB\u52A0\u4FBF\u7B7E",
+  "command.openSidebar": "\u6253\u5F00\u6279\u6CE8\u603B\u89C8",
+  "command.openBookshelf": "\u6253\u5F00 EPUB \u4E66\u67B6",
+  "command.showPdfOutline": "\u663E\u793A PDF \u76EE\u5F55",
+  "command.testStorage": "\u6D4B\u8BD5Book Note\u5B58\u50A8",
+  // Ribbon
+  "ribbon.open": "\u6253\u5F00Book Note",
+  // Common
+  "common.save": "\u4FDD\u5B58",
+  "common.cancel": "\u53D6\u6D88",
+  "common.close": "\u5173\u95ED",
+  "common.refresh": "\u5237\u65B0",
+  "common.moveUp": "\u4E0A\u79FB",
+  "common.moveDown": "\u4E0B\u79FB",
+  "common.edit": "\u7F16\u8F91\u7B14\u8BB0",
+  "common.addNote": "\u6DFB\u52A0\u7B14\u8BB0",
+  "common.jump": "\u8DF3\u8F6C",
+  "common.more": "\u66F4\u591A",
+  "common.copyLink": "\u590D\u5236\u6279\u6CE8\u94FE\u63A5",
+  "common.delete": "\u5220\u9664\u6279\u6CE8",
+  "common.untagged": "\u672A\u5206\u7C7B",
+  "common.reader": "\u8BFB\u8005",
+  "common.tag": "\u6807\u7B7E",
+  "common.unknownChapter": "\u672A\u77E5\u7AE0\u8282",
+  "common.copy": "\u590D\u5236",
+  "common.openOverview": "\u6253\u5F00\u603B\u89C8",
+  "common.expand": "\u5C55\u5F00",
+  "common.collapse": "\u6536\u8D77",
+  // Settings
+  "settings.header": "Book Note",
+  "settings.defaultColor": "\u9ED8\u8BA4\u9AD8\u4EAE\u989C\u8272",
+  "settings.defaultAuthor": "\u9ED8\u8BA4\u4F5C\u8005",
+  "settings.migrateOnRename": "\u91CD\u547D\u540D\u65F6\u8FC1\u79FB\u6279\u6CE8",
+  "settings.showRibbonIcon.name": "\u663E\u793A\u4FA7\u8FB9\u680F\u56FE\u6807",
+  "settings.showRibbonIcon.desc": "\u5728\u5DE6\u4FA7\u680F\u663E\u793A Book Note \u9AD8\u4EAE\u7B14\u56FE\u6807\uFF0C\u70B9\u51FB\u53EF\u6253\u5F00\u6279\u6CE8\u603B\u89C8\u9762\u677F\u3002",
+  "settings.tags.heading": "\u6279\u6CE8\u6807\u7B7E",
+  "settings.tags.desc": "\u6807\u7B7E\u7528\u4E8E\u5206\u7C7B\u7B14\u8BB0\u548C\u60F3\u6CD5\u3002\u6700\u591A\u542F\u7528 {{max}} \u4E2A\uFF1B\u4FEE\u6539\u540D\u79F0\u4F1A\u7ACB\u5373\u540C\u6B65\u663E\u793A\uFF0C\u4E0D\u4F1A\u6279\u91CF\u6539\u5199\u6279\u6CE8\u6587\u4EF6\u3002",
+  "settings.tags.add": "\u6DFB\u52A0\u6807\u7B7E",
+  "settings.tags.reset": "\u6062\u590D\u9ED8\u8BA4\u6807\u7B7E",
+  "settings.tags.save": "\u4FDD\u5B58\u6807\u7B7E",
+  "settings.tags.saved": "\u6279\u6CE8\u6807\u7B7E\u5DF2\u4FDD\u5B58",
+  "settings.tags.resetConfirm": "\u6062\u590D\u9ED8\u8BA4\u6807\u7B7E\u540D\u79F0\u3001\u56FE\u6807\u548C\u987A\u5E8F\uFF1F\u81EA\u5B9A\u4E49\u6807\u7B7E\u4F1A\u4FDD\u7559\u3002",
+  "settings.epub.heading": "EPUB \u9605\u8BFB",
+  "settings.epub.fontSize.name": "\u9605\u8BFB\u5B57\u53F7",
+  "settings.epub.fontSize.desc": "EPUB \u6B63\u6587\u57FA\u7840\u5B57\u53F7\uFF08px\uFF09\u3002\u4FEE\u6539\u540E\u91CD\u65B0\u6253\u5F00\u7535\u5B50\u4E66\u751F\u6548\u3002",
+  "settings.epub.theme.name": "\u9605\u8BFB\u4E3B\u9898",
+  "settings.epub.theme.desc": "EPUB \u9605\u8BFB\u533A\u80CC\u666F\u4E0E\u6587\u5B57\u914D\u8272\u3002",
+  "settings.epub.flow.name": "\u7FFB\u9875\u6A21\u5F0F",
+  "settings.epub.flow.desc": "\u7FFB\u9875\u4E3A\u5206\u9875\u5E03\u5C40\uFF1B\u6EDA\u52A8\u4E3A\u8FDE\u7EED\u6EDA\u52A8\u9605\u8BFB\u3002",
+  "settings.epub.highlightStyle.name": "\u9AD8\u4EAE\u6837\u5F0F",
+  "settings.epub.highlightStyle.desc": "EPUB \u6587\u672C\u6807\u6CE8\u7684\u9ED8\u8BA4\u5448\u73B0\u6837\u5F0F\u3002",
+  "settings.pdf.heading": "PDF \u9605\u8BFB",
+  "settings.pdf.progress.name": "\u8BB0\u5F55 PDF \u9605\u8BFB\u8FDB\u5EA6",
+  "settings.pdf.progress.desc": "\u4FDD\u5B58\u5F53\u524D\u9875\u548C\u9605\u8BFB\u8FDB\u5EA6\uFF1B\u5173\u95ED\u540E\u4E0D\u4F1A\u5220\u9664\u5DF2\u6709\u8FDB\u5EA6\u3002",
+  "settings.storage.heading": "\u5B58\u50A8",
+  "settings.storagePath.name": "\u5B58\u50A8\u76EE\u5F55\uFF08Vault \u76F8\u5BF9\u8DEF\u5F84\uFF09",
+  "settings.storagePath.desc": "Vault \u5185\u7528\u4E8E\u5B58\u653E sidecar \u6587\u4EF6\u7684\u76EE\u5F55\uFF0C\u7559\u7A7A\u4F7F\u7528\u9ED8\u8BA4 booknote\u3002\u4EC5\u5141\u8BB8 Vault \u5185\u76F8\u5BF9\u8DEF\u5F84\u3002",
+  "settings.storagePath.placeholder": "\u4F8B\u5982 booknote",
+  "settings.sidecarLocation.name": "\u6279\u6CE8\u6587\u4EF6\u4F4D\u7F6E",
+  "settings.sidecarLocation.desc": "\u6279\u6CE8 sidecar \u7684\u5B58\u653E\u4F4D\u7F6E\u3002\u300C\u4E0E\u6E90\u6587\u4EF6\u540C\u76EE\u5F55\u300D\u4F1A\u628A sidecar \u653E\u5728\u6E90\u6587\u4EF6\u65C1\u8FB9\uFF1B\u300C\u6307\u5B9A\u76EE\u5F55\u300D\u5219\u7EDF\u4E00\u6536\u96C6\u5230\u4E0A\u65B9\u7684\u5B58\u50A8\u76EE\u5F55\u4E0B\u3002",
+  "settings.sidecarLocation.specifiedFolder": "\u6307\u5B9A\u76EE\u5F55",
+  "settings.sidecarLocation.sameFolder": "\u4E0E\u6E90\u6587\u4EF6\u540C\u76EE\u5F55",
+  "settings.storage.test": "\u6D4B\u8BD5\u5199\u5165",
+  "settings.storage.migrate": "\u8FC1\u79FB\u6570\u636E",
+  "settings.storage.migrate.desc": "\u5C06\u5DF2\u6709\u6279\u6CE8 sidecar \u79FB\u52A8\u5230\u5F53\u524D\u76EE\u5F55\u3002\u70B9\u51FB\u53F3\u4FA7\u6309\u94AE\u6267\u884C\u3002",
+  // Sidebar
+  "sidebar.emptyHint": "\u6253\u5F00 Markdown \u6216 PDF \u6587\u4EF6\u4EE5\u67E5\u770B\u6279\u6CE8\u3002",
+  "sidebar.noMatch": "\u6CA1\u6709\u5339\u914D\u7684\u6279\u6CE8\u3002",
+  "sidebar.title": "Book Note",
+  "sidebar.searchPlaceholder": "\u641C\u7D22\u6279\u6CE8...",
+  "sidebar.scope.current": "\u5F53\u524D\u6587\u4EF6",
+  "sidebar.scope.all": "\u5168\u5E93",
+  "sidebar.filter": "\u7B5B\u9009",
+  "sidebar.filterColor.all": "\u5168\u90E8\u989C\u8272",
+  "sidebar.filterType.all": "\u5168\u90E8\u7C7B\u578B",
+  "sidebar.filterType.highlight": "\u9AD8\u4EAE",
+  "sidebar.filterType.note": "\u7B14\u8BB0",
+  "sidebar.filterTag": "\u6309\u6807\u7B7E\u7B5B\u9009",
+  "sidebar.filterTag.all": "\u5168\u90E8\u6807\u7B7E",
+  "sidebar.export.summary": "\u9ED8\u8BA4\u6458\u8981",
+  "sidebar.export.byColor": "\u6309\u989C\u8272\u5206\u7EC4",
+  "sidebar.export.notesOnly": "\u53EA\u5BFC\u51FA\u7B14\u8BB0",
+  "sidebar.export.readingNotes": "\u9605\u8BFB\u7B14\u8BB0",
+  "sidebar.exportButton": "\u2191 \u5BFC\u51FA\u6279\u6CE8",
+  "sidebar.noteTag": "\u7B14\u8BB0\u6807\u7B7E",
+  "sidebar.notePlaceholder": "\u5199\u4E0B\u4F60\u7684\u60F3\u6CD5...",
+  "sidebar.count": "{{scope}} \xB7 {{highlights}} \u4E2A\u9AD8\u4EAE \xB7 {{notes}} \u6761\u7B14\u8BB0",
+  // aria-labels
+  "aria.refreshAnnotations": "\u5237\u65B0\u6279\u6CE8",
+  "aria.closePanel": "\u5173\u95ED\u9762\u677F",
+  "aria.tagIcon": "{{name}} \u56FE\u6807",
+  "aria.tagName": "\u6807\u7B7E\u540D\u79F0",
+  "aria.tagEnabled": "{{name}} \u5DF2\u542F\u7528",
+  "aria.colorHighlight": "{{color}}\u753B\u7EBF",
+  "aria.addAnnotation": "\u6DFB\u52A0\u6807\u6CE8",
+  "aria.moreActions": "\u66F4\u591A\u6279\u6CE8\u64CD\u4F5C",
+  "aria.theme": "\u4E3B\u9898: {{label}}",
+  "aria.closePopover": "\u5173\u95ED\u6279\u6CE8\u5F39\u5C42",
+  "aria.searchFull": "\u641C\u7D22\u5168\u6587",
+  "aria.toggleSidebar": "\u5207\u6362\u4FA7\u8FB9\u680F",
+  "aria.decreaseFont": "\u7F29\u5C0F\u5B57\u53F7",
+  "aria.increaseFont": "\u653E\u5927\u5B57\u53F7",
+  "aria.prevPage": "\u4E0A\u4E00\u9875",
+  "aria.nextPage": "\u4E0B\u4E00\u9875",
+  "aria.searchPlaceholder": "\u641C\u7D22\u5168\u6587\u2026",
+  "aria.searchBody": "\u641C\u7D22\u6B63\u6587\u2026",
+  // EPUB reader
+  "epub.toc": "\u76EE\u5F55",
+  "epub.emptyToc": "\u672A\u627E\u5230\u76EE\u5F55\u4FE1\u606F\u3002",
+  "epub.searchEmpty": "\u672A\u627E\u5230\u5339\u914D",
+  "epub.searchUnsupported": "\u641C\u7D22\u529F\u80FD\u4E0D\u652F\u6301",
+  "epub.searching": "\u641C\u7D22\u4E2D...",
+  "epub.searchProgress": "\u641C\u7D22\u4E2D {{percent}}%",
+  "epub.searchNoMatch": "\u672A\u627E\u5230\u5339\u914D\u5185\u5BB9",
+  "epub.loadFailed": "Book Note EPUB \u52A0\u8F7D\u5931\u8D25: {{error}}",
+  "epub.highlightAdded": "\u5DF2\u6DFB\u52A0{{color}}\u753B\u7EBF",
+  "epub.highlightCreateFailed": "\u753B\u7EBF\u521B\u5EFA\u5931\u8D25",
+  "epub.noteAdded": "\u5DF2\u6DFB\u52A0\u6807\u6CE8",
+  "epub.noteCreateFailed": "\u6807\u6CE8\u521B\u5EFA\u5931\u8D25",
+  "epub.noteDeleted": "\u6807\u6CE8\u5DF2\u5220\u9664",
+  "epub.noteDeleteFailed": "\u6807\u6CE8\u5220\u9664\u5931\u8D25",
+  "epub.tapPageOn": "\u70B9\u6309\u7FFB\u9875\u5DF2\u5F00\u542F",
+  "epub.swipePageOn": "\u6ED1\u52A8\u7FFB\u9875\u5DF2\u5F00\u542F",
+  "epub.keyboardPageOn": "\u952E\u76D8\u7FFB\u9875\u5DF2\u5F00\u542F",
+  "epub.scrollPageOn": "\u6EDA\u8F6E\u7FFB\u9875\u5DF2\u5F00\u542F",
+  "epub.toggleScroll": "\u5207\u6362\u4E3A\u6EDA\u52A8",
+  "epub.togglePaginate": "\u5207\u6362\u4E3A\u5206\u9875",
+  "epub.readDone": "\u5DF2\u8BFB\u5B8C",
+  "epub.remainingLessThanMinute": "\u5269\u4F59\u4E0D\u5230 1 \u5206\u949F",
+  "epub.toggleToSwipe": "\u5207\u6362\u4E3A\u6ED1\u52A8\u7FFB\u9875",
+  "epub.toggleToTap": "\u5207\u6362\u4E3A\u70B9\u6309\u7FFB\u9875",
+  "epub.toggleToWheel": "\u5207\u6362\u4E3A\u6EDA\u8F6E\u7FFB\u9875",
+  "epub.toggleToKeyboard": "\u5207\u6362\u4E3A\u952E\u76D8\u7FFB\u9875",
+  // EPUB note modal
+  "epubNote.color": "\u753B\u7EBF\u989C\u8272",
+  "epubNote.style": "\u6807\u6CE8\u6837\u5F0F",
+  "epubNote.title": "\u5199\u4E0B\u4F60\u7684\u60F3\u6CD5",
+  "epubNote.placeholder": "\u5728\u8FD9\u91CC\u5199\u4E0B\u4F60\u7684\u60F3\u6CD5\u6216\u8054\u60F3\u2026",
+  // PDF
+  "pdf.selectTextFirst": "\u8BF7\u5148\u5728 PDF \u4E2D\u9009\u4E2D\u6587\u672C\u3002",
+  "pdf.popoverTitle": "PDF \u7B2C {{page}} \u9875",
+  // Bookshelf
+  "bookshelf.title": "\u{1F4DA} \u7535\u5B50\u4E66\u4E66\u67B6",
+  "bookshelf.empty": "Vault \u4E2D\u6CA1\u6709\u627E\u5230\u7535\u5B50\u4E66\u6587\u4EF6\u3002",
+  "bookshelf.lastRead": "\u4E0A\u6B21\u9605\u8BFB\uFF1A{{chapter}} \xB7 {{date}}",
+  "bookshelf.readTime": "\u5DF2\u8BFB {{time}}",
+  "bookshelf.remaining": "\u5269\u4F59\u7EA6 {{minutes}} \u5206\u949F",
+  "bookshelf.displayName": "EPUB \u4E66\u67B6",
+  "bookshelf.hours": "{{count}}\u5C0F\u65F6",
+  "bookshelf.minutes": "{{count}}\u5206",
+  "bookshelf.seconds": "{{count}}\u79D2",
+  // Popover
+  "popover.title": "\u6279\u6CE8",
+  "popover.emptyNote": "\u6682\u65E0\u9644\u52A0\u4FBF\u7B7E\u3002",
+  "popover.onlyHighlight": "\u4EC5\u9AD8\u4EAE",
+  // Selection toolbar
+  "selection.highlight": "\u9AD8\u4EAE {{color}}",
+  // Comment modal
+  "modal.sticky.title": "\u4FBF\u7B7E",
+  "modal.sticky.note": "\u7B14\u8BB0",
+  "modal.sticky.placeholder": "\u5199\u4E0B\u4F60\u7684\u60F3\u6CD5...",
+  "modal.sticky.disabledSuffix": "\uFF08\u5DF2\u505C\u7528\uFF09",
+  // Notices
+  "notice.pageNotFound": "\u672A\u627E\u5230\u7B2C {{page}} \u9875",
+  "notice.openPdfFirst": "\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A PDF \u6587\u4EF6",
+  "notice.pdfNoOutline": "\u8BE5 PDF \u6CA1\u6709\u76EE\u5F55",
+  "notice.pdfOutline": "PDF \u76EE\u5F55\uFF08{{count}} \u9879\uFF09\uFF1A\n{{lines}}",
+  "notice.selectTextFirst": "\u8BF7\u5148\u9009\u4E2D\u6587\u672C\u3002",
+  "notice.annotationLinkCopied": "\u5DF2\u590D\u5236\u6279\u6CE8\u94FE\u63A5",
+  "notice.pdfViewNotReady": "PDF \u9605\u8BFB\u89C6\u56FE\u672A\u80FD\u53CA\u65F6\u5C31\u7EEA",
+  "notice.epubFileNotFound": "\u65E0\u6CD5\u627E\u5230\u5BF9\u5E94\u7684\u7535\u5B50\u4E66\u6587\u4EF6",
+  "notice.epubSourceMissing": "\u627E\u4E0D\u5230\u5BF9\u5E94\u7535\u5B50\u4E66\u6587\u4EF6",
+  "notice.epubViewNotReady": "\u7535\u5B50\u4E66\u9605\u8BFB\u89C6\u56FE\u672A\u80FD\u53CA\u65F6\u5C31\u7EEA",
+  "notice.selectionCopied": "\u5DF2\u590D\u5236\u6240\u9009\u5185\u5BB9",
+  "notice.invalidLink": "Book Note\u94FE\u63A5\u65E0\u6548",
+  "notice.multipleSameId": "\u627E\u5230\u591A\u4E2A\u540C ID \u6279\u6CE8\uFF0C\u5DF2\u505C\u6B62\u8DF3\u8F6C\u4EE5\u4FDD\u62A4\u6570\u636E",
+  "notice.annotationGone": "\u6279\u6CE8\u5DF2\u5220\u9664\u6216\u5C1A\u672A\u540C\u6B65",
+  "notice.onlyPdfEpubAnnotations": "Book Note \u6279\u6CE8\u4EC5\u652F\u6301 PDF \u4E0E EPUB \u6587\u4EF6\u3002",
+  "notice.sourceFileMissing": "\u627E\u4E0D\u5230\u6279\u6CE8\u6765\u6E90\u6587\u4EF6",
+  "notice.originalChanged": "\u539F\u6587\u5DF2\u53D8\u5316\uFF0C\u65E0\u6CD5\u53EF\u9760\u5B9A\u4F4D\u8BE5\u6279\u6CE8",
+  "notice.unableResolve": "\u65E0\u6CD5\u89E3\u6790\u6E90\u6279\u6CE8",
+  "notice.exported": "\u5DF2\u5BFC\u51FA\u7B14\u8BB0\u81F3 {{path}}",
+  "notice.resetTagsFailed": "\u65E0\u6CD5\u6062\u590D\u9ED8\u8BA4\u6807\u7B7E\uFF1A{{validation}}",
+  "notice.notSaved": "Book Note\u672A\u4FDD\u5B58\uFF0C\u8BF7\u68C0\u67E5\u5199\u5165\u6743\u9650\u6216\u540C\u6B65\u72B6\u6001\uFF1A{{path}}",
+  "notice.storageTestFailed": "Book Note\u5B58\u50A8\u6D4B\u8BD5\u5931\u8D25\uFF1A{{path}}",
+  "notice.cannotRead": "Book Note\u65E0\u6CD5\u8BFB\u53D6 {{path}}\uFF0C\u5DF2\u505C\u6B62\u5199\u5165\u4EE5\u4FDD\u62A4\u6279\u6CE8\u6570\u636E\u3002",
+  "notice.storageWritable": "Book Note\u5B58\u50A8\u53EF\u5199\uFF1A{{path}}",
+  "notice.storageNotWritable": "Book Note\u5B58\u50A8\u4E0D\u53EF\u5199\uFF0C\u8BF7\u68C0\u67E5 booknote \u76EE\u5F55\u6743\u9650\u6216\u540C\u6B65\u72B6\u6001\u3002",
+  "notice.storageMigrated": "\u5DF2\u5C06 {{count}} \u4E2A\u6279\u6CE8\u6587\u4EF6\u8FC1\u79FB\u81F3\u65B0\u5B58\u50A8\u3002",
+  "notice.storageMigratePartial": "\u5DF2\u8FC1\u79FB {{migrated}} \u4E2A\u6587\u4EF6\uFF0C{{failed}} \u4E2A\u5931\u8D25\u3002",
+  "notice.storageMigrateFailed": "\u6279\u6CE8\u8FC1\u79FB\u5931\u8D25\uFF1A{{error}}",
+  // Tag validation
+  "tag.atLeastOne": "\u8BF7\u81F3\u5C11\u4FDD\u7559\u4E00\u4E2A\u6807\u7B7E\u3002",
+  "tag.atLeastOneEnabled": "\u8BF7\u81F3\u5C11\u542F\u7528\u4E00\u4E2A\u6807\u7B7E\u3002",
+  "tag.invalidId": "\u6807\u7B7E ID \u65E0\u6548\u3002",
+  "tag.duplicateId": "\u6807\u7B7E ID \u91CD\u590D\u3002",
+  "tag.emptyName": "\u6807\u7B7E\u540D\u79F0\u4E0D\u80FD\u4E3A\u7A7A\u3002",
+  "tag.duplicateName": "\u6807\u7B7E\u540D\u79F0\u5DF2\u5B58\u5728\u3002",
+  "tag.invalidIcon": "\u6807\u7B7E\u56FE\u6807\u65E0\u6548\u3002",
+  "tag.maxEnabled": "\u6700\u591A\u53EA\u80FD\u542F\u7528 {{max}} \u4E2A\u6807\u7B7E\u3002",
+  "tag.nameTooLong": "\u6807\u7B7E\u540D\u79F0\u4E0D\u80FD\u8D85\u8FC7 {{max}} \u4E2A\u5B57\u7B26\u3002",
+  "tag.newTagName": "\u65B0\u6807\u7B7E",
+  // Export
+  "export.heading": "Book Note\u5168\u5E93\u6C47\u603B",
+  "export.summary": "\u5BFC\u51FA\u4E3A Markdown \u6458\u8981",
+  "export.byColor": "\u6309\u989C\u8272\u5206\u7EC4\u5BFC\u51FA",
+  "export.notesOnly": "\u53EA\u5BFC\u51FA\u5E26\u7B14\u8BB0\u7684\u6279\u6CE8",
+  "export.readingNotes": "\u5BFC\u51FA\u4E3A\u9605\u8BFB\u7B14\u8BB0\u683C\u5F0F",
+  // Colors
+  "color.yellow": "\u9EC4\u8272",
+  "color.green": "\u7EFF\u8272",
+  "color.blue": "\u84DD\u8272",
+  "color.pink": "\u7C89\u8272",
+  "color.orange": "\u6A59\u8272",
+  "color.purple": "\u7D2B\u8272",
+  // Themes
+  "theme.follow": "\u8DDF\u968F Obsidian",
+  "theme.white": "\u9ED8\u8BA4\u767D",
+  "theme.warm": "\u6696\u5149",
+  "theme.green": "\u62A4\u773C\u7EFF",
+  "theme.sepia": "\u7F8A\u76AE\u7EB8",
+  "theme.dark": "\u591C\u95F4",
+  // Highlight styles
+  "style.fill": "\u586B\u5145",
+  "style.underline": "\u4E0B\u5212\u7EBF",
+  "style.wavy": "\u6CE2\u6D6A\u7EBF",
+  // Tag icons
+  "icon.lightbulb": "\u706F\u6CE1",
+  "icon.help": "\u95EE\u53F7",
+  "icon.bell": "\u94C3\u94DB",
+  "icon.bookmark": "\u4E66\u7B7E",
+  "icon.star": "\u661F\u6807",
+  "icon.flag": "\u65D7\u5E1C",
+  "icon.heart": "\u5FC3\u5F62",
+  // Sort
+  "sort.document": "\u6587\u6863\u987A\u5E8F",
+  "sort.newest": "\u6700\u65B0\u4F18\u5148",
+  "sort.oldest": "\u6700\u65E9\u4F18\u5148",
+  // Storage / export format headings
+  "storage.section.highlight": "\u9AD8\u4EAE",
+  "storage.section.note": "\u7B14\u8BB0",
+  "storage.backToSource": "\u8FD4\u56DE\u539F\u6587",
+  "storage.noteLabel": "\u7B14\u8BB0",
+  "storage.tagLabel": "\u6807\u7B7E",
+  "storage.noNotesFound": "\u672A\u627E\u5230\u7B14\u8BB0\u3002",
+  "storage.notesOnlyHeading": "\u7B14\u8BB0"
+};
+var strings = isZh ? zh : en;
+function t(key, params) {
+  let text = strings[key] ?? en[key] ?? key;
+  if (params) {
+    for (const [k3, v3] of Object.entries(params)) {
+      text = text.replace(new RegExp(`{{${k3}}}`, "g"), String(v3));
+    }
+  }
+  return text;
+}
+
 // src/anchor/fuzzyMatch.ts
 function findBestFuzzyMatch(source, target, expectedStart) {
   const needle = normalize(target);
@@ -7958,454 +8473,20 @@ function normalizeLineEndings(content) {
   return content.replace(/\r\n/g, "\n");
 }
 
-// src/editor/highlightExtension.ts
-var import_state = require("@codemirror/state");
-var import_view = require("@codemirror/view");
-var import_obsidian = require("obsidian");
-
-// src/editor/highlightColors.ts
-var HIGHLIGHT_BACKGROUND = {
-  yellow: "rgba(245, 197, 24, 0.42)",
-  orange: "rgba(255, 140, 0, 0.36)",
-  pink: "rgba(255, 105, 180, 0.32)",
-  green: "rgba(82, 196, 26, 0.30)",
-  blue: "rgba(22, 119, 255, 0.28)",
-  purple: "rgba(114, 46, 209, 0.30)"
-};
-function highlightBackground(color) {
-  return HIGHLIGHT_BACKGROUND[color] ?? HIGHLIGHT_BACKGROUND.yellow;
-}
-
-// src/editor/highlightExtension.ts
-function createHighlightExtension(options) {
-  return import_view.ViewPlugin.fromClass(
-    class HighlightPlugin {
-      constructor(view) {
-        this.view = view;
-        this.version = -1;
-        this.decorations = this.buildDecorations();
-        this.version = options.getVersion();
-        this.captureSelection();
-      }
-      update(update) {
-        const nextVersion = options.getVersion();
-        if (update.docChanged || update.viewportChanged || update.selectionSet || this.version !== nextVersion) {
-          this.version = nextVersion;
-          this.decorations = this.buildDecorations();
-        }
-        if (update.selectionSet) {
-          this.captureSelection();
-        }
-      }
-      buildDecorations() {
-        const filePath = this.filePath();
-        if (!filePath) {
-          return import_view.Decoration.none;
-        }
-        const document2 = options.getDocument(filePath);
-        if (!document2) {
-          return import_view.Decoration.none;
-        }
-        const builder = new import_state.RangeSetBuilder();
-        const docLength = this.view.state.doc.length;
-        const marks = [
-          ...document2.highlights.map((highlight) => ({
-            id: highlight.id,
-            color: highlight.color,
-            anchor: highlight.anchor,
-            orphaned: highlight.orphaned
-          })),
-          ...document2.comments.map((comment) => ({
-            id: comment.id,
-            color: comment.color,
-            anchor: comment.anchor,
-            orphaned: comment.orphaned
-          }))
-        ].sort((a3, b3) => a3.anchor.startOffset - b3.anchor.startOffset);
-        for (const mark of marks) {
-          if (mark.orphaned) {
-            continue;
-          }
-          const from = Math.max(0, Math.min(mark.anchor.startOffset, docLength));
-          const to = Math.max(from, Math.min(mark.anchor.endOffset, docLength));
-          if (from === to) {
-            continue;
-          }
-          builder.add(
-            from,
-            to,
-            import_view.Decoration.mark({
-              class: `yh-highlight yh-highlight--${mark.color}`,
-              attributes: {
-                "data-yh-color": mark.color,
-                "data-yh-id": mark.id,
-                style: `background-color: ${highlightBackground(mark.color)} !important;`
-              }
-            })
-          );
-        }
-        return builder.finish();
-      }
-      captureSelection() {
-        const filePath = this.filePath();
-        if (!filePath) {
-          return;
-        }
-        const selection = this.view.state.selection.main;
-        if (selection.empty) {
-          return;
-        }
-        options.rememberSelection(
-          filePath,
-          selection.from,
-          selection.to,
-          this.view.state.sliceDoc(selection.from, selection.to)
-        );
-      }
-      filePath() {
-        return this.view.state.field(import_obsidian.editorInfoField).file?.path ?? null;
-      }
-    },
-    {
-      decorations: (plugin) => plugin.decorations
-    }
-  );
-}
-
-// src/editor/readingViewHighlight.ts
+// src/editor/selectionToolbar.ts
 var import_obsidian2 = require("obsidian");
-var MARK_SELECTOR = ".yh-reading-highlight, mark.yh-highlight";
-var MOBILE_RENDER_DELAYS = [0, 80, 220, 520, 900];
-var DESKTOP_RENDER_DELAYS = [0, 40, 160];
-function installReadingViewHighlights(options) {
-  const component = new import_obsidian2.MarkdownRenderChild(options.root);
-  let frame = null;
-  let disposed = false;
-  const render = () => {
-    if (disposed) {
-      return;
-    }
-    if (frame !== null) {
-      cancelAnimationFrame(frame);
-    }
-    frame = requestAnimationFrame(() => {
-      frame = null;
-      refreshReadingViewHighlights(options.root, options.marks);
-    });
-  };
-  const delays = import_obsidian2.Platform.isMobile ? MOBILE_RENDER_DELAYS : DESKTOP_RENDER_DELAYS;
-  for (const delay of delays) {
-    const timer = window.setTimeout(render, delay);
-    component.register(() => window.clearTimeout(timer));
-  }
-  const observer = new MutationObserver((mutations) => {
-    if (mutations.every(isOwnHighlightMutation)) {
-      return;
-    }
-    render();
-  });
-  observer.observe(options.root, { childList: true, subtree: true, characterData: true });
-  component.register(() => {
-    disposed = true;
-    if (frame !== null) {
-      cancelAnimationFrame(frame);
-    }
-    observer.disconnect();
-  });
-  options.context.addChild(component);
-}
-function refreshReadingViewHighlights(root, marks) {
-  unwrapReadingHighlights(root);
-  renderReadingHighlights(root, marks);
-  renderCalloutReadingHighlights(root, marks);
-}
-function renderReadingHighlights(root, marks) {
-  const liveMarks = marks.filter((mark) => !mark.orphaned && mark.anchor.selectedText.trim()).sort((left, right) => right.anchor.selectedText.length - left.anchor.selectedText.length);
-  for (const mark of liveMarks) {
-    if (root.querySelector(highlightSelectorForId(mark.id))) {
-      continue;
-    }
-    wrapRenderedAnchor(root, mark.anchor, mark.color, mark.id);
-  }
-}
-function renderCalloutReadingHighlights(root, marks) {
-  const callouts = calloutRoots(root);
-  if (!callouts.length) {
-    return;
-  }
-  const liveMarks = marks.filter((mark) => !mark.orphaned && mark.anchor.selectedText.trim()).sort((left, right) => right.anchor.selectedText.length - left.anchor.selectedText.length);
-  for (const callout of callouts) {
-    for (const mark of liveMarks) {
-      if (root.querySelector(highlightSelectorForId(mark.id))) {
-        continue;
-      }
-      wrapRenderedAnchor(callout, mark.anchor, mark.color, mark.id);
-    }
-  }
-}
-function calloutRoots(root) {
-  const roots = /* @__PURE__ */ new Set();
-  if (root.matches(".callout")) {
-    roots.add(root);
-  }
-  const parentCallout = root.closest(".callout");
-  if (parentCallout) {
-    roots.add(parentCallout);
-  }
-  for (const callout of Array.from(root.querySelectorAll(".callout"))) {
-    roots.add(callout);
-  }
-  return Array.from(roots);
-}
-function unwrapReadingHighlights(root) {
-  for (const mark of Array.from(root.querySelectorAll(MARK_SELECTOR))) {
-    const parent = mark.parentNode;
-    if (!parent) {
-      continue;
-    }
-    while (mark.firstChild) {
-      parent.insertBefore(mark.firstChild, mark);
-    }
-    parent.removeChild(mark);
-    parent.normalize();
-  }
-}
-function wrapRenderedAnchor(root, anchor, color, id) {
-  const snapshot = collectText(root);
-  if (!snapshot.text.trim()) {
-    return false;
-  }
-  const range = locateRenderedRange(snapshot.text, anchor);
-  if (!range || range.start === range.end) {
-    return false;
-  }
-  return wrapRange(snapshot.segments, range, color, id);
-}
-function locateRenderedRange(renderedText, anchor) {
-  const exact = locateBestTextRange(renderedText, anchor);
-  if (exact) {
-    return exact;
-  }
-  const normalized = locateNormalizedRange(renderedText, anchor);
-  if (normalized) {
-    return normalized;
-  }
-  const fuzzy = findBestFuzzyMatch(
-    renderedText,
-    anchor.selectedText,
-    0
-  );
-  if (!fuzzy || fuzzy.confidence < 0.55) {
-    return null;
-  }
-  return {
-    start: fuzzy.startOffset,
-    end: fuzzy.endOffset
-  };
-}
-function locateBestTextRange(renderedText, anchor) {
-  if (!anchor.selectedText) {
-    return null;
-  }
-  let cursor = renderedText.indexOf(anchor.selectedText);
-  let best = null;
-  while (cursor >= 0) {
-    const range = {
-      start: cursor,
-      end: cursor + anchor.selectedText.length
-    };
-    const score = rangeScore(renderedText, anchor, range);
-    if (!best || score > best.score) {
-      best = { range, score };
-    }
-    cursor = renderedText.indexOf(anchor.selectedText, cursor + 1);
-  }
-  return best?.range ?? null;
-}
-function locateNormalizedRange(renderedText, anchor) {
-  const rendered = normalizeWithMap(renderedText);
-  const selected = normalizeWithMap(anchor.selectedText);
-  if (!rendered.text || !selected.text) {
-    return null;
-  }
-  let normalizedStart = rendered.text.indexOf(selected.text);
-  let best = null;
-  while (normalizedStart >= 0) {
-    const normalizedEnd = normalizedStart + selected.text.length - 1;
-    const start = rendered.map[normalizedStart];
-    const end = rendered.map[normalizedEnd] + 1;
-    if (start !== void 0 && end !== void 0 && start < end) {
-      const range = { start, end };
-      const score = rangeScore(renderedText, anchor, range);
-      if (!best || score > best.score) {
-        best = { range, score };
-      }
-    }
-    normalizedStart = rendered.text.indexOf(selected.text, normalizedStart + 1);
-  }
-  return best?.range ?? null;
-}
-function rangeScore(renderedText, anchor, range) {
-  const before = renderedText.slice(Math.max(0, range.start - anchor.prefix.length), range.start);
-  const after = renderedText.slice(range.end, Math.min(renderedText.length, range.end + anchor.suffix.length));
-  const context = prefixScore(anchor.prefix, before) * 0.45 + suffixScore(anchor.suffix, after) * 0.45;
-  const distance = 1 - Math.min(1, Math.abs(range.start - anchor.startOffset) / Math.max(renderedText.length, 1));
-  return context + distance * 0.1;
-}
-function prefixScore(expected, actual) {
-  if (!expected && !actual) {
-    return 1;
-  }
-  if (!expected || !actual) {
-    return 0;
-  }
-  if (actual.endsWith(expected) || expected.endsWith(actual)) {
-    return 1;
-  }
-  let shared = 0;
-  const max = Math.min(expected.length, actual.length);
-  for (let index = 1; index <= max; index += 1) {
-    if (expected.slice(-index) === actual.slice(-index)) {
-      shared = index;
-    }
-  }
-  return shared / Math.max(expected.length, actual.length);
-}
-function suffixScore(expected, actual) {
-  if (!expected && !actual) {
-    return 1;
-  }
-  if (!expected || !actual) {
-    return 0;
-  }
-  if (actual.startsWith(expected) || expected.startsWith(actual)) {
-    return 1;
-  }
-  let shared = 0;
-  const max = Math.min(expected.length, actual.length);
-  for (let index = 1; index <= max; index += 1) {
-    if (expected.slice(0, index) === actual.slice(0, index)) {
-      shared = index;
-    }
-  }
-  return shared / Math.max(expected.length, actual.length);
-}
-function normalizeWithMap(value) {
-  let text = "";
-  const map = [];
-  let pendingSpace = false;
-  for (let index = 0; index < value.length; index += 1) {
-    const char = value[index];
-    if (/\s/.test(char)) {
-      pendingSpace = text.length > 0;
-      continue;
-    }
-    if (pendingSpace) {
-      text += " ";
-      map.push(index);
-      pendingSpace = false;
-    }
-    text += char.toLowerCase();
-    map.push(index);
-  }
-  return { text: text.trim(), map };
-}
-function collectText(root) {
-  const segments = [];
-  let text = "";
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-    acceptNode(node2) {
-      const parent = node2.parentElement;
-      if (!parent) {
-        return NodeFilter.FILTER_REJECT;
-      }
-      const tag = parent.tagName.toLowerCase();
-      if (["script", "style"].includes(tag)) {
-        return NodeFilter.FILTER_REJECT;
-      }
-      if (parent.closest(`${MARK_SELECTOR}, mark.yh-highlight, pre, textarea, input`)) {
-        return NodeFilter.FILTER_REJECT;
-      }
-      if (!node2.textContent) {
-        return NodeFilter.FILTER_REJECT;
-      }
-      return NodeFilter.FILTER_ACCEPT;
-    }
-  });
-  let node = walker.nextNode();
-  while (node) {
-    const start = text.length;
-    text += node.textContent ?? "";
-    segments.push({ node, start, end: text.length });
-    node = walker.nextNode();
-  }
-  return { text, segments };
-}
-function wrapRange(segments, range, color, id) {
-  const touched = segments.filter((segment) => segment.end > range.start && segment.start < range.end);
-  if (!touched.length) {
-    return false;
-  }
-  for (const segment of touched) {
-    const localStart = Math.max(0, range.start - segment.start);
-    const localEnd = Math.min(segment.node.length, range.end - segment.start);
-    if (localStart >= localEnd || !segment.node.parentNode) {
-      continue;
-    }
-    const selected = splitTextRange(segment.node, localStart, localEnd);
-    const mark = document.createElement("mark");
-    mark.className = `yh-reading-highlight yh-highlight yh-highlight--${color}`;
-    mark.dataset.yhColor = color;
-    mark.dataset.yhId = id;
-    mark.style.setProperty("background-color", highlightBackground(color), "important");
-    mark.tabIndex = 0;
-    selected.parentNode?.insertBefore(mark, selected);
-    mark.appendChild(selected);
-  }
-  return true;
-}
-function splitTextRange(node, start, end) {
-  let selected = node;
-  if (start > 0) {
-    selected = selected.splitText(start);
-  }
-  const selectedLength = end - start;
-  if (selectedLength < selected.length) {
-    selected.splitText(selectedLength);
-  }
-  return selected;
-}
-function isOwnHighlightMutation(mutation) {
-  const target = mutation.target;
-  if (target instanceof HTMLElement && target.closest(MARK_SELECTOR)) {
-    return true;
-  }
-  return Array.from(mutation.addedNodes).every((node) => {
-    return node instanceof HTMLElement && Boolean(node.closest(MARK_SELECTOR));
-  });
-}
-function cssEscape(value) {
-  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
-    return CSS.escape(value);
-  }
-  return value.replace(/["\\]/g, "\\$&");
-}
-function highlightSelectorForId(id) {
-  const escaped = cssEscape(id);
-  return `.yh-reading-highlight[data-yh-id="${escaped}"], mark.yh-highlight[data-yh-id="${escaped}"]`;
-}
 
 // src/tags/tagDomain.ts
 var MAX_ENABLED_ANNOTATION_TAGS = 5;
 var MAX_ANNOTATION_TAG_NAME_LENGTH = 20;
 var TAG_ICON_OPTIONS = [
-  { id: "lightbulb", label: "\u706F\u6CE1" },
-  { id: "circle-help", label: "\u95EE\u53F7" },
-  { id: "bell", label: "\u94C3\u94DB" },
-  { id: "bookmark", label: "\u4E66\u7B7E" },
-  { id: "star", label: "\u661F\u6807" },
-  { id: "flag", label: "\u65D7\u5E1C" },
-  { id: "heart", label: "\u5FC3\u5F62" }
+  { id: "lightbulb", label: t("icon.lightbulb") },
+  { id: "circle-help", label: t("icon.help") },
+  { id: "bell", label: t("icon.bell") },
+  { id: "bookmark", label: t("icon.bookmark") },
+  { id: "star", label: t("icon.star") },
+  { id: "flag", label: t("icon.flag") },
+  { id: "heart", label: t("icon.heart") }
 ];
 var DEFAULT_ANNOTATION_TAGS = [
   { id: "insight", name: "\u6D1E\u89C1", icon: "lightbulb", enabled: true, builtIn: true },
@@ -8439,39 +8520,39 @@ function enabledAnnotationTags(tags) {
 }
 function validateAnnotationTags(tags) {
   if (!tags.length) {
-    return "\u8BF7\u81F3\u5C11\u4FDD\u7559\u4E00\u4E2A\u6807\u7B7E\u3002";
+    return t("tag.atLeastOne");
   }
   const enabledCount = enabledAnnotationTags(tags).length;
   if (enabledCount === 0) {
-    return "\u8BF7\u81F3\u5C11\u542F\u7528\u4E00\u4E2A\u6807\u7B7E\u3002";
+    return t("tag.atLeastOneEnabled");
   }
   if (enabledCount > MAX_ENABLED_ANNOTATION_TAGS) {
-    return `\u6700\u591A\u53EA\u80FD\u542F\u7528 ${MAX_ENABLED_ANNOTATION_TAGS} \u4E2A\u6807\u7B7E\u3002`;
+    return t("tag.maxEnabled", { max: MAX_ENABLED_ANNOTATION_TAGS });
   }
   const seenIds = /* @__PURE__ */ new Set();
   const seenNames = /* @__PURE__ */ new Set();
   for (const tag of tags) {
     if (!tag.id.trim()) {
-      return "\u6807\u7B7E ID \u65E0\u6548\u3002";
+      return t("tag.invalidId");
     }
     if (seenIds.has(tag.id)) {
-      return "\u6807\u7B7E ID \u91CD\u590D\u3002";
+      return t("tag.duplicateId");
     }
     seenIds.add(tag.id);
     const label = normalizeTagLabel(tag.name);
     if (!label) {
-      return "\u6807\u7B7E\u540D\u79F0\u4E0D\u80FD\u4E3A\u7A7A\u3002";
+      return t("tag.emptyName");
     }
     if (Array.from(label).length > MAX_ANNOTATION_TAG_NAME_LENGTH) {
-      return `\u6807\u7B7E\u540D\u79F0\u4E0D\u80FD\u8D85\u8FC7 ${MAX_ANNOTATION_TAG_NAME_LENGTH} \u4E2A\u5B57\u7B26\u3002`;
+      return t("tag.nameTooLong", { max: MAX_ANNOTATION_TAG_NAME_LENGTH });
     }
     const nameKey = normalizeTagName(label);
     if (seenNames.has(nameKey)) {
-      return "\u6807\u7B7E\u540D\u79F0\u5DF2\u5B58\u5728\u3002";
+      return t("tag.duplicateName");
     }
     seenNames.add(nameKey);
     if (!isKnownTagIcon(tag.icon)) {
-      return "\u6807\u7B7E\u56FE\u6807\u65E0\u6548\u3002";
+      return t("tag.invalidIcon");
     }
   }
   return null;
@@ -8506,7 +8587,7 @@ function normalizeAnnotationTags(value) {
 function createCustomAnnotationTag(id) {
   return {
     id,
-    name: "\u65B0\u6807\u7B7E",
+    name: t("tag.newTagName"),
     icon: "bookmark",
     enabled: true
   };
@@ -8569,18 +8650,23 @@ var ANNOTATION_COLORS = [
   "purple"
 ];
 var COLOR_LABELS = {
-  yellow: "\u9EC4\u8272",
-  green: "\u7EFF\u8272",
-  blue: "\u84DD\u8272",
-  pink: "\u7C89\u8272",
-  orange: "\u6A59\u8272",
-  purple: "\u7D2B\u8272"
+  yellow: t("color.yellow"),
+  green: t("color.green"),
+  blue: t("color.blue"),
+  pink: t("color.pink"),
+  orange: t("color.orange"),
+  purple: t("color.purple")
 };
 var DEFAULT_SETTINGS = {
   defaultHighlightColor: "yellow",
   defaultAuthor: "\u8BFB\u8005",
   migrateOnRename: true,
   annotationTags: cloneDefaultAnnotationTags(),
+  // 存储
+  storagePath: "booknote",
+  sidecarLocation: "specifiedFolder",
+  // 通用
+  showRibbonIcon: true,
   // EPUB
   epubDefaultFlow: "scrolled",
   epubFontSize: 16,
@@ -8594,17 +8680,17 @@ var EMPTY_INDEX = {
   files: {}
 };
 var EPUB_READING_THEMES = [
-  { id: "obsidian", label: "\u8DDF\u968F Obsidian", background: "", text: "", swatch: "linear-gradient(135deg, #ffffff 50%, #1e1e1e 50%)" },
-  { id: "white", label: "\u9ED8\u8BA4\u767D", background: "#FFFFFF", text: "#333333", swatch: "#FFFFFF" },
-  { id: "warm", label: "\u6696\u5149", background: "#FAF9DE", text: "#333333", swatch: "#FAF9DE" },
-  { id: "green", label: "\u62A4\u773C\u7EFF", background: "#E3EDCD", text: "#333333", swatch: "#E3EDCD" },
-  { id: "sepia", label: "\u7F8A\u76AE\u7EB8", background: "#F4ECD8", text: "#5C4B37", swatch: "#F4ECD8" },
-  { id: "dark", label: "\u591C\u95F4", background: "#1C1C1E", text: "#A8A8A8", swatch: "#1C1C1E" }
+  { id: "obsidian", label: t("theme.follow"), background: "", text: "", swatch: "linear-gradient(135deg, #ffffff 50%, #1e1e1e 50%)" },
+  { id: "white", label: t("theme.white"), background: "#FFFFFF", text: "#333333", swatch: "#FFFFFF" },
+  { id: "warm", label: t("theme.warm"), background: "#FAF9DE", text: "#333333", swatch: "#FAF9DE" },
+  { id: "green", label: t("theme.green"), background: "#E3EDCD", text: "#333333", swatch: "#E3EDCD" },
+  { id: "sepia", label: t("theme.sepia"), background: "#F4ECD8", text: "#5C4B37", swatch: "#F4ECD8" },
+  { id: "dark", label: t("theme.dark"), background: "#1C1C1E", text: "#A8A8A8", swatch: "#1C1C1E" }
 ];
 var EPUB_HIGHLIGHT_STYLES = [
-  { id: "fill", label: "\u586B\u5145" },
-  { id: "underline", label: "\u4E0B\u5212\u7EBF" },
-  { id: "wavy", label: "\u6CE2\u6D6A\u7EBF" }
+  { id: "fill", label: t("style.fill") },
+  { id: "underline", label: t("style.underline") },
+  { id: "wavy", label: t("style.wavy") }
 ];
 var EPUB_COLOR_MAP = {
   yellow: "rgba(245, 197, 24, 0.38)",
@@ -8624,7 +8710,7 @@ var SelectionToolbar = class {
     this.handleMouseUp = () => {
       window.setTimeout(() => this.showForSelection(), 0);
     };
-    this.element = document.body.createDiv({ cls: "yh-toolbar yh-selection-toolbar" });
+    this.element = document.body.createDiv({ cls: "book-note-toolbar book-note-selection-toolbar" });
     this.render();
     this.hide();
     document.addEventListener("mouseup", this.handleMouseUp);
@@ -8634,6 +8720,10 @@ var SelectionToolbar = class {
     this.element.remove();
   }
   showForSelection() {
+    if (this.options.isEnabled && !this.options.isEnabled()) {
+      this.hide();
+      return;
+    }
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.isCollapsed) {
       this.hide();
@@ -8661,33 +8751,33 @@ var SelectionToolbar = class {
   render() {
     for (const color of ANNOTATION_COLORS) {
       const button = this.element.createEl("button", {
-        cls: `yh-toolbar-color yh-toolbar-color--${color}`,
+        cls: `book-note-toolbar-color book-note-toolbar-color--${color}`,
         attr: {
           type: "button",
-          "aria-label": `\u9AD8\u4EAE ${COLOR_LABELS[color]}`,
-          "data-yh-color": color
+          "aria-label": `t("selection.highlight", { color: COLOR_LABELS[color] })`,
+          "data-book-note-color": color
         }
       });
       button.addEventListener("click", () => this.options.onHighlight(color));
     }
-    this.element.createDiv({ cls: "yh-toolbar-sep" });
-    const commentButton = this.iconButton("\u6DFB\u52A0\u4FBF\u7B7E", NOTE_ICON);
+    this.element.createDiv({ cls: "book-note-toolbar-sep" });
+    const commentButton = this.iconButton(t("common.addNote"), "message-square");
     commentButton.addEventListener("click", () => this.options.onComment());
-    const copyButton = this.iconButton("\u590D\u5236", COPY_ICON);
+    const copyButton = this.iconButton(t("common.copy"), "copy");
     copyButton.addEventListener("click", () => this.options.onCopy());
-    const sidebarButton = this.iconButton("\u6253\u5F00\u603B\u89C8", OVERVIEW_ICON);
+    const sidebarButton = this.iconButton(t("common.openOverview"), "list");
     sidebarButton.addEventListener("click", () => this.options.onOpenSidebar());
   }
-  iconButton(label, svg) {
+  iconButton(label, iconId) {
     const button = this.element.createEl("button", {
-      cls: "yh-toolbar-action",
+      cls: "book-note-toolbar-action",
       attr: {
         type: "button",
         "aria-label": label,
         title: label
       }
     });
-    button.innerHTML = svg;
+    (0, import_obsidian2.setIcon)(button, iconId);
     return button;
   }
 };
@@ -8700,36 +8790,6 @@ function isSelectionInsideWorkspace(range) {
     container.closest(".workspace") || container.closest(".callout-content") || container.closest(".markdown-preview-view")
   );
 }
-var NOTE_ICON = `
-  <svg width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5
-      a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-  </svg>
-`;
-var COPY_ICON = `
-  <svg width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round">
-    <rect x="9" y="9" width="13" height="13"
-      rx="2" ry="2"/>
-    <path d="M5 15H4a2 2 0 0 1-2-2V4
-      a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-  </svg>
-`;
-var OVERVIEW_ICON = `
-  <svg width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round">
-    <line x1="8" y1="6" x2="21" y2="6"/>
-    <line x1="8" y1="12" x2="21" y2="12"/>
-    <line x1="8" y1="18" x2="21" y2="18"/>
-    <line x1="3" y1="6" x2="3.01" y2="6"/>
-    <line x1="3" y1="12" x2="3.01" y2="12"/>
-    <line x1="3" y1="18" x2="3.01" y2="18"/>
-  </svg>
-`;
 
 // src/pdf/pdfAnnotationLayer.ts
 var import_obsidian3 = require("obsidian");
@@ -8828,7 +8888,7 @@ var PdfAnnotationLayer = class {
   async createHighlight(color) {
     const snapshot = this.resolveSelection();
     if (!snapshot) {
-      new import_obsidian3.Notice("\u8BF7\u5148\u5728 PDF \u4E2D\u9009\u4E2D\u6587\u672C\u3002");
+      new import_obsidian3.Notice(t("pdf.selectTextFirst"));
       return true;
     }
     await this.options.addHighlight(snapshot.file, {
@@ -8844,7 +8904,7 @@ var PdfAnnotationLayer = class {
   async createComment(color, content, author, title = "", tagId, tagLabelSnapshot) {
     const snapshot = this.resolveSelection();
     if (!snapshot) {
-      new import_obsidian3.Notice("\u8BF7\u5148\u5728 PDF \u4E2D\u9009\u4E2D\u6587\u672C\u3002");
+      new import_obsidian3.Notice(t("pdf.selectTextFirst"));
       return true;
     }
     const now = (/* @__PURE__ */ new Date()).toISOString();
@@ -8913,7 +8973,7 @@ var PdfAnnotationLayer = class {
         result.push({ title, pageNumber: pageNum, children });
       }
     } catch (e3) {
-      console.warn("yh-inklight: PDF getOutline failed", e3);
+      console.warn("book-note: PDF getOutline failed", e3);
     }
     return result;
   }
@@ -9012,10 +9072,10 @@ var PdfAnnotationLayer = class {
     this.attachViewerLifecycle(context.viewerEl);
     const document2 = await this.options.getDocument(file);
     const host = viewer.closest(".workspace-leaf-content") ?? viewer;
-    host.addClass("yh-pdf-host");
+    host.addClass("book-note-pdf-host");
     if (!this.root || this.root.parentElement !== host) {
       this.root?.remove();
-      this.root = host.createDiv({ cls: "yh-pdf-layer" });
+      this.root = host.createDiv({ cls: "book-note-pdf-layer" });
     }
     this.renderHighlights(host, document2);
     this.totalPages = this.pages().length;
@@ -9028,7 +9088,7 @@ var PdfAnnotationLayer = class {
     if (!this.root) {
       return;
     }
-    this.root.querySelectorAll(".yh-pdf-highlight").forEach((item) => item.remove());
+    this.root.querySelectorAll(".book-note-pdf-highlight").forEach((item) => item.remove());
     const hostRect = host.getBoundingClientRect();
     const annotations = [...document2.pdfHighlights, ...document2.pdfComments].filter((item) => !item.orphaned);
     for (const annotation of annotations) {
@@ -9039,10 +9099,10 @@ var PdfAnnotationLayer = class {
         }
         const pageRect = page.getBoundingClientRect();
         const highlight = this.root.createDiv({
-          cls: `yh-pdf-highlight yh-pdf-highlight--${annotation.color}`,
+          cls: `book-note-pdf-highlight book-note-pdf-highlight--${annotation.color}`,
           attr: {
-            "data-yh-id": annotation.id,
-            "data-yh-color": annotation.color
+            "data-book-note-id": annotation.id,
+            "data-book-note-color": annotation.color
           }
         });
         highlight.style.left = `${pageRect.left - hostRect.left + rect.left * pageRect.width}px`;
@@ -9121,15 +9181,15 @@ var PdfAnnotationLayer = class {
     if (!(target instanceof HTMLElement)) {
       return;
     }
-    const highlight = target.closest(".yh-pdf-highlight");
+    const highlight = target.closest(".book-note-pdf-highlight");
     if (!highlight) {
-      if (!target.closest(".yh-pdf-popover")) {
+      if (!target.closest(".book-note-pdf-popover")) {
         this.hidePopover();
       }
       return;
     }
     const file = this.activePdfFile();
-    const id = highlight.dataset.yhId;
+    const id = highlight.dataset.bookNoteId;
     if (!file || !id) {
       return;
     }
@@ -9144,19 +9204,19 @@ var PdfAnnotationLayer = class {
   }
   showPopover(sourcePath, rect, annotation) {
     this.hidePopover();
-    this.popover = document.body.createDiv({ cls: "yh-pdf-popover yh-annotation-popover is-visible" });
-    const header = this.popover.createDiv({ cls: "yh-popover-header" });
-    header.createSpan({ cls: "yh-popover-title", text: `PDF \u7B2C ${annotation.anchor.pageNumber} \u9875` });
-    const close = header.createEl("button", { cls: "yh-icon-button", attr: { type: "button", title: "\u5173\u95ED" } });
+    this.popover = document.body.createDiv({ cls: "book-note-pdf-popover book-note-annotation-popover is-visible" });
+    const header = this.popover.createDiv({ cls: "book-note-popover-header" });
+    header.createSpan({ cls: "book-note-popover-title", text: `t("pdf.popoverTitle", { page: annotation.anchor.pageNumber })` });
+    const close = header.createEl("button", { cls: "book-note-icon-button", attr: { type: "button", title: t("common.close") } });
     (0, import_obsidian3.setIcon)(close, "x");
     close.addEventListener("click", () => this.hidePopover());
     const card = this.popover.createDiv({
-      cls: "yh-popover-card",
-      attr: { "data-yh-color": annotation.color, "data-yh-id": annotation.id }
+      cls: "book-note-popover-card",
+      attr: { "data-book-note-color": annotation.color, "data-book-note-id": annotation.id }
     });
-    card.createDiv({ cls: "yh-popover-quote", text: annotation.anchor.selectedText });
+    card.createDiv({ cls: "book-note-popover-quote", text: annotation.anchor.selectedText });
     if ("content" in annotation && annotation.content) {
-      const body = card.createDiv({ cls: "yh-popover-body" });
+      const body = card.createDiv({ cls: "book-note-popover-body" });
       import_obsidian3.MarkdownRenderer.render(this.options.app, annotation.content, body, sourcePath, this.options.component);
     }
     const width = Math.min(320, window.innerWidth - 24);
@@ -9333,7 +9393,7 @@ var PdfViewerAdapter = class {
           pdfViewer.currentPageNumber = pageNumber;
         }
       } catch (error) {
-        console.warn("yh-inklight: pdf viewer navigation failed, falling back to DOM scroll", error);
+        console.warn("book-note: pdf viewer navigation failed, falling back to DOM scroll", error);
       }
     }
     const page = await this.waitForPage(pageNumber, context);
@@ -9383,8 +9443,8 @@ var PdfViewerAdapter = class {
     });
   }
   flashPage(page) {
-    page.addClass("yh-flash-target");
-    window.setTimeout(() => page.removeClass("yh-flash-target"), 850);
+    page.addClass("book-note-flash-target");
+    window.setTimeout(() => page.removeClass("book-note-flash-target"), 850);
   }
   async waitForPage(pageNumber, context) {
     const immediate = this.pageElement(pageNumber, context);
@@ -9462,7 +9522,7 @@ var import_obsidian5 = require("obsidian");
 
 // src/links/annotationLink.ts
 function createAnnotationUri(filePath, annotationId) {
-  return `obsidian://inklight?file=${encodeURIComponent(filePath)}&id=${encodeURIComponent(annotationId)}`;
+  return `obsidian://book-note?file=${encodeURIComponent(filePath)}&id=${encodeURIComponent(annotationId)}`;
 }
 function readProtocolParam(value) {
   if (typeof value !== "string") {
@@ -9487,7 +9547,7 @@ var AnnotationLinkService = class {
   }
   async open(params) {
     if (!params.file || !params.id) {
-      new import_obsidian5.Notice("\u58A8\u5149\u6279\u6CE8\u94FE\u63A5\u65E0\u6548");
+      new import_obsidian5.Notice(t("notice.invalidLink"));
       return false;
     }
     let target = await this.store.findAnnotationTarget(params.file, params.id);
@@ -9496,7 +9556,7 @@ var AnnotationLinkService = class {
       if (candidates.length === 1) {
         target = candidates[0];
       } else if (candidates.length > 1) {
-        new import_obsidian5.Notice("\u627E\u5230\u591A\u4E2A\u540C ID \u6279\u6CE8\uFF0C\u5DF2\u505C\u6B62\u8DF3\u8F6C\u4EE5\u4FDD\u62A4\u6570\u636E");
+        new import_obsidian5.Notice(t("notice.multipleSameId"));
         return false;
       }
     }
@@ -9506,9 +9566,9 @@ var AnnotationLinkService = class {
         const leaf = this.app.workspace.getLeaf("tab");
         await leaf.openFile(file);
         this.app.workspace.revealLeaf(leaf);
-        new import_obsidian5.Notice("\u6279\u6CE8\u5DF2\u5220\u9664\u6216\u5C1A\u672A\u540C\u6B65");
+        new import_obsidian5.Notice(t("notice.annotationGone"));
       } else {
-        new import_obsidian5.Notice("\u627E\u4E0D\u5230\u6279\u6CE8\u6765\u6E90\u6587\u4EF6");
+        new import_obsidian5.Notice(t("notice.sourceFileMissing"));
       }
       return false;
     }
@@ -9517,7 +9577,7 @@ var AnnotationLinkService = class {
   async openLegacyEpub(filePath, cfi) {
     const file = this.app.vault.getAbstractFileByPath(filePath);
     if (!(file instanceof import_obsidian5.TFile)) {
-      new import_obsidian5.Notice("\u627E\u4E0D\u5230\u5BF9\u5E94\u7535\u5B50\u4E66\u6587\u4EF6");
+      new import_obsidian5.Notice(t("notice.epubSourceMissing"));
       return false;
     }
     return this.navigator.openEpub(file, { cfiRange: cfi, selectedText: "", chapter: "" }, "");
@@ -9525,14 +9585,14 @@ var AnnotationLinkService = class {
   async openTarget(target) {
     const file = this.app.vault.getAbstractFileByPath(target.filePath);
     if (!(file instanceof import_obsidian5.TFile)) {
-      new import_obsidian5.Notice("\u627E\u4E0D\u5230\u6279\u6CE8\u6765\u6E90\u6587\u4EF6");
+      new import_obsidian5.Notice(t("notice.sourceFileMissing"));
       return false;
     }
     if (target.mode === "md") {
       const source = await this.app.vault.cachedRead(file);
       const resolved = resolveTextAnchor(source, target.anchor);
       if (resolved.orphaned) {
-        new import_obsidian5.Notice("\u539F\u6587\u5DF2\u53D8\u5316\uFF0C\u65E0\u6CD5\u53EF\u9760\u5B9A\u4F4D\u8BE5\u6279\u6CE8");
+        new import_obsidian5.Notice(t("notice.originalChanged"));
         return false;
       }
       return this.navigator.openMarkdown(file, resolved.anchor, target.id);
@@ -9550,12 +9610,13 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
   constructor(plugin) {
     super(plugin.app, plugin);
     this.plugin = plugin;
+    this.storagePathSetting = null;
   }
   display() {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "\u58A8\u5149\u6279\u6CE8" });
-    new import_obsidian6.Setting(containerEl).setName("\u9ED8\u8BA4\u9AD8\u4EAE\u989C\u8272").addDropdown((dropdown) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.header")).setHeading();
+    new import_obsidian6.Setting(containerEl).setName(t("settings.defaultColor")).addDropdown((dropdown) => {
       for (const color of ANNOTATION_COLORS) {
         dropdown.addOption(color, COLOR_LABELS[color]);
       }
@@ -9564,38 +9625,98 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian6.Setting(containerEl).setName("\u9ED8\u8BA4\u4F5C\u8005").addText((text) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.defaultAuthor")).addText((text) => {
       text.setValue(this.plugin.settings.defaultAuthor).onChange(async (value) => {
         this.plugin.settings.defaultAuthor = value.trim() || "\u8BFB\u8005";
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian6.Setting(containerEl).setName("\u91CD\u547D\u540D\u65F6\u8FC1\u79FB\u6279\u6CE8").addToggle((toggle) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.migrateOnRename")).addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.migrateOnRename).onChange(async (value) => {
         this.plugin.settings.migrateOnRename = value;
         await this.plugin.saveSettings();
       });
     });
+    new import_obsidian6.Setting(containerEl).setName(t("settings.showRibbonIcon.name")).setDesc(t("settings.showRibbonIcon.desc")).addToggle((toggle) => {
+      toggle.setValue(this.plugin.settings.showRibbonIcon).onChange(async (value) => {
+        this.plugin.settings.showRibbonIcon = value;
+        await this.plugin.saveSettings();
+        this.plugin.updateRibbonIcon();
+      });
+    });
+    this.renderStorageSettings();
     this.renderTagSettings();
     this.renderEpubSettings();
     this.renderPdfSettings();
   }
+  renderStorageSettings() {
+    const { containerEl } = this;
+    new import_obsidian6.Setting(containerEl).setName(t("settings.storage.heading")).setHeading();
+    new import_obsidian6.Setting(containerEl).setName(t("settings.sidecarLocation.name")).setDesc(t("settings.sidecarLocation.desc")).addDropdown((dropdown) => {
+      dropdown.addOption("specifiedFolder", t("settings.sidecarLocation.specifiedFolder"));
+      dropdown.addOption("sameFolder", t("settings.sidecarLocation.sameFolder"));
+      dropdown.setValue(this.plugin.settings.sidecarLocation).onChange(async (value) => {
+        this.plugin.settings.sidecarLocation = value;
+        await this.plugin.saveSettings();
+        this.refreshStorageSettings();
+      });
+    }).addButton((button) => {
+      button.setButtonText(t("settings.storage.migrate")).onClick(() => {
+        void this.migrateAndNotify();
+      });
+    });
+    this.storagePathSetting = new import_obsidian6.Setting(containerEl).setName(t("settings.storagePath.name")).setDesc(t("settings.storagePath.desc")).addText((text) => {
+      text.setPlaceholder(t("settings.storagePath.placeholder")).setValue(this.plugin.settings.storagePath).onChange(async (value) => {
+        this.plugin.settings.storagePath = value.trim();
+        await this.plugin.saveSettings();
+      });
+    }).addButton((button) => {
+      button.setButtonText(t("settings.storage.test")).onClick(async () => {
+        try {
+          const path = await this.plugin.store.testWriteAccess();
+          new import_obsidian6.Notice(t("notice.storageWritable", { path }));
+        } catch {
+          new import_obsidian6.Notice(t("notice.storageNotWritable"));
+        }
+      });
+    });
+    this.refreshStorageSettings();
+  }
+  refreshStorageSettings() {
+    if (!this.storagePathSetting) {
+      return;
+    }
+    this.storagePathSetting.settingEl.toggleClass("book-note-hidden", this.plugin.settings.sidecarLocation === "sameFolder");
+  }
+  async migrateAndNotify() {
+    try {
+      const result = await this.plugin.store.migrateAll();
+      if (result.failed > 0) {
+        new import_obsidian6.Notice(t("notice.storageMigratePartial", { migrated: result.migrated, failed: result.failed }));
+      } else {
+        new import_obsidian6.Notice(t("notice.storageMigrated", { count: result.migrated }));
+      }
+      this.display();
+    } catch (error) {
+      new import_obsidian6.Notice(t("notice.storageMigrateFailed", { error: String(error) }));
+    }
+  }
   renderTagSettings() {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: "\u6279\u6CE8\u6807\u7B7E" });
+    new import_obsidian6.Setting(containerEl).setName(t("settings.tags.heading")).setHeading();
     containerEl.createDiv({
       cls: "setting-item-description",
-      text: `\u6807\u7B7E\u7528\u4E8E\u5206\u7C7B\u7B14\u8BB0\u548C\u60F3\u6CD5\u3002\u6700\u591A\u542F\u7528 ${MAX_ENABLED_ANNOTATION_TAGS} \u4E2A\uFF1B\u4FEE\u6539\u540D\u79F0\u4F1A\u7ACB\u5373\u540C\u6B65\u663E\u793A\uFF0C\u4E0D\u4F1A\u6279\u91CF\u6539\u5199\u6279\u6CE8\u6587\u4EF6\u3002`
+      text: t("settings.tags.desc", { max: MAX_ENABLED_ANNOTATION_TAGS })
     });
-    const section = containerEl.createDiv({ cls: "yh-tag-settings" });
+    const section = containerEl.createDiv({ cls: "book-note-tag-settings" });
     let draft = this.plugin.settings.annotationTags.map((tag) => ({ ...tag }));
-    const error = section.createDiv({ cls: "yh-tag-settings-error hidden" });
-    const list = section.createDiv({ cls: "yh-tag-settings-list" });
-    const actions = section.createDiv({ cls: "yh-tag-settings-actions" });
-    const add = actions.createEl("button", { text: "\u6DFB\u52A0\u6807\u7B7E", attr: { type: "button" } });
-    const reset = actions.createEl("button", { attr: { type: "button", title: "\u6062\u590D\u9ED8\u8BA4\u6807\u7B7E", "aria-label": "\u6062\u590D\u9ED8\u8BA4\u6807\u7B7E" } });
+    const error = section.createDiv({ cls: "book-note-tag-settings-error hidden" });
+    const list = section.createDiv({ cls: "book-note-tag-settings-list" });
+    const actions = section.createDiv({ cls: "book-note-tag-settings-actions" });
+    const add = actions.createEl("button", { text: t("settings.tags.add"), attr: { type: "button" } });
+    const reset = actions.createEl("button", { attr: { type: "button", title: t("settings.tags.reset"), "aria-label": t("settings.tags.reset") } });
     (0, import_obsidian6.setIcon)(reset, "rotate-ccw");
-    const save = actions.createEl("button", { text: "\u4FDD\u5B58\u6807\u7B7E", cls: "mod-cta", attr: { type: "button" } });
+    const save = actions.createEl("button", { text: t("settings.tags.save"), cls: "mod-cta", attr: { type: "button" } });
     const refreshValidation = () => {
       const validation = validateAnnotationTags(draft);
       error.toggleClass("hidden", !validation);
@@ -9606,8 +9727,8 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
     const renderRows = () => {
       list.empty();
       draft.forEach((tag, index) => {
-        const row = list.createDiv({ cls: "yh-tag-settings-row" });
-        const icon = row.createEl("select", { cls: "dropdown", attr: { "aria-label": `${tag.name} \u56FE\u6807` } });
+        const row = list.createDiv({ cls: "book-note-tag-settings-row" });
+        const icon = row.createEl("select", { cls: "dropdown", attr: { "aria-label": `${t("aria.tagIcon", { name: tag.name })}` } });
         for (const option of TAG_ICON_OPTIONS) {
           icon.createEl("option", { text: option.label, value: option.id });
         }
@@ -9616,7 +9737,7 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
           tag.icon = icon.value;
           refreshValidation();
         });
-        const name = row.createEl("input", { cls: "text", attr: { type: "text", maxlength: "20", "aria-label": "\u6807\u7B7E\u540D\u79F0" } });
+        const name = row.createEl("input", { cls: "text", attr: { type: "text", maxlength: "20", "aria-label": t("aria.tagName") } });
         name.value = tag.name;
         name.addEventListener("input", () => {
           tag.name = name.value;
@@ -9627,13 +9748,13 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
           name.value = tag.name;
           refreshValidation();
         });
-        const enabled = row.createEl("input", { attr: { type: "checkbox", "aria-label": `${tag.name} \u5DF2\u542F\u7528` } });
+        const enabled = row.createEl("input", { attr: { type: "checkbox", "aria-label": `${t("aria.tagEnabled", { name: tag.name })}` } });
         enabled.checked = tag.enabled;
         enabled.addEventListener("change", () => {
           tag.enabled = enabled.checked;
           refreshValidation();
         });
-        const up = row.createEl("button", { attr: { type: "button", title: "\u4E0A\u79FB", "aria-label": "\u4E0A\u79FB" } });
+        const up = row.createEl("button", { attr: { type: "button", title: t("common.moveUp"), "aria-label": t("common.moveUp") } });
         (0, import_obsidian6.setIcon)(up, "chevron-up");
         up.disabled = index === 0;
         up.addEventListener("click", () => {
@@ -9641,7 +9762,7 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
           renderRows();
           refreshValidation();
         });
-        const down = row.createEl("button", { attr: { type: "button", title: "\u4E0B\u79FB", "aria-label": "\u4E0B\u79FB" } });
+        const down = row.createEl("button", { attr: { type: "button", title: t("common.moveDown"), "aria-label": t("common.moveDown") } });
         (0, import_obsidian6.setIcon)(down, "chevron-down");
         down.disabled = index === draft.length - 1;
         down.addEventListener("click", () => {
@@ -9657,14 +9778,14 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
       refreshValidation();
     });
     reset.addEventListener("click", () => {
-      if (!window.confirm("\u6062\u590D\u9ED8\u8BA4\u6807\u7B7E\u540D\u79F0\u3001\u56FE\u6807\u548C\u987A\u5E8F\uFF1F\u81EA\u5B9A\u4E49\u6807\u7B7E\u4F1A\u4FDD\u7559\u3002")) {
+      if (!window.confirm(t("settings.tags.resetConfirm"))) {
         return;
       }
       const customTags = draft.filter((tag) => !tag.builtIn);
       const candidate = [...cloneDefaultAnnotationTags(), ...customTags];
       const validation = validateAnnotationTags(candidate);
       if (validation) {
-        new import_obsidian6.Notice(`\u65E0\u6CD5\u6062\u590D\u9ED8\u8BA4\u6807\u7B7E\uFF1A${validation}`);
+        new import_obsidian6.Notice(t("notice.resetTagsFailed", { validation }));
         return;
       }
       draft = candidate;
@@ -9680,7 +9801,7 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
       }
       this.plugin.settings.annotationTags = draft.map((tag) => ({ ...tag, name: normalizeTagLabel(tag.name) }));
       await this.plugin.saveSettings();
-      new import_obsidian6.Notice("\u6279\u6CE8\u6807\u7B7E\u5DF2\u4FDD\u5B58");
+      new import_obsidian6.Notice(t("settings.tags.saved"));
       this.display();
     });
     renderRows();
@@ -9689,14 +9810,14 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
   /** EPUB 阅读相关设置：字号 / 主题 / 翻页 / 高亮样式 / 摘录目录 / 段落模式 / 脚注 / 回显 */
   renderEpubSettings() {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: "EPUB \u9605\u8BFB" });
-    new import_obsidian6.Setting(containerEl).setName("\u9605\u8BFB\u5B57\u53F7").setDesc("EPUB \u6B63\u6587\u57FA\u7840\u5B57\u53F7\uFF08px\uFF09\u3002\u4FEE\u6539\u540E\u91CD\u65B0\u6253\u5F00\u7535\u5B50\u4E66\u751F\u6548\u3002").addSlider((slider) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.epub.heading")).setHeading();
+    new import_obsidian6.Setting(containerEl).setName(t("settings.epub.fontSize.name")).setDesc(t("settings.epub.fontSize.desc")).addSlider((slider) => {
       slider.setLimits(12, 28, 1).setValue(this.plugin.settings.epubFontSize).setDynamicTooltip().onChange(async (value) => {
         this.plugin.settings.epubFontSize = value;
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian6.Setting(containerEl).setName("\u9605\u8BFB\u4E3B\u9898").setDesc("EPUB \u9605\u8BFB\u533A\u80CC\u666F\u4E0E\u6587\u5B57\u914D\u8272\u3002").addDropdown((dropdown) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.epub.theme.name")).setDesc(t("settings.epub.theme.desc")).addDropdown((dropdown) => {
       for (const theme of EPUB_READING_THEMES) {
         dropdown.addOption(theme.id, theme.label);
       }
@@ -9705,7 +9826,7 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian6.Setting(containerEl).setName("\u7FFB\u9875\u6A21\u5F0F").setDesc("\u7FFB\u9875\u4E3A\u5206\u9875\u5E03\u5C40\uFF1B\u6EDA\u52A8\u4E3A\u8FDE\u7EED\u6EDA\u52A8\u9605\u8BFB\u3002").addDropdown((dropdown) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.epub.flow.name")).setDesc(t("settings.epub.flow.desc")).addDropdown((dropdown) => {
       dropdown.addOption("paginated", "\u7FFB\u9875");
       dropdown.addOption("scrolled", "\u6EDA\u52A8");
       dropdown.setValue(this.plugin.settings.epubDefaultFlow).onChange(async (value) => {
@@ -9713,7 +9834,7 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
-    new import_obsidian6.Setting(containerEl).setName("\u9AD8\u4EAE\u6837\u5F0F").setDesc("EPUB \u6587\u672C\u6807\u6CE8\u7684\u9ED8\u8BA4\u5448\u73B0\u6837\u5F0F\u3002").addDropdown((dropdown) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.epub.highlightStyle.name")).setDesc(t("settings.epub.highlightStyle.desc")).addDropdown((dropdown) => {
       for (const style2 of EPUB_HIGHLIGHT_STYLES) {
         dropdown.addOption(style2.id, style2.label);
       }
@@ -9725,8 +9846,8 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
   }
   renderPdfSettings() {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: "PDF \u9605\u8BFB" });
-    new import_obsidian6.Setting(containerEl).setName("\u8BB0\u5F55 PDF \u9605\u8BFB\u8FDB\u5EA6").setDesc("\u4FDD\u5B58\u5F53\u524D\u9875\u548C\u9605\u8BFB\u8FDB\u5EA6\uFF1B\u5173\u95ED\u540E\u4E0D\u4F1A\u5220\u9664\u5DF2\u6709\u8FDB\u5EA6\u3002").addToggle((toggle) => {
+    new import_obsidian6.Setting(containerEl).setName(t("settings.pdf.heading")).setHeading();
+    new import_obsidian6.Setting(containerEl).setName(t("settings.pdf.progress.name")).setDesc(t("settings.pdf.progress.desc")).addToggle((toggle) => {
       toggle.setValue(this.plugin.settings.pdfProgressTracking).onChange(async (value) => {
         this.plugin.settings.pdfProgressTracking = value;
         await this.plugin.saveSettings();
@@ -9737,10 +9858,7 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
 
 // src/storage/annotationStore.ts
 var import_obsidian7 = require("obsidian");
-var STORE_DIR = ".obsidian-annotations";
-var INDEX_PATH = (0, import_obsidian7.normalizePath)(`${STORE_DIR}/index.json`);
-var MAX_LEGACY_SIDECAR_NAME_LENGTH = 180;
-var MAX_COMPACT_SIDECAR_PREFIX_LENGTH = 96;
+var DEFAULT_STORE_DIR = "booknote";
 var AnnotationStoreReadError = class extends Error {
   constructor(path, originalError) {
     super(`Failed to read annotation sidecar JSON: ${path}`);
@@ -9758,9 +9876,16 @@ var AnnotationStoreWriteError = class extends Error {
   }
 };
 var AnnotationStore = class {
-  constructor(app, getAnnotationTags = () => []) {
+  constructor(app, getAnnotationTags = () => [], getStorageConfig = () => ({
+    baseDir: DEFAULT_STORE_DIR,
+    sidecarLocation: "specifiedFolder"
+  }), loadData = async () => null, saveData = async () => {
+  }) {
     this.app = app;
     this.getAnnotationTags = getAnnotationTags;
+    this.getStorageConfig = getStorageConfig;
+    this.loadData = loadData;
+    this.saveData = saveData;
     this.documents = /* @__PURE__ */ new Map();
     this.documentWrites = /* @__PURE__ */ new Map();
     this.indexWriteTail = Promise.resolve();
@@ -9770,9 +9895,22 @@ var AnnotationStore = class {
   get version() {
     return this.changeVersion;
   }
+  getStorageConfigResolved() {
+    const cfg = this.getStorageConfig?.() ?? { baseDir: DEFAULT_STORE_DIR, sidecarLocation: "specifiedFolder" };
+    return {
+      baseDir: resolveStoreDir(cfg.baseDir),
+      sidecarLocation: cfg.sidecarLocation === "sameFolder" ? "sameFolder" : "specifiedFolder"
+    };
+  }
+  getBaseDir() {
+    return this.getStorageConfigResolved().baseDir;
+  }
+  getSidecarLocation() {
+    return this.getStorageConfigResolved().sidecarLocation;
+  }
   async initialize() {
-    await this.ensureStoreDir();
-    this.index = await this.readJson(INDEX_PATH, EMPTY_INDEX, { allowCorruptFallback: true });
+    const stored = await this.loadData();
+    this.index = stored && typeof stored === "object" && "files" in stored ? stored : EMPTY_INDEX;
   }
   getCachedDocument(filePath) {
     return this.documents.get(this.toCacheKey(filePath)) ?? null;
@@ -9798,7 +9936,7 @@ var AnnotationStore = class {
     }
     const sidecarPath = this.toSidecarPath(filePath);
     const fallback = await this.createEmptyDocument(file);
-    const document2 = await this.readJson(sidecarPath, fallback);
+    const document2 = await this.readDocumentOrFallback(sidecarPath, fallback);
     this.documents.set(cacheKey, this.normalizeDocument(document2, filePath));
     return this.documents.get(cacheKey);
   }
@@ -9840,8 +9978,9 @@ var AnnotationStore = class {
     const normalized = this.normalizeDocument(document2, filePath);
     try {
       await this.ensureStoreDir();
-      await this.app.vault.adapter.write(sidecarPath, JSON.stringify(normalized, null, 2));
-      const persisted = await this.readExistingJson(sidecarPath);
+      const serialized = serializeDocumentToMarkdown(normalized);
+      await this.app.vault.adapter.write(sidecarPath, serialized);
+      const persisted = await this.readDocumentOrThrow(sidecarPath);
       this.verifyPersistedDocument(normalized, persisted, sidecarPath);
       await this.enqueueIndexWrite(async () => {
         const nextIndex = {
@@ -9855,7 +9994,7 @@ var AnnotationStore = class {
         this.index = nextIndex;
       });
     } catch (error) {
-      new import_obsidian7.Notice(`\u58A8\u5149\u6279\u6CE8\u672A\u4FDD\u5B58\uFF0C\u8BF7\u68C0\u67E5\u5199\u5165\u6743\u9650\u6216\u540C\u6B65\u72B6\u6001\uFF1A${sidecarPath}`);
+      new import_obsidian7.Notice(t("notice.notSaved", { path: sidecarPath }));
       throw new AnnotationStoreWriteError(sidecarPath, error);
     }
     this.documents.set(this.toCacheKey(normalized.filePath), normalized);
@@ -9954,10 +10093,10 @@ var AnnotationStore = class {
   async migrateFilePath(oldPath, file) {
     const normalizedOldPath = this.normalizeVaultPath(oldPath);
     const oldSidecar = this.toSidecarPath(normalizedOldPath);
-    const oldDocument = await this.readJson(oldSidecar, null);
-    if (!oldDocument) {
+    if (!await this.app.vault.adapter.exists(oldSidecar)) {
       return;
     }
+    const oldDocument = await this.readDocumentOrThrow(oldSidecar);
     const nextDocument = {
       ...oldDocument,
       filePath: this.normalizeVaultPath(file.path),
@@ -9979,7 +10118,7 @@ var AnnotationStore = class {
   /**
    * 重命名/移动源文件后，把对应的摘录导出文件一并迁移：
    * 1. 文件名从旧 basename 派生改为新 basename 派生（兼容 {-notes.md} 与 《名》摘录.md 两种历史格式）；
-   * 2. 文件内容里所有指向旧路径的 source 引用（标题、[[wikilink]]、data-yh-source-path）替换为新路径。
+   * 2. 文件内容里所有指向旧路径的 source 引用（标题、[[wikilink]]、data-book-note-source-path）替换为新路径。
    * 摘录文件不存在时静默跳过。
    */
   async migrateExcerptFile(oldPath, newPath) {
@@ -10002,7 +10141,7 @@ var AnnotationStore = class {
       }
       try {
         const content = await this.app.vault.read(excerptFile);
-        const updated = content.split(oldPath).join(newPath).split(encodeURIComponent(oldPath)).join(encodeURIComponent(newPath));
+        const updated = content.split(oldPath).join(newPath);
         const newName = candidate.replace(oldBase.split(/[\\/]/).pop(), newBase.split(/[\\/]/).pop());
         const targetPath = (0, import_obsidian7.normalizePath)(`${newParent}/${newName}`);
         if (updated !== content) {
@@ -10012,7 +10151,7 @@ var AnnotationStore = class {
           await this.app.vault.rename(excerptFile, targetPath);
         }
       } catch (error) {
-        console.warn("yh-inklight: migrate excerpt file failed", candidatePath, error);
+        console.warn("book-note: migrate excerpt file failed", candidatePath, error);
       }
     }
   }
@@ -10079,9 +10218,9 @@ var AnnotationStore = class {
   async exportAllNotes(format = "summary") {
     const documents = await this.getIndexedDocuments();
     const suffix = format === "summary" ? "" : `-${format}`;
-    const targetPath = (0, import_obsidian7.normalizePath)(`inklight-all-notes${suffix}.md`);
+    const targetPath = (0, import_obsidian7.normalizePath)(`book-note-all-notes${suffix}.md`);
     const sources = documents.map((document2) => ({ filePath: document2.filePath, document: document2 }));
-    const lines = buildExportLines("\u58A8\u5149\u6279\u6CE8\u5168\u5E93\u6C47\u603B", sources, format, this.getAnnotationTags());
+    const lines = buildExportLines(t("export.heading"), sources, format, this.getAnnotationTags());
     const existing = this.app.vault.getAbstractFileByPath(targetPath);
     if (existing instanceof import_obsidian7.TFile) {
       await this.app.vault.modify(existing, lines.join("\n"));
@@ -10090,8 +10229,8 @@ var AnnotationStore = class {
     return this.app.vault.create(targetPath, lines.join("\n"));
   }
   async testWriteAccess() {
-    await this.ensureStoreDir();
-    const testPath = (0, import_obsidian7.normalizePath)(`${STORE_DIR}/.write-test.json`);
+    const testDir = this.getSidecarLocation() === "sameFolder" ? "" : this.getBaseDir();
+    const testPath = (0, import_obsidian7.normalizePath)(`${testDir}/.write-test.json`);
     const payload = JSON.stringify({ ok: true, timestamp: (/* @__PURE__ */ new Date()).toISOString() }, null, 2);
     try {
       await this.app.vault.adapter.write(testPath, payload);
@@ -10102,7 +10241,7 @@ var AnnotationStore = class {
       await this.deleteIfExists(testPath);
       return testPath;
     } catch (error) {
-      new import_obsidian7.Notice(`\u58A8\u5149\u6279\u6CE8\u5B58\u50A8\u6D4B\u8BD5\u5931\u8D25\uFF1A${testPath}`);
+      new import_obsidian7.Notice(t("notice.storageTestFailed", { path: testPath }));
       throw new AnnotationStoreWriteError(testPath, error);
     }
   }
@@ -10113,24 +10252,23 @@ var AnnotationStore = class {
     const bytes = await this.app.vault.readBinary(file);
     return this.hashBytes(bytes);
   }
+  /**
+   * Build a sidecar path from the source file path.
+   *
+   * - specifiedFolder: `{baseDir}/{path-segments}-{filename}.{ext}.{sidecarExt}`
+   *   e.g. `books/未命名.pdf` -> `booknote/books-未命名.pdf.md`
+   * - sameFolder: `{dir}/{filename}.{ext}.{sidecarExt}`
+   *   e.g. `books/未命名.pdf` -> `books/未命名.pdf.md`
+   */
   toSidecarPath(filePath) {
-    const legacyPath = this.toLegacySidecarPath(filePath);
-    const legacyName = legacyPath.split("/").pop() ?? "";
-    if (legacyName.length <= MAX_LEGACY_SIDECAR_NAME_LENGTH) {
-      return legacyPath;
+    const normalized = this.normalizeVaultPath(filePath);
+    const sidecarExt = "md";
+    if (this.getSidecarLocation() === "sameFolder") {
+      return (0, import_obsidian7.normalizePath)(`${normalized}.${sidecarExt}`);
     }
-    return this.toCompactSidecarPath(filePath);
-  }
-  toLegacySidecarPath(filePath) {
-    const safeName = this.normalizeVaultPath(filePath).toLowerCase().split(/[\\/]/).map((part) => encodeURIComponent(part)).join("__");
-    return (0, import_obsidian7.normalizePath)(`${STORE_DIR}/${safeName}.json`);
-  }
-  toCompactSidecarPath(filePath) {
-    const normalizedPath = this.normalizeVaultPath(filePath).toLowerCase();
-    const fileName = normalizedPath.split(/[\\/]/).pop() ?? "annotation";
-    const encodedName = encodeURIComponent(fileName).replace(/%/g, "_").replace(/[^a-z0-9._-]/g, "_");
-    const prefix = encodedName.slice(0, MAX_COMPACT_SIDECAR_PREFIX_LENGTH).replace(/[._-]+$/g, "") || "annotation";
-    return (0, import_obsidian7.normalizePath)(`${STORE_DIR}/${prefix}--${hashPath(normalizedPath)}.json`);
+    const parts = normalized.split("/").filter((part) => part.length > 0);
+    const safeName = parts.join("-");
+    return (0, import_obsidian7.normalizePath)(`${this.getBaseDir()}/${safeName}.${sidecarExt}`);
   }
   async createEmptyDocument(file) {
     return {
@@ -10180,17 +10318,27 @@ var AnnotationStore = class {
     };
   }
   async ensureStoreDir() {
-    await this.ensureDir(STORE_DIR);
+    if (this.getSidecarLocation() === "sameFolder") {
+      return;
+    }
+    await this.ensureDir(this.getBaseDir());
   }
   async ensureDir(path) {
     const normalizedPath = (0, import_obsidian7.normalizePath)(path);
-    if (!await this.app.vault.adapter.exists(normalizedPath)) {
-      await this.app.vault.adapter.mkdir(normalizedPath);
+    if (await this.app.vault.adapter.exists(normalizedPath)) {
+      return;
+    }
+    const segments = normalizedPath.split("/").filter((segment) => segment.length > 0);
+    let current = "";
+    for (const segment of segments) {
+      current = current ? `${current}/${segment}` : segment;
+      if (!await this.app.vault.adapter.exists(current)) {
+        await this.app.vault.adapter.mkdir(current);
+      }
     }
   }
   async writeIndex(nextIndex = this.index) {
-    await this.ensureStoreDir();
-    await this.app.vault.adapter.write(INDEX_PATH, JSON.stringify(nextIndex, null, 2));
+    await this.saveData(nextIndex);
   }
   verifyPersistedDocument(expected, persisted, sidecarPath) {
     const normalizedPersisted = this.normalizeDocument(persisted, expected.filePath);
@@ -10210,16 +10358,69 @@ var AnnotationStore = class {
       if (options.allowCorruptFallback) {
         return fallback;
       }
-      new import_obsidian7.Notice(`\u58A8\u5149\u6279\u6CE8\u65E0\u6CD5\u8BFB\u53D6 ${normalizedPath}\uFF0C\u5DF2\u505C\u6B62\u5199\u5165\u4EE5\u4FDD\u62A4\u6279\u6CE8\u6570\u636E\u3002`);
+      new import_obsidian7.Notice(t("notice.cannotRead", { path: normalizedPath }));
       throw new AnnotationStoreReadError(normalizedPath, error);
     }
   }
-  async readExistingJson(path) {
+  async readDocumentOrFallback(path, fallback) {
     const normalizedPath = (0, import_obsidian7.normalizePath)(path);
     if (!await this.app.vault.adapter.exists(normalizedPath)) {
-      throw new Error(`Expected JSON file does not exist: ${normalizedPath}`);
+      return fallback;
     }
-    return JSON.parse(await this.app.vault.adapter.read(normalizedPath));
+    try {
+      return this.parseDocument(await this.app.vault.adapter.read(normalizedPath), normalizedPath);
+    } catch (error) {
+      new import_obsidian7.Notice(t("notice.cannotRead", { path: normalizedPath }));
+      return fallback;
+    }
+  }
+  async readDocumentOrThrow(path) {
+    const normalizedPath = (0, import_obsidian7.normalizePath)(path);
+    if (!await this.app.vault.adapter.exists(normalizedPath)) {
+      throw new AnnotationStoreReadError(normalizedPath, new Error("missing"));
+    }
+    try {
+      return this.parseDocument(await this.app.vault.adapter.read(normalizedPath), normalizedPath);
+    } catch (error) {
+      throw new AnnotationStoreReadError(normalizedPath, error);
+    }
+  }
+  parseDocument(raw, path) {
+    return parseMarkdownDocument(raw, path);
+  }
+  /** Move every indexed sidecar to the path derived from the current storage config. */
+  async migrateAll() {
+    const result = { migrated: 0, failed: 0 };
+    const filePaths = Object.keys(this.index.files);
+    for (const filePath of filePaths) {
+      const entry = this.index.files[filePath];
+      const oldSidecar = entry.sidecarPath;
+      const newSidecar = this.toSidecarPath(filePath);
+      if (!await this.app.vault.adapter.exists(oldSidecar)) {
+        continue;
+      }
+      if (oldSidecar === newSidecar) {
+        continue;
+      }
+      try {
+        const document2 = await this.readDocumentOrThrow(oldSidecar);
+        const normalized = this.normalizeDocument(document2, filePath);
+        await this.ensureStoreDir();
+        const serialized = serializeDocumentToMarkdown(normalized);
+        await this.app.vault.adapter.write(newSidecar, serialized);
+        if (newSidecar !== oldSidecar) {
+          await this.deleteIfExists(oldSidecar);
+        }
+        this.index.files[filePath] = this.toIndexEntry(normalized, newSidecar);
+        this.documents.delete(this.toCacheKey(filePath));
+        result.migrated += 1;
+      } catch (error) {
+        console.warn("book-note: migrate sidecar failed", oldSidecar, error);
+        result.failed += 1;
+      }
+    }
+    await this.writeIndex();
+    return result;
   }
   async deleteIfExists(path) {
     const normalizedPath = (0, import_obsidian7.normalizePath)(path);
@@ -10271,14 +10472,6 @@ var AnnotationStore = class {
     return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
   }
 };
-function hashPath(value) {
-  let hash = 2166136261;
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-  return (hash >>> 0).toString(16).padStart(8, "0");
-}
 function buildExportLines(title, sources, format, tags) {
   const entries = sources.flatMap((source) => collectExportEntries(source, tags));
   const lines = [`# ${title}`, "", `Exported: ${(/* @__PURE__ */ new Date()).toISOString()}`, ""];
@@ -10415,22 +10608,45 @@ function renderByColor(entries) {
 function renderNotesOnly(entries) {
   const notes = entries.filter((entry) => entry.kind === "note" && entry.content.trim());
   if (!notes.length) {
-    return ["No notes found.", ""];
+    return [t("storage.noNotesFound"), ""];
   }
-  return ["## Notes", "", ...notes.flatMap((entry) => renderAnnotationBlock(entry))];
+  return [`## ${t("storage.notesOnlyHeading")}`, "", ...notes.flatMap((entry) => renderAnnotationBlock(entry))];
 }
 function renderReadingNotes(entries) {
-  return [
-    "## Reading Notes",
-    "",
-    ...entries.flatMap((entry) => {
-      return [`### ${entrySource(entry)}`, "", ...renderAnnotationBlock(entry)];
-    })
-  ];
+  const highlights = entries.filter((entry) => entry.kind === "highlight");
+  const notes = entries.filter((entry) => entry.kind === "note");
+  const lines = [];
+  function renderSection(title, sectionEntries) {
+    if (!sectionEntries.length) {
+      return;
+    }
+    lines.push(`## ${title}`);
+    lines.push("");
+    const groups = /* @__PURE__ */ new Map();
+    for (const entry of sectionEntries) {
+      const heading = entryGroupHeading(entry);
+      if (!groups.has(heading)) {
+        groups.set(heading, []);
+      }
+      groups.get(heading).push(entry);
+    }
+    for (const [heading, groupEntries] of groups) {
+      if (heading) {
+        lines.push(`### ${heading}`);
+        lines.push("");
+      }
+      for (const entry of groupEntries) {
+        lines.push(...renderAnnotationBlock(entry));
+      }
+    }
+  }
+  renderSection(t("storage.section.highlight"), highlights);
+  renderSection(t("storage.section.note"), notes);
+  return lines;
 }
 function renderAnnotationBlock(entry) {
   const blockId = `${entry.mode}-${entry.id}`;
-  const calloutType = entry.mode === "epub" ? "inklight-epub" : entry.mode === "pdf" ? "inklight-pdf" : "inklight-md";
+  const calloutType = entry.mode === "epub" ? "book-note-epub" : entry.mode === "pdf" ? "book-note-pdf" : "book-note-md";
   const header = `> [!${calloutType}|${entry.color}] ${entrySource(entry)} - ${entry.createdAt} ^${blockId}`;
   const lines = [header];
   for (const line of entry.text.split(/\r?\n/)) {
@@ -10438,16 +10654,16 @@ function renderAnnotationBlock(entry) {
   }
   if (entry.tagName) {
     lines.push(">");
-    lines.push(`> \u6807\u7B7E\uFF1A${entry.tagName}`);
+    lines.push(`> ${t("storage.tagLabel")}\uFF1A${entry.tagName}`);
   }
   if (entry.content.trim()) {
     lines.push(">");
     for (const line of entry.content.split(/\r?\n/)) {
-      lines.push(`> Note: ${line}`);
+      lines.push(`> ${t("storage.noteLabel")}: ${line}`);
     }
   }
   lines.push(">");
-  lines.push(`> [\u8FD4\u56DE\u539F\u6587](${createAnnotationUri(entry.sourcePath, entry.id)})`);
+  lines.push(`> [${t("storage.backToSource")}](${createAnnotationUri(entry.sourcePath, entry.id)})`);
   const anchor = hiddenAnchor(entry);
   if (anchor) {
     lines.push(anchor);
@@ -10457,13 +10673,13 @@ function renderAnnotationBlock(entry) {
 }
 function hiddenAnchor(entry) {
   if (entry.mode === "epub" && entry.cfiRange) {
-    return `> <span style="display:none" data-yh-id="${escapeHtmlAttribute(entry.id)}" data-yh-mode="epub" data-yh-cfi="${escapeHtmlAttribute(entry.cfiRange)}" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
+    return `> <span style="display:none" data-book-note-id="${escapeHtmlAttribute(entry.id)}" data-book-note-mode="epub" data-book-note-cfi="${escapeHtmlAttribute(entry.cfiRange)}" data-book-note-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
   }
   if (entry.mode === "pdf" && entry.pageNumber) {
-    const rects = entry.pdfRects ? ` data-yh-pdf-rects="${escapeHtmlAttribute(entry.pdfRects)}"` : "";
-    return `> <span style="display:none" data-yh-id="${escapeHtmlAttribute(entry.id)}" data-yh-mode="pdf" data-yh-pdf-page="${entry.pageNumber}" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}" data-yh-pdf-id="${escapeHtmlAttribute(entry.id)}"${rects}></span>`;
+    const rects = entry.pdfRects ? ` data-book-note-pdf-rects="${escapeHtmlAttribute(entry.pdfRects)}"` : "";
+    return `> <span style="display:none" data-book-note-id="${escapeHtmlAttribute(entry.id)}" data-book-note-mode="pdf" data-book-note-pdf-page="${entry.pageNumber}" data-book-note-source-path="${escapeHtmlAttribute(entry.sourcePath)}" data-book-note-pdf-id="${escapeHtmlAttribute(entry.id)}"${rects}></span>`;
   }
-  return `> <span style="display:none" data-yh-id="${escapeHtmlAttribute(entry.id)}" data-yh-mode="md" data-yh-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
+  return `> <span style="display:none" data-book-note-id="${escapeHtmlAttribute(entry.id)}" data-book-note-mode="md" data-book-note-source-path="${escapeHtmlAttribute(entry.sourcePath)}"></span>`;
 }
 function escapeHtmlAttribute(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -10477,13 +10693,414 @@ function entrySource(entry) {
   }
   return entry.sourcePath;
 }
+function entryGroupHeading(entry) {
+  if (entry.pageNumber) {
+    return `p.${entry.pageNumber}`;
+  }
+  if (entry.mode === "epub" && entry.chapter?.trim()) {
+    return entry.chapter.trim();
+  }
+  return void 0;
+}
+var MD_ANNOTATION_ATTR = "data-book-note";
+function emptyDocMeta() {
+  return {
+    filePath: "",
+    fileHash: "",
+    lastModified: (/* @__PURE__ */ new Date()).toISOString(),
+    bookmarks: [],
+    canvasBinding: null,
+    canvasNodes: []
+  };
+}
+function resolveStoreDir(raw) {
+  const trimmed = (raw ?? "").trim();
+  if (!trimmed) {
+    return DEFAULT_STORE_DIR;
+  }
+  const normalized = (0, import_obsidian7.normalizePath)(trimmed);
+  if (normalized.startsWith("/") || normalized.startsWith("\\") || /^[A-Za-z]:[\\/]/.test(normalized) || normalized.includes("..") || normalized === "." || normalized === "..") {
+    return DEFAULT_STORE_DIR;
+  }
+  return normalized;
+}
+function sidecarSource(filePath, mode, annotation) {
+  if (mode === "pdf" && "pageNumber" in annotation.anchor && typeof annotation.anchor.pageNumber === "number") {
+    return `${filePath} p.${annotation.anchor.pageNumber}`;
+  }
+  if (mode === "epub" && "chapter" in annotation.anchor && annotation.anchor.chapter?.trim()) {
+    return `${filePath} \xB7 ${annotation.anchor.chapter.trim()}`;
+  }
+  return filePath;
+}
+function sidecarCreatedAt(kind, annotation) {
+  if (kind === "md-comment" || kind === "pdf-comment") {
+    const comment = annotation;
+    return comment.updatedAt || comment.createdAt;
+  }
+  return annotation.createdAt;
+}
+function sidecarContent(kind, annotation) {
+  if (kind === "epub-comment") {
+    return annotation.note;
+  }
+  if (kind.endsWith("-comment")) {
+    return annotation.content;
+  }
+  return "";
+}
+function sidecarTagLabel(kind, annotation) {
+  if (kind.endsWith("-comment")) {
+    return annotation.tagLabelSnapshot;
+  }
+  return void 0;
+}
+function sidecarResolved(kind, annotation) {
+  if (kind.endsWith("-comment")) {
+    return annotation.resolved;
+  }
+  return false;
+}
+function sidecarReplies(kind, annotation) {
+  if (kind.endsWith("-comment")) {
+    return annotation.replies;
+  }
+  return [];
+}
+function sidecarGroupHeading(mode, annotation) {
+  if (mode === "pdf" && "pageNumber" in annotation.anchor && typeof annotation.anchor.pageNumber === "number") {
+    return `p.${annotation.anchor.pageNumber}`;
+  }
+  if (mode === "epub" && "chapter" in annotation.anchor && annotation.anchor.chapter?.trim()) {
+    return annotation.anchor.chapter.trim();
+  }
+  return void 0;
+}
+function serializeDocumentToMarkdown(document2) {
+  const meta = {
+    filePath: document2.filePath,
+    fileHash: document2.fileHash,
+    lastModified: document2.lastModified,
+    bookmarks: document2.bookmarks ?? [],
+    canvasBinding: document2.canvasBinding ?? null,
+    canvasNodes: document2.canvasNodes ?? []
+  };
+  if (document2.pdfProgress) {
+    meta.pageNumber = document2.pdfProgress.pageNumber;
+    meta.totalPages = document2.pdfProgress.totalPages;
+    meta.percent = document2.pdfProgress.percent;
+    meta.lastRead = document2.pdfProgress.lastRead;
+  }
+  if (document2.epubProgress) {
+    meta.cfi = document2.epubProgress.cfi;
+    meta.chapter = document2.epubProgress.chapter;
+    meta.percent = document2.epubProgress.percent;
+    meta.lastRead = document2.epubProgress.lastRead;
+    meta.readingTimeSeconds = document2.epubProgress.readingTimeSeconds;
+    meta.estimatedRemainingMinutes = document2.epubProgress.estimatedRemainingMinutes;
+  }
+  const lines = [];
+  lines.push("---");
+  lines.push(`filePath: ${yamlValue(meta.filePath)}`);
+  lines.push(`fileHash: ${yamlValue(meta.fileHash)}`);
+  lines.push(`lastModified: ${yamlValue(meta.lastModified)}`);
+  if (meta.pageNumber !== void 0) {
+    lines.push(`pageNumber: ${yamlValue(meta.pageNumber)}`);
+    lines.push(`totalPages: ${yamlValue(meta.totalPages)}`);
+    lines.push(`percent: ${yamlValue(meta.percent)}`);
+    lines.push(`lastRead: ${yamlValue(meta.lastRead)}`);
+  }
+  if (meta.cfi !== void 0) {
+    lines.push(`cfi: ${yamlValue(meta.cfi)}`);
+    lines.push(`chapter: ${yamlValue(meta.chapter)}`);
+    lines.push(`percent: ${yamlValue(meta.percent)}`);
+    lines.push(`lastRead: ${yamlValue(meta.lastRead)}`);
+    lines.push(`readingTimeSeconds: ${yamlValue(meta.readingTimeSeconds)}`);
+    if (meta.estimatedRemainingMinutes !== void 0) {
+      lines.push(`estimatedRemainingMinutes: ${yamlValue(meta.estimatedRemainingMinutes)}`);
+    }
+  }
+  lines.push(`bookmarks: ${yamlValue(meta.bookmarks)}`);
+  lines.push(`canvasBinding: ${yamlValue(meta.canvasBinding)}`);
+  lines.push(`canvasNodes: ${yamlValue(meta.canvasNodes)}`);
+  lines.push("---");
+  lines.push("");
+  const pushBlock = (mode, kind, annotation) => {
+    const blockId = `bn-${mode}-${annotation.id}`;
+    const calloutType = mode === "epub" ? "book-note-epub" : mode === "pdf" ? "book-note-pdf" : "book-note-md";
+    const source = sidecarSource(document2.filePath, mode, annotation);
+    const createdAt = sidecarCreatedAt(kind, annotation);
+    const selectedText = annotation.anchor.selectedText;
+    const content = sidecarContent(kind, annotation);
+    const tagLabel = sidecarTagLabel(kind, annotation);
+    const resolved = sidecarResolved(kind, annotation);
+    const replies = sidecarReplies(kind, annotation);
+    lines.push(`> [!${calloutType}|${annotation.color}] ${source} - ${createdAt} ^${blockId}`);
+    for (const line of selectedText.split(/\r?\n/)) {
+      lines.push(`> ${line}`);
+    }
+    if (tagLabel) {
+      lines.push(">");
+      lines.push(`> ${t("storage.tagLabel")}\uFF1A${tagLabel}`);
+    }
+    if (content.trim()) {
+      lines.push(">");
+      for (const line of content.split(/\r?\n/)) {
+        lines.push(`> ${t("storage.noteLabel")}: ${line}`);
+      }
+    }
+    if (replies.length) {
+      lines.push(">");
+      for (const reply of replies) {
+        lines.push(`> reply ${reply.createdAt}: ${reply.content}`);
+      }
+    }
+    if (resolved) {
+      lines.push(">");
+      lines.push("> resolved");
+    }
+    lines.push(">");
+    lines.push(`> [${t("storage.backToSource")}](${createAnnotationUri(document2.filePath, annotation.id)})`);
+    lines.push(`> <span style="display:none" ${MD_ANNOTATION_ATTR}="${escapeHtmlAttribute(JSON.stringify({ kind, value: annotation }))}"></span>`);
+    lines.push("");
+  };
+  const items = [
+    ...document2.highlights.map((a3) => ({ mode: "md", kind: "md-highlight", annotation: a3 })),
+    ...document2.comments.map((a3) => ({ mode: "md", kind: "md-comment", annotation: a3 })),
+    ...document2.pdfHighlights.map((a3) => ({ mode: "pdf", kind: "pdf-highlight", annotation: a3 })),
+    ...document2.pdfComments.map((a3) => ({ mode: "pdf", kind: "pdf-comment", annotation: a3 })),
+    ...document2.epubHighlights.map((a3) => ({ mode: "epub", kind: "epub-highlight", annotation: a3 })),
+    ...document2.epubComments.map((a3) => ({ mode: "epub", kind: "epub-comment", annotation: a3 }))
+  ];
+  const highlights = items.filter((i3) => i3.kind.endsWith("-highlight"));
+  const notes = items.filter((i3) => i3.kind.endsWith("-comment"));
+  function renderSection(title, sectionItems) {
+    if (!sectionItems.length) {
+      return;
+    }
+    lines.push(`# ${title}`);
+    lines.push("");
+    const groups = /* @__PURE__ */ new Map();
+    for (const item of sectionItems) {
+      const heading = sidecarGroupHeading(item.mode, item.annotation);
+      if (!groups.has(heading)) {
+        groups.set(heading, []);
+      }
+      groups.get(heading).push(item);
+    }
+    for (const [heading, groupItems] of groups) {
+      if (heading) {
+        lines.push(`## ${heading}`);
+        lines.push("");
+      }
+      for (const item of groupItems) {
+        pushBlock(item.mode, item.kind, item.annotation);
+      }
+    }
+  }
+  renderSection(t("storage.section.highlight"), highlights);
+  renderSection(t("storage.section.note"), notes);
+  return lines.join("\n");
+}
+function parseMarkdownDocument(raw, path) {
+  const meta = parseFrontmatter(raw);
+  const annotations = extractAnnotations(raw);
+  const document2 = {
+    filePath: meta.filePath,
+    fileHash: meta.fileHash ?? "",
+    lastModified: meta.lastModified ?? (/* @__PURE__ */ new Date()).toISOString(),
+    highlights: [],
+    comments: [],
+    pdfHighlights: [],
+    pdfComments: [],
+    epubHighlights: [],
+    epubComments: [],
+    // cfi means EPUB; pageNumber means PDF. The two formats never coexist in one file.
+    epubProgress: meta.cfi !== void 0 ? {
+      cfi: meta.cfi,
+      chapter: meta.chapter ?? "",
+      percent: meta.percent ?? 0,
+      lastRead: meta.lastRead ?? "",
+      readingTimeSeconds: meta.readingTimeSeconds ?? 0,
+      ...meta.estimatedRemainingMinutes !== void 0 ? { estimatedRemainingMinutes: meta.estimatedRemainingMinutes } : {}
+    } : void 0,
+    pdfProgress: meta.pageNumber !== void 0 ? {
+      pageNumber: meta.pageNumber,
+      totalPages: meta.totalPages ?? 0,
+      percent: meta.percent ?? 0,
+      lastRead: meta.lastRead ?? ""
+    } : void 0,
+    bookmarks: meta.bookmarks ?? [],
+    canvasBinding: meta.canvasBinding ?? void 0,
+    canvasNodes: meta.canvasNodes ?? []
+  };
+  for (const item of annotations) {
+    switch (item.kind) {
+      case "md-highlight":
+        document2.highlights.push(item.value);
+        break;
+      case "md-comment":
+        document2.comments.push(item.value);
+        break;
+      case "pdf-highlight":
+        document2.pdfHighlights.push(item.value);
+        break;
+      case "pdf-comment":
+        document2.pdfComments.push(item.value);
+        break;
+      case "epub-highlight":
+        document2.epubHighlights.push(item.value);
+        break;
+      case "epub-comment":
+        document2.epubComments.push(item.value);
+        break;
+    }
+  }
+  return document2;
+}
+function parseFrontmatter(raw) {
+  const meta = emptyDocMeta();
+  const match = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?/.exec(raw);
+  if (!match) {
+    return meta;
+  }
+  for (const line of match[1].split(/\r?\n/)) {
+    const idx = line.indexOf(":");
+    if (idx <= 0) {
+      continue;
+    }
+    const key = line.slice(0, idx).trim();
+    const value = parseYamlScalar(line.slice(idx + 1).trim());
+    switch (key) {
+      case "filePath":
+        meta.filePath = typeof value === "string" ? value : "";
+        break;
+      case "fileHash":
+        meta.fileHash = typeof value === "string" ? value : "";
+        break;
+      case "lastModified":
+        meta.lastModified = typeof value === "string" ? value : (/* @__PURE__ */ new Date()).toISOString();
+        break;
+      case "pageNumber":
+        if (meta.pageNumber === void 0) meta.pageNumber = typeof value === "number" ? value : Number(value);
+        break;
+      case "pdfPageNumber":
+        if (meta.pageNumber === void 0) meta.pageNumber = typeof value === "number" ? value : Number(value);
+        break;
+      case "totalPages":
+        if (meta.totalPages === void 0) meta.totalPages = typeof value === "number" ? value : Number(value);
+        break;
+      case "pdfTotalPages":
+        if (meta.totalPages === void 0) meta.totalPages = typeof value === "number" ? value : Number(value);
+        break;
+      case "percent":
+        if (meta.percent === void 0) meta.percent = typeof value === "number" ? value : Number(value);
+        break;
+      case "pdfPercent":
+      case "epubPercent":
+        if (meta.percent === void 0) meta.percent = typeof value === "number" ? value : Number(value);
+        break;
+      case "lastRead":
+        if (meta.lastRead === void 0) meta.lastRead = typeof value === "string" ? value : "";
+        break;
+      case "pdfLastRead":
+      case "epubLastRead":
+        if (meta.lastRead === void 0) meta.lastRead = typeof value === "string" ? value : "";
+        break;
+      case "cfi":
+        if (meta.cfi === void 0) meta.cfi = typeof value === "string" ? value : "";
+        break;
+      case "epubCfi":
+        if (meta.cfi === void 0) meta.cfi = typeof value === "string" ? value : "";
+        break;
+      case "chapter":
+        if (meta.chapter === void 0) meta.chapter = typeof value === "string" ? value : "";
+        break;
+      case "epubChapter":
+        if (meta.chapter === void 0) meta.chapter = typeof value === "string" ? value : "";
+        break;
+      case "readingTimeSeconds":
+        if (meta.readingTimeSeconds === void 0) meta.readingTimeSeconds = typeof value === "number" ? value : Number(value);
+        break;
+      case "epubReadingTimeSeconds":
+        if (meta.readingTimeSeconds === void 0) meta.readingTimeSeconds = typeof value === "number" ? value : Number(value);
+        break;
+      case "estimatedRemainingMinutes":
+        if (meta.estimatedRemainingMinutes === void 0) meta.estimatedRemainingMinutes = typeof value === "number" ? value : Number(value);
+        break;
+      case "epubEstimatedRemainingMinutes":
+        if (meta.estimatedRemainingMinutes === void 0) meta.estimatedRemainingMinutes = typeof value === "number" ? value : Number(value);
+        break;
+      case "bookmarks":
+        meta.bookmarks = Array.isArray(value) ? value : [];
+        break;
+      case "canvasBinding":
+        meta.canvasBinding = isObject(value) ? value : null;
+        break;
+      case "canvasNodes":
+        meta.canvasNodes = Array.isArray(value) ? value : [];
+        break;
+    }
+  }
+  return meta;
+}
+function isObject(value) {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+function yamlValue(value) {
+  const json = JSON.stringify(value ?? null);
+  return `'${json.replace(/'/g, "''")}'`;
+}
+function parseYamlScalar(raw) {
+  const s3 = raw.trim();
+  if (s3.startsWith("'") && s3.endsWith("'") && s3.length >= 2) {
+    try {
+      return JSON.parse(s3.slice(1, -1).replace(/''/g, "'"));
+    } catch {
+      return s3.slice(1, -1).replace(/''/g, "'");
+    }
+  }
+  if (s3.startsWith('"') && s3.endsWith('"') && s3.length >= 2) {
+    try {
+      return JSON.parse(s3.slice(1, -1).replace(/\\"/g, '"').replace(/\\\\/g, "\\"));
+    } catch {
+      return s3.slice(1, -1);
+    }
+  }
+  if (s3 === "" || s3 === "null") {
+    return null;
+  }
+  try {
+    return JSON.parse(s3);
+  } catch {
+    return s3;
+  }
+}
+function extractAnnotations(raw) {
+  const regex = new RegExp(`<span[^>]*\\s${MD_ANNOTATION_ATTR}="([^"]*)"[^>]*>\\s*</span>`, "g");
+  const result = [];
+  let match;
+  while ((match = regex.exec(raw)) !== null) {
+    try {
+      const item = JSON.parse(unescapeHtmlAttribute(match[1]));
+      if (item && typeof item.kind === "string" && "value" in item) {
+        result.push(item);
+      }
+    } catch {
+    }
+  }
+  return result;
+}
+function unescapeHtmlAttribute(value) {
+  return value.replace(/&quot;/g, '"').replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&amp;/g, "&");
+}
 
 // src/views/annotationPopover.ts
 var import_obsidian8 = require("obsidian");
 var AnnotationPopover = class {
   constructor(options) {
     this.options = options;
-    this.element = document.body.createDiv({ cls: "yh-annotation-popover" });
+    this.element = document.body.createDiv({ cls: "book-note-annotation-popover" });
     this.element.addEventListener("click", (event) => event.stopPropagation());
     this.hide();
   }
@@ -10493,15 +11110,15 @@ var AnnotationPopover = class {
   show(options) {
     this.element.empty();
     this.element.toggleClass("is-visible", true);
-    const header = this.element.createDiv({ cls: "yh-popover-header" });
-    header.createSpan({ cls: "yh-popover-title", text: "\u6279\u6CE8" });
+    const header = this.element.createDiv({ cls: "book-note-popover-header" });
+    header.createSpan({ cls: "book-note-popover-title", text: t("popover.title") });
     const close = header.createEl("button", {
-      cls: "yh-icon-button",
-      attr: { type: "button", title: "\u5173\u95ED\u6279\u6CE8\u5F39\u5C42" }
+      cls: "book-note-icon-button",
+      attr: { type: "button", title: t("aria.closePopover") }
     });
     (0, import_obsidian8.setIcon)(close, "x");
     close.addEventListener("click", () => this.hide());
-    const list = this.element.createDiv({ cls: "yh-popover-list" });
+    const list = this.element.createDiv({ cls: "book-note-popover-list" });
     for (const item of options.items) {
       this.renderItem(list, item, options.sourcePath);
     }
@@ -10524,21 +11141,21 @@ var AnnotationPopover = class {
   }
   renderItem(container, item, sourcePath) {
     const card = container.createDiv({
-      cls: "yh-popover-card",
+      cls: "book-note-popover-card",
       attr: {
-        "data-yh-color": item.color,
-        "data-yh-id": item.id
+        "data-book-note-color": item.color,
+        "data-book-note-id": item.id
       }
     });
-    const meta = card.createDiv({ cls: "yh-popover-meta" });
-    meta.createSpan({ cls: "yh-color-chip", text: COLOR_LABELS[item.color], attr: { "data-yh-color": item.color } });
-    meta.createSpan({ text: item.kind === "comment" ? item.author ?? "\u8BFB\u8005" : "\u4EC5\u9AD8\u4EAE" });
-    card.createDiv({ cls: "yh-popover-quote", text: item.quote });
+    const meta = card.createDiv({ cls: "book-note-popover-meta" });
+    meta.createSpan({ cls: "book-note-color-chip", text: COLOR_LABELS[item.color], attr: { "data-book-note-color": item.color } });
+    meta.createSpan({ text: item.kind === "comment" ? item.author ?? t("common.reader") : t("popover.onlyHighlight") });
+    card.createDiv({ cls: "book-note-popover-quote", text: item.quote });
     if (!item.content) {
-      card.createDiv({ cls: "yh-popover-empty", text: "\u6682\u65E0\u9644\u52A0\u4FBF\u7B7E\u3002" });
+      card.createDiv({ cls: "book-note-popover-empty", text: t("popover.emptyNote") });
       return;
     }
-    const body = card.createDiv({ cls: "yh-popover-body" });
+    const body = card.createDiv({ cls: "book-note-popover-body" });
     import_obsidian8.MarkdownRenderer.render(this.options.app, item.content, body, sourcePath, this.options.component);
   }
   place(rect) {
@@ -10564,7 +11181,7 @@ function formatTime(value) {
 }
 
 // src/views/sidebarView.ts
-var ANNOTATION_SIDEBAR_VIEW = "yh-inklight-sidebar";
+var ANNOTATION_SIDEBAR_VIEW = "book-note-sidebar";
 var ALL_TAGS_FILTER = "__all__";
 var UNTAGGED_FILTER = "__untagged__";
 var AnnotationSidebarView = class extends import_obsidian9.ItemView {
@@ -10585,13 +11202,13 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
     return ANNOTATION_SIDEBAR_VIEW;
   }
   getDisplayText() {
-    return "\u58A8\u5149\u6279\u6CE8";
+    return "Book Note";
   }
   getIcon() {
-    return "yh-inklight-icon";
+    return "book-note-icon";
   }
   async onOpen() {
-    this.containerEl.addClass("yh-sidebar");
+    this.containerEl.addClass("book-note-sidebar");
     await this.render();
   }
   requestRender() {
@@ -10607,12 +11224,12 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
     const token = ++this.renderToken;
     const container = this.containerEl.children[1] ?? this.containerEl;
     container.empty();
-    container.addClass("yh-overview");
+    container.addClass("book-note-overview");
     const file = this.app.workspace.getActiveFile();
     this.renderHeader(container);
     if (this.annotationScope === "current" && !file) {
       this.renderControls(container, []);
-      container.createDiv({ cls: "yh-empty", text: "Open a Markdown or PDF file to inspect annotations." });
+      container.createDiv({ cls: "book-note-empty", text: t("sidebar.emptyHint") });
       this.renderExportFooter(container, null);
       return;
     }
@@ -10625,11 +11242,11 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
     const cards = this.filterCards(rawCards);
     const highlightCount = rawCards.filter((card) => card.kind === "highlight" && !card.orphaned).length;
     const noteCount = rawCards.filter((card) => card.note && !card.orphaned).length;
-    const scopeLabel = this.annotationScope === "all" ? `${documents.length} files` : "current file";
-    container.createDiv({ cls: "yh-ov-count", text: `${scopeLabel} \xB7 ${highlightCount} highlights \xB7 ${noteCount} notes` });
-    const list = container.createDiv({ cls: "yh-ov-list" });
+    const scopeLabel = this.annotationScope === "all" ? t("sidebar.scope.all") : t("sidebar.scope.current");
+    container.createDiv({ cls: "book-note-ov-count", text: t("sidebar.count", { scope: scopeLabel, highlights: highlightCount, notes: noteCount }) });
+    const list = container.createDiv({ cls: "book-note-ov-list" });
     if (!cards.length) {
-      list.createDiv({ cls: "yh-empty", text: "No matching annotations." });
+      list.createDiv({ cls: "book-note-empty", text: t("sidebar.noMatch") });
     } else {
       for (const card of cards) {
         this.renderCard(list, card);
@@ -10642,7 +11259,7 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
    */
   async refreshList() {
     const root = this.containerEl.children[1] ?? this.containerEl;
-    const list = root.querySelector(".yh-ov-list");
+    const list = root.querySelector(".book-note-ov-list");
     if (!list) {
       await this.render();
       return;
@@ -10657,18 +11274,18 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
     const cards = this.filterCards(rawCards);
     list.empty();
     if (!cards.length) {
-      list.createDiv({ cls: "yh-empty", text: "No matching annotations." });
+      list.createDiv({ cls: "book-note-empty", text: t("sidebar.noMatch") });
     } else {
       for (const card of cards) {
         this.renderCard(list, card);
       }
     }
-    const countEl = root.querySelector(".yh-ov-count");
+    const countEl = root.querySelector(".book-note-ov-count");
     if (countEl) {
       const highlightCount = rawCards.filter((card) => card.kind === "highlight" && !card.orphaned).length;
       const noteCount = rawCards.filter((card) => card.note && !card.orphaned).length;
-      const scopeLabel = this.annotationScope === "all" ? `${documents.length} files` : "current file";
-      countEl.textContent = `${scopeLabel} \xB7 ${highlightCount} highlights \xB7 ${noteCount} notes`;
+      const scopeLabel = this.annotationScope === "all" ? t("sidebar.scope.all") : t("sidebar.scope.current");
+      countEl.textContent = t("sidebar.count", { scope: scopeLabel, highlights: highlightCount, notes: noteCount });
     }
   }
   buildCards(document2) {
@@ -10814,18 +11431,18 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
     return comments.find((note) => !usedNotes.has(note.id) && note.anchor.cfiRange === highlight.anchor.cfiRange) ?? null;
   }
   renderHeader(container) {
-    const header = container.createDiv({ cls: "yh-ov-head" });
-    header.createSpan({ cls: "yh-ov-title", text: "Inklight" });
-    const actions = header.createDiv({ cls: "yh-ov-head-actions" });
+    const header = container.createDiv({ cls: "book-note-ov-head" });
+    header.createSpan({ cls: "book-note-ov-title", text: t("sidebar.title") });
+    const actions = header.createDiv({ cls: "book-note-ov-head-actions" });
     const refresh = actions.createEl("button", {
-      cls: "yh-icon-btn yh-ov-refresh",
-      attr: { type: "button", title: "Refresh", "aria-label": "Refresh annotations" }
+      cls: "book-note-icon-btn book-note-ov-refresh",
+      attr: { type: "button", title: t("common.refresh"), "aria-label": t("aria.refreshAnnotations") }
     });
     (0, import_obsidian9.setIcon)(refresh, "refresh-cw");
     refresh.addEventListener("click", () => this.requestRender());
     const close = actions.createEl("button", {
-      cls: "yh-icon-btn yh-ov-close",
-      attr: { type: "button", title: "Close panel", "aria-label": "Close panel" }
+      cls: "book-note-icon-btn book-note-ov-close",
+      attr: { type: "button", title: t("aria.closePanel"), "aria-label": t("aria.closePanel") }
     });
     (0, import_obsidian9.setIcon)(close, "x");
     close.addEventListener("click", () => {
@@ -10833,10 +11450,10 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
     });
   }
   renderControls(container, cards) {
-    const searchRow = container.createDiv({ cls: "yh-ov-search-row" });
+    const searchRow = container.createDiv({ cls: "book-note-ov-search-row" });
     const search2 = searchRow.createEl("input", {
-      cls: "yh-ov-search",
-      attr: { type: "search", placeholder: "\u641C\u7D22\u6279\u6CE8..." }
+      cls: "book-note-ov-search",
+      attr: { type: "search", placeholder: t("sidebar.searchPlaceholder") }
     });
     search2.value = this.query;
     let searchTimer = null;
@@ -10850,19 +11467,19 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
         void this.refreshList();
       }, 200);
     });
-    const scope = searchRow.createEl("select", { cls: "yh-filter-select" });
-    scope.createEl("option", { text: "\u5F53\u524D\u6587\u4EF6", value: "current" });
-    scope.createEl("option", { text: "\u5168\u5E93", value: "all" });
+    const scope = searchRow.createEl("select", { cls: "book-note-filter-select" });
+    scope.createEl("option", { text: t("sidebar.scope.current"), value: "current" });
+    scope.createEl("option", { text: t("sidebar.scope.all"), value: "all" });
     scope.value = this.annotationScope;
     scope.addEventListener("change", async () => {
       this.annotationScope = scope.value;
       await this.render();
     });
-    const filterButton = searchRow.createEl("button", { cls: "yh-icon-btn", attr: { type: "button", title: "\u7B5B\u9009" } });
+    const filterButton = searchRow.createEl("button", { cls: "book-note-icon-btn", attr: { type: "button", title: t("sidebar.filter") } });
     (0, import_obsidian9.setIcon)(filterButton, "filter");
-    const filterRow = container.createDiv({ cls: "yh-ov-filter-row" });
-    const color = filterRow.createEl("select", { cls: "yh-filter-select" });
-    color.createEl("option", { text: "\u5168\u90E8\u989C\u8272", value: "all" });
+    const filterRow = container.createDiv({ cls: "book-note-ov-filter-row" });
+    const color = filterRow.createEl("select", { cls: "book-note-filter-select" });
+    color.createEl("option", { text: t("sidebar.filterColor.all"), value: "all" });
     for (const item of ANNOTATION_COLORS) {
       color.createEl("option", { text: COLOR_LABELS[item], value: item });
     }
@@ -10871,20 +11488,20 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
       this.color = color.value;
       await this.render();
     });
-    const type = filterRow.createEl("select", { cls: "yh-filter-select" });
-    type.createEl("option", { text: "\u5168\u90E8\u7C7B\u578B", value: "all" });
-    type.createEl("option", { text: "\u9AD8\u4EAE", value: "highlight" });
-    type.createEl("option", { text: "\u7B14\u8BB0", value: "note" });
+    const type = filterRow.createEl("select", { cls: "book-note-filter-select" });
+    type.createEl("option", { text: t("sidebar.filterType.all"), value: "all" });
+    type.createEl("option", { text: t("sidebar.filterType.highlight"), value: "highlight" });
+    type.createEl("option", { text: t("sidebar.filterType.note"), value: "note" });
     type.value = this.type;
     type.addEventListener("change", async () => {
       this.type = type.value;
       await this.render();
     });
-    const tag = filterRow.createEl("select", { cls: "yh-filter-select", attr: { title: "\u6309\u6807\u7B7E\u7B5B\u9009" } });
-    tag.createEl("option", { text: "\u5168\u90E8\u6807\u7B7E", value: ALL_TAGS_FILTER });
-    tag.createEl("option", { text: "\u672A\u5206\u7C7B", value: UNTAGGED_FILTER });
+    const tag = filterRow.createEl("select", { cls: "book-note-filter-select", attr: { title: t("sidebar.filterTag") } });
+    tag.createEl("option", { text: t("sidebar.filterTag.all"), value: ALL_TAGS_FILTER });
+    tag.createEl("option", { text: t("common.untagged"), value: UNTAGGED_FILTER });
     for (const resolvedTag of this.availableTags(cards)) {
-      const suffix = resolvedTag.unavailable ? "\uFF08\u5DF2\u505C\u7528\uFF09" : "";
+      const suffix = resolvedTag.unavailable ? t("modal.sticky.disabledSuffix") : "";
       tag.createEl("option", { text: `${resolvedTag.name}${suffix}`, value: resolvedTag.id });
     }
     if (![...tag.options].some((option) => option.value === this.tag)) {
@@ -10895,8 +11512,8 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
       this.tag = tag.value;
       await this.render();
     });
-    const sort = filterRow.createEl("select", { cls: "yh-filter-select" });
-    const sortOptions = { document: "\u6587\u6863\u987A\u5E8F", newest: "\u6700\u65B0\u4F18\u5148", oldest: "\u6700\u65E9\u4F18\u5148" };
+    const sort = filterRow.createEl("select", { cls: "book-note-filter-select" });
+    const sortOptions = { document: t("sort.document"), newest: t("sort.newest"), oldest: t("sort.oldest") };
     for (const item of ["document", "newest", "oldest"]) {
       sort.createEl("option", { text: sortOptions[item], value: item });
     }
@@ -10905,11 +11522,11 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
       this.sort = sort.value;
       await this.render();
     });
-    const exportFormat = filterRow.createEl("select", { cls: "yh-filter-select" });
-    exportFormat.createEl("option", { text: "\u9ED8\u8BA4\u6458\u8981", value: "summary" });
-    exportFormat.createEl("option", { text: "\u6309\u989C\u8272\u5206\u7EC4", value: "by-color" });
-    exportFormat.createEl("option", { text: "\u53EA\u5BFC\u51FA\u7B14\u8BB0", value: "notes-only" });
-    exportFormat.createEl("option", { text: "\u9605\u8BFB\u7B14\u8BB0", value: "reading-notes" });
+    const exportFormat = filterRow.createEl("select", { cls: "book-note-filter-select" });
+    exportFormat.createEl("option", { text: t("sidebar.export.summary"), value: "summary" });
+    exportFormat.createEl("option", { text: t("sidebar.export.byColor"), value: "by-color" });
+    exportFormat.createEl("option", { text: t("sidebar.export.notesOnly"), value: "notes-only" });
+    exportFormat.createEl("option", { text: t("sidebar.export.readingNotes"), value: "reading-notes" });
     exportFormat.value = this.exportFormat;
     exportFormat.addEventListener("change", async () => {
       this.exportFormat = exportFormat.value;
@@ -10919,48 +11536,48 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
   renderCard(list, cardData) {
     const file = this.fileForCard(cardData);
     const card = list.createDiv({
-      cls: `yh-ov-card yh-ov-card--${cardData.color}`,
+      cls: `book-note-ov-card book-note-ov-card--${cardData.color}`,
       attr: this.cardAttributes(cardData)
     });
     card.toggleClass("is-orphaned", !!cardData.orphaned);
-    const head = card.createDiv({ cls: "yh-ov-card-head" });
-    head.createSpan({ cls: `yh-ov-label yh-label--${cardData.color}`, text: COLOR_LABELS[cardData.color] });
-    head.createSpan({ cls: "yh-ov-meta", text: cardData.mode === "md" ? "Markdown" : cardData.mode === "pdf" ? "PDF" : "EPUB" });
-    head.createSpan({ cls: "yh-ov-dot", text: "\xB7" });
+    const head = card.createDiv({ cls: "book-note-ov-card-head" });
+    head.createSpan({ cls: `book-note-ov-label book-note-label--${cardData.color}`, text: COLOR_LABELS[cardData.color] });
+    head.createSpan({ cls: "book-note-ov-meta", text: cardData.mode === "md" ? "Markdown" : cardData.mode === "pdf" ? "PDF" : "EPUB" });
+    head.createSpan({ cls: "book-note-ov-dot", text: "\xB7" });
     const resolvedTag = this.cardTag(cardData);
-    const tag = head.createSpan({ cls: "yh-ov-tag", text: resolvedTag?.name ?? "\u672A\u5206\u7C7B" });
+    const tag = head.createSpan({ cls: "book-note-ov-tag", text: resolvedTag?.name ?? t("common.untagged") });
     if (resolvedTag) {
       tag.dataset.tagId = resolvedTag.id;
       if (resolvedTag.unavailable) {
         tag.addClass("is-unavailable");
       }
       tag.empty();
-      const icon = tag.createSpan({ cls: "yh-ov-tag-icon" });
+      const icon = tag.createSpan({ cls: "book-note-ov-tag-icon" });
       (0, import_obsidian9.setIcon)(icon, resolvedTag.icon);
       tag.createSpan({ text: resolvedTag.name });
     }
-    head.createSpan({ cls: "yh-ov-time", text: formatTime(cardData.createdAt) });
-    const quote = card.createDiv({ cls: "yh-ov-quote" });
+    head.createSpan({ cls: "book-note-ov-time", text: formatTime(cardData.createdAt) });
+    const quote = card.createDiv({ cls: "book-note-ov-quote" });
     quote.textContent = cardData.text;
     quote.toggleClass("is-code", cardData.isCode || isCodeLikeText(cardData.text));
     this.addExpandToggle(quote, card);
     if (cardData.content) {
-      const content = card.createDiv({ cls: "yh-ov-content" });
+      const content = card.createDiv({ cls: "book-note-ov-content" });
       void import_obsidian9.MarkdownRenderer.render(this.app, cardData.content, content, cardData.sourcePath, this).then(() => {
         this.addExpandToggle(content, card);
       });
     }
-    const source = card.createDiv({ cls: "yh-ov-source" });
-    source.createSpan({ cls: "yh-ov-file", text: file?.name ?? cardData.sourcePath });
+    const source = card.createDiv({ cls: "book-note-ov-source" });
+    source.createSpan({ cls: "book-note-ov-file", text: file?.name ?? cardData.sourcePath });
     source.createSpan({
-      cls: "yh-ov-mode",
+      cls: "book-note-ov-mode",
       text: cardData.mode === "epub" ? cardData.chapter ?? "EPUB" : cardData.pageNumber ? `p.${cardData.pageNumber}` : "Markdown"
     });
-    const actions = card.createDiv({ cls: "yh-ov-actions" });
+    const actions = card.createDiv({ cls: "book-note-ov-actions" });
     if (cardData.note) {
       const edit2 = actions.createEl("button", {
-        cls: "yh-ov-btn yh-ov-btn--icon",
-        attr: { type: "button", title: "\u7F16\u8F91\u7B14\u8BB0", "data-action": "edit-note" }
+        cls: "book-note-ov-btn book-note-ov-btn--icon",
+        attr: { type: "button", title: t("common.edit"), "data-action": "edit-note" }
       });
       (0, import_obsidian9.setIcon)(edit2, "pencil");
       edit2.disabled = !file;
@@ -10971,8 +11588,8 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
       });
     } else if (cardData.highlight) {
       const addNote = actions.createEl("button", {
-        cls: "yh-ov-btn",
-        text: "\u6DFB\u52A0\u7B14\u8BB0",
+        cls: "book-note-ov-btn",
+        text: t("common.addNote"),
         attr: { type: "button", "data-action": "add-note" }
       });
       addNote.disabled = !file;
@@ -10984,8 +11601,8 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
       });
     }
     const jump = actions.createEl("button", {
-      cls: "yh-ov-btn",
-      text: "\u8DF3\u8F6C",
+      cls: "book-note-ov-btn",
+      text: t("common.jump"),
       attr: { type: "button", "data-action": "jump" }
     });
     jump.disabled = !file;
@@ -10995,8 +11612,8 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
       }
     });
     const more = actions.createEl("button", {
-      cls: "yh-ov-btn yh-ov-btn--icon",
-      attr: { type: "button", title: "More annotation actions", "aria-label": "More annotation actions" }
+      cls: "book-note-ov-btn book-note-ov-btn--icon",
+      attr: { type: "button", title: t("aria.moreActions"), "aria-label": t("aria.moreActions") }
     });
     (0, import_obsidian9.setIcon)(more, "ellipsis");
     more.disabled = !file;
@@ -11013,16 +11630,16 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
       event.preventDefault();
       this.openCardMenu(file, cardData, event);
     });
-    const edit = card.createDiv({ cls: "yh-ov-edit hidden" });
-    const tagSelect = edit.createEl("select", { cls: "yh-ov-tag-select", attr: { "aria-label": "\u7B14\u8BB0\u6807\u7B7E" } });
+    const edit = card.createDiv({ cls: "book-note-ov-edit hidden" });
+    const tagSelect = edit.createEl("select", { cls: "book-note-ov-tag-select", attr: { "aria-label": t("sidebar.noteTag") } });
     tagSelect.addClass("hidden");
     const textarea = edit.createEl("textarea", {
-      cls: "yh-ov-textarea",
-      attr: { placeholder: "\u5199\u4E0B\u4F60\u7684\u60F3\u6CD5..." }
+      cls: "book-note-ov-textarea",
+      attr: { placeholder: t("sidebar.notePlaceholder") }
     });
-    const editActions = edit.createDiv({ cls: "yh-ov-edit-actions" });
-    editActions.createEl("button", { cls: "yh-ov-save", text: "\u4FDD\u5B58", attr: { type: "button" } });
-    editActions.createEl("button", { cls: "yh-ov-cancel", text: "\u53D6\u6D88", attr: { type: "button" } });
+    const editActions = edit.createDiv({ cls: "book-note-ov-edit-actions" });
+    editActions.createEl("button", { cls: "book-note-ov-save", text: t("common.save"), attr: { type: "button" } });
+    editActions.createEl("button", { cls: "book-note-ov-cancel", text: t("common.cancel"), attr: { type: "button" } });
   }
   cardAttributes(card) {
     const attrs = { "data-id": card.id, "data-source-path": card.sourcePath };
@@ -11073,11 +11690,11 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
     }
   }
   openInlineEditor(card, file, cardData, initialValue) {
-    const edit = card.querySelector(".yh-ov-edit");
-    const tagSelect = card.querySelector(".yh-ov-tag-select");
-    const textarea = card.querySelector(".yh-ov-textarea");
-    const save = card.querySelector(".yh-ov-save");
-    const cancel = card.querySelector(".yh-ov-cancel");
+    const edit = card.querySelector(".book-note-ov-edit");
+    const tagSelect = card.querySelector(".book-note-ov-tag-select");
+    const textarea = card.querySelector(".book-note-ov-textarea");
+    const save = card.querySelector(".book-note-ov-save");
+    const cancel = card.querySelector(".book-note-ov-cancel");
     const addNote = card.querySelector('[data-action="add-note"]');
     if (!edit || !textarea || !save || !cancel || !tagSelect) {
       return;
@@ -11086,7 +11703,7 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
     const currentTag = this.cardTag(cardData);
     const selectableTags = this.plugin.settings.annotationTags.filter((tag) => tag.enabled || tag.id === currentTag?.id);
     for (const tag of selectableTags) {
-      const suffix = tag.enabled ? "" : "\uFF08\u5DF2\u505C\u7528\uFF09";
+      const suffix = tag.enabled ? "" : t("modal.sticky.disabledSuffix");
       tagSelect.createEl("option", { text: `${tag.name}${suffix}`, value: tag.id });
     }
     tagSelect.value = currentTag?.id && selectableTags.some((tag) => tag.id === currentTag.id) ? currentTag.id : selectableTags[0]?.id ?? "";
@@ -11128,15 +11745,15 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
           return;
         }
         const button = document.createElement("span");
-        button.className = "yh-ov-expand-btn";
-        button.textContent = "\u5C55\u5F00";
+        button.className = "book-note-ov-expand-btn";
+        button.textContent = t("common.expand");
         button.tabIndex = 0;
         button.setAttribute("role", "button");
         contentEl.insertAdjacentElement("afterend", button);
         const toggle = () => {
           const expanded = contentEl.hasClass("expanded");
           contentEl.toggleClass("expanded", !expanded);
-          button.setText(expanded ? "\u5C55\u5F00" : "\u6536\u8D77");
+          button.setText(expanded ? t("common.expand") : t("common.collapse"));
         };
         button.addEventListener("click", toggle);
         button.addEventListener("keydown", (event) => {
@@ -11303,24 +11920,24 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
     });
   }
   renderExportFooter(container, file) {
-    const footer = container.createDiv({ cls: "yh-ov-foot" });
-    const exportButton = footer.createEl("button", { cls: "yh-export-btn", text: "\u2191 \u5BFC\u51FA\u6279\u6CE8", attr: { type: "button" } });
+    const footer = container.createDiv({ cls: "book-note-ov-foot" });
+    const exportButton = footer.createEl("button", { cls: "book-note-export-btn", text: t("sidebar.exportButton"), attr: { type: "button" } });
     exportButton.disabled = this.annotationScope === "current" && !file;
     exportButton.addEventListener("click", async () => {
       if (this.annotationScope === "current" && !file) {
         return;
       }
       const exported = this.annotationScope === "all" ? await this.plugin.store.exportAllNotes(this.exportFormat) : await this.plugin.store.exportNotes(file, this.exportFormat);
-      new import_obsidian9.Notice(`\u5DF2\u5BFC\u51FA\u7B14\u8BB0\u81F3 ${exported.path}`);
+      new import_obsidian9.Notice(t("notice.exported", { path: exported.path }));
     });
-    footer.createDiv({ cls: "yh-ov-export-note", text: this.exportFormatLabel() });
+    footer.createDiv({ cls: "book-note-ov-export-note", text: this.exportFormatLabel() });
   }
   exportFormatLabel() {
     const labels = {
-      summary: "\u5BFC\u51FA\u4E3A Markdown \u6458\u8981",
-      "by-color": "\u6309\u989C\u8272\u5206\u7EC4\u5BFC\u51FA",
-      "notes-only": "\u53EA\u5BFC\u51FA\u5E26\u7B14\u8BB0\u7684\u6279\u6CE8",
-      "reading-notes": "\u5BFC\u51FA\u4E3A\u9605\u8BFB\u7B14\u8BB0\u683C\u5F0F"
+      summary: t("export.summary"),
+      "by-color": t("export.byColor"),
+      "notes-only": t("export.notesOnly"),
+      "reading-notes": t("export.readingNotes")
     };
     return labels[this.exportFormat];
   }
@@ -11333,7 +11950,7 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
     }
     if (file.extension.toLowerCase() === "pdf") {
       window.setTimeout(() => {
-        document.dispatchEvent(new CustomEvent("yh-pdf-goto-page", { detail: { page: pageNumber } }));
+        document.dispatchEvent(new CustomEvent("book-note-pdf-goto-page", { detail: { page: pageNumber } }));
       }, 120);
       return;
     }
@@ -11344,8 +11961,8 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
     const pos = view.editor.offsetToPos(offset);
     view.editor.setCursor(pos);
     view.editor.scrollIntoView({ from: pos, to: pos }, true);
-    view.containerEl.addClass("yh-flash-target");
-    window.setTimeout(() => view.containerEl.removeClass("yh-flash-target"), 850);
+    view.containerEl.addClass("book-note-flash-target");
+    window.setTimeout(() => view.containerEl.removeClass("book-note-flash-target"), 850);
   }
 };
 function isCodeAnchor(anchor) {
@@ -11469,12 +12086,12 @@ async function inlineBlockedStylesheets(contents) {
         continue;
       }
       const style2 = doc.createElement("style");
-      style2.setAttribute("data-yh-inlined", "1");
+      style2.setAttribute("data-book-note-inlined", "1");
       style2.textContent = css;
       link.parentNode?.insertBefore(style2, link);
       link.remove();
     } catch (error) {
-      console.warn("yh-inklight: stylesheet inline failed in content hook", href, error);
+      console.warn("book-note: stylesheet inline failed in content hook", href, error);
       link.remove();
     }
   }
@@ -11727,7 +12344,7 @@ async function inlineBlobStylesheetsInHtml(html) {
         style2.textContent = css;
         link.replaceWith(style2);
       } catch (error) {
-        console.warn("yh-inklight: inline blob css failed", href, error);
+        console.warn("book-note: inline blob css failed", href, error);
       }
     })
   );
@@ -11796,7 +12413,7 @@ async function ensureViewModule() {
 async function ensureFoliateViewRegistered() {
   installFoliateCustomElementGuard();
   installFoliateBlobIframePatch((error) => {
-    console.warn("yh-inklight: foliate blob iframe \u52A0\u8F7D\u5931\u8D25", error);
+    console.warn("book-note: foliate blob iframe \u52A0\u8F7D\u5931\u8D25", error);
   });
   if (customElements.get("foliate-view")) {
     return;
@@ -11916,7 +12533,7 @@ async function transformFoliateMarkup(markup, mediaType) {
     try {
       const css = await normalizeFoliateCss(await readBlobUrlAsText2(href));
       const style2 = doc.createElement("style");
-      style2.setAttribute("data-yh-foliate-inlined", "1");
+      style2.setAttribute("data-book-note-foliate-inlined", "1");
       style2.textContent = css;
       link.replaceWith(style2);
     } catch {
@@ -12033,7 +12650,7 @@ async function showFoliateStart(view) {
 // src/epub/EpubNoteModal.ts
 var import_obsidian11 = require("obsidian");
 var EpubNoteModal = class extends import_obsidian11.Modal {
-  constructor(app, selectedText, tags, initial, onSubmit, titleText = "\u5199\u4E0B\u4F60\u7684\u60F3\u6CD5") {
+  constructor(app, selectedText, tags, initial, onSubmit, titleText = t("epubNote.title")) {
     super(app);
     this.tags = tags;
     this.selectedText = selectedText;
@@ -12058,18 +12675,18 @@ var EpubNoteModal = class extends import_obsidian11.Modal {
   onOpen() {
     const { contentEl } = this;
     contentEl.empty();
-    contentEl.addClass("yh-epub-note-modal");
+    contentEl.addClass("book-note-epub-note-modal");
     contentEl.createEl("h3", { text: this.titleText });
-    const quote = contentEl.createDiv({ cls: "yh-epub-note-quote" });
+    const quote = contentEl.createDiv({ cls: "book-note-epub-note-quote" });
     quote.setText(
       this.selectedText.length > 240 ? this.selectedText.slice(0, 240) + "\u2026" : this.selectedText
     );
-    const colorRow = contentEl.createDiv({ cls: "yh-epub-note-colors" });
-    colorRow.createEl("span", { cls: "yh-epub-note-label", text: "\u753B\u7EBF\u989C\u8272" });
-    const dots = colorRow.createDiv({ cls: "yh-epub-color-dots" });
+    const colorRow = contentEl.createDiv({ cls: "book-note-epub-note-colors" });
+    colorRow.createEl("span", { cls: "book-note-epub-note-label", text: t("epubNote.color") });
+    const dots = colorRow.createDiv({ cls: "book-note-epub-color-dots" });
     const dotEls = {};
     for (const c2 of ANNOTATION_COLORS) {
-      const dot = dots.createDiv({ cls: "yh-epub-color-dot" });
+      const dot = dots.createDiv({ cls: "book-note-epub-color-dot" });
       dot.setAttribute("data-color", c2);
       dot.style.background = EPUB_COLOR_MAP[c2];
       dot.title = COLOR_LABELS[c2];
@@ -12083,12 +12700,12 @@ var EpubNoteModal = class extends import_obsidian11.Modal {
       });
       dotEls[c2] = dot;
     }
-    const styleRow = contentEl.createDiv({ cls: "yh-epub-note-styles" });
-    styleRow.createEl("span", { cls: "yh-epub-note-label", text: "\u6807\u6CE8\u6837\u5F0F" });
-    const styleChips = styleRow.createDiv({ cls: "yh-epub-style-chips" });
+    const styleRow = contentEl.createDiv({ cls: "book-note-epub-note-styles" });
+    styleRow.createEl("span", { cls: "book-note-epub-note-label", text: t("epubNote.style") });
+    const styleChips = styleRow.createDiv({ cls: "book-note-epub-style-chips" });
     const styleEls = {};
     for (const s3 of EPUB_HIGHLIGHT_STYLES) {
-      const chip = styleChips.createDiv({ cls: "yh-epub-style-chip" });
+      const chip = styleChips.createDiv({ cls: "book-note-epub-style-chip" });
       chip.setText(s3.label);
       chip.title = s3.label;
       chip.setAttribute("data-style", s3.id);
@@ -12102,15 +12719,15 @@ var EpubNoteModal = class extends import_obsidian11.Modal {
       });
       styleEls[s3.id] = chip;
     }
-    const typeRow = contentEl.createDiv({ cls: "yh-epub-note-type-row" });
-    typeRow.createEl("span", { cls: "yh-epub-note-label", text: "\u6807\u7B7E" });
-    const chips = typeRow.createDiv({ cls: "yh-epub-note-type-chips" });
+    const typeRow = contentEl.createDiv({ cls: "book-note-epub-note-type-row" });
+    typeRow.createEl("span", { cls: "book-note-epub-note-label", text: t("common.tag") });
+    const chips = typeRow.createDiv({ cls: "book-note-epub-note-type-chips" });
     const chipEls = {};
     for (const tag of this.tags.filter((item) => item.enabled || item.id === this.tagId)) {
-      const chip = chips.createDiv({ cls: "yh-epub-note-type-chip" });
-      chip.title = tag.enabled ? tag.name : `${tag.name}\uFF08\u5DF2\u505C\u7528\uFF09`;
+      const chip = chips.createDiv({ cls: "book-note-epub-note-type-chip" });
+      chip.title = tag.enabled ? tag.name : `${tag.name}${t("modal.sticky.disabledSuffix")}`;
       chip.setAttribute("data-tag-id", tag.id);
-      const icon = chip.createSpan({ cls: "yh-epub-note-type-icon" });
+      const icon = chip.createSpan({ cls: "book-note-epub-note-type-icon" });
       (0, import_obsidian11.setIcon)(icon, tag.icon);
       chip.createSpan({ text: tag.name });
       if (tag.id === this.tagId) {
@@ -12123,19 +12740,19 @@ var EpubNoteModal = class extends import_obsidian11.Modal {
       });
       chipEls[tag.id] = chip;
     }
-    const ta = contentEl.createEl("textarea", { cls: "yh-epub-note-textarea" });
-    ta.placeholder = "\u5728\u8FD9\u91CC\u5199\u4E0B\u4F60\u7684\u60F3\u6CD5\u6216\u8054\u60F3\u2026";
+    const ta = contentEl.createEl("textarea", { cls: "book-note-epub-note-textarea" });
+    ta.placeholder = t("epubNote.placeholder");
     ta.value = this.note;
     ta.rows = 6;
     window.setTimeout(() => ta.focus(), 30);
-    const actions = contentEl.createDiv({ cls: "yh-epub-note-actions" });
+    const actions = contentEl.createDiv({ cls: "book-note-epub-note-actions" });
     const cancelBtn = actions.createEl("button", {
-      text: "\u53D6\u6D88",
-      cls: "yh-epub-note-cancel"
+      text: t("common.cancel"),
+      cls: "book-note-epub-note-cancel"
     });
     const saveBtn = actions.createEl("button", {
-      text: "\u4FDD\u5B58",
-      cls: "yh-epub-note-save"
+      text: t("common.save"),
+      cls: "book-note-epub-note-save"
     });
     saveBtn.addClass("mod-cta");
     cancelBtn.addEventListener("click", () => this.close());
@@ -12157,11 +12774,12 @@ var EpubNoteModal = class extends import_obsidian11.Modal {
 };
 
 // src/epub/EpubReaderView.ts
-var EPUB_READER_VIEW_TYPE = "inklight-epub-reader";
+var EPUB_READER_VIEW_TYPE = "book-note-epub-reader";
 var READING_TIME_FLUSH_INTERVAL_MS = 6e4;
 var WHEEL_DEBOUNCE_MS = 400;
 var PROGRESS_SAVE_DEBOUNCE_MS = 2e3;
 var SELECTION_SYNC_RETRY_DELAY_MS = 120;
+var SCROLL_OVERRUN_THRESHOLD = 40;
 var EpubReaderView = class extends import_obsidian12.FileView {
   // ================================================================
   // 构造 & 生命周期
@@ -12172,6 +12790,8 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.foliateView = null;
     this.loadedSectionDocs = /* @__PURE__ */ new WeakMap();
     this.documentSelectionCleanups = /* @__PURE__ */ new WeakMap();
+    /** 清理 iframe 内 keydown 监听（PC 端键盘翻页） */
+    this.documentKeyboardCleanups = /* @__PURE__ */ new WeakMap();
     /** 最近一次 foliate load 事件的 section doc，供工具栏全文搜索使用（getContents 不可靠时的可靠来源） */
     this.currentLoadedDoc = null;
     // 跟踪 foliate 高亮层实际已渲染的标注（id → 渲染时传入 foliate 的 meta）。
@@ -12183,6 +12803,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.tocEntries = [];
     this.currentChapter = "";
     this.currentPercent = 0;
+    this.themeObserver = null;
     this.sidebarOpen = false;
     this.contextMenuEl = null;
     this.lastSelectedCfiRange = "";
@@ -12205,11 +12826,33 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.readingTimeFlushTimer = null;
     this.progressSaveTimer = null;
     this.wheelDebounceTimer = null;
+    /** 滚动模式下跨章导航进行中标志，防止重入 */
+    this.scrolledNavigating = false;
+    /** 最近一次跨章导航方向，冷却期内阻止反方向触发（防止来回跳） */
+    this.scrolledNavDirection = null;
+    /** 滚动到底部后，用户继续向下滑动的累积距离 */
+    this.scrollOverrunNext = 0;
+    /** 滚动到顶部后，用户继续向上滑动的累积距离 */
+    this.scrollOverrunPrev = 0;
+    /** PC 端翻页模式：键盘翻页 / 滚轮翻页（互斥，默认键盘） */
+    this.pcNavMode = "wheel";
+    /** 移动端点按翻页开关（true=点按翻页，false=滑动翻页） */
+    this.mobileTapEnabled = true;
+    /** 移动端 readerContainer 点击翻页监听清理函数 */
+    this.mobileTapZoneCleanup = null;
+    /** 清理 paginator scroll/touch/wheel 事件监听 */
+    this.paginatorScrollCleanup = null;
     this.contextMenuDismissTimer = null;
     this.visibilityHandler = null;
     this.blurHandler = null;
     this.focusHandler = null;
     this.lastFlushTimestamp = 0;
+    // ---- 工具栏溢出菜单 ----
+    this.toolbarItems = [];
+    this.toolbarOverflowBtn = null;
+    this.toolbarOverflowEl = null;
+    this.toolbarResizeObserver = null;
+    this.toolbarOverflowOutsideClickHandler = null;
     /**
      * 销毁当前浮动上下文菜单。
      */
@@ -12226,10 +12869,18 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       stripScriptsFromDocument(doc);
       void inlineBlockedStylesheets({ document: doc });
       this.attachSelectionListeners(doc);
+      this.attachKeyboardNavigation(doc);
       this.handleRendered();
+      requestAnimationFrame(() => this.focusActiveIframe());
+      if (import_obsidian12.Platform.isMobile) {
+        doc.addEventListener("click", (e3) => this.handleReaderAreaClick(e3));
+      }
     };
     this.handleFoliateRelocate = (event) => {
       this.handleRelocated(event.detail ?? {});
+      if (!import_obsidian12.Platform.isMobile && this.currentFlowMode === "paginated") {
+        requestAnimationFrame(() => this.focusActiveIframe());
+      }
     };
     this.handleFoliateDrawAnnotation = (event) => {
       const detail = event.detail;
@@ -12262,15 +12913,22 @@ var EpubReaderView = class extends import_obsidian12.FileView {
   }
   /** 视图打开时构建 DOM 骨架 */
   async onOpen() {
-    this.containerEl.addClass("yh-epub-reader");
+    this.contentEl.addClass("book-note-epub-reader");
     this.buildLayout();
     this.startReadingTimeTracker();
+    this.startObsidianThemeWatcher();
   }
   /** 视图关闭时释放 foliate 资源与定时器 */
   async onClose() {
     this.stopReadingTimeTracker();
     this.dismissContextMenu();
     this.destroyRendition();
+    this.stopObsidianThemeWatcher();
+    this.destroyToolbarOverflow();
+    if (this.mobileTapZoneCleanup) {
+      this.mobileTapZoneCleanup();
+      this.mobileTapZoneCleanup = null;
+    }
   }
   // ================================================================
   // 文件加载（FileView 核心）
@@ -12289,6 +12947,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       this.configureFoliateView(this.foliateView);
       this.registerFoliateEvents(this.foliateView);
       await openBookFromBuffer(this.foliateView, arrayBuffer, file.name);
+      this.attachPaginatorScrollListener();
       this.applyFoliateLayout();
       this.tocEntries = this.buildFoliateTocEntries(this.foliateView.book?.toc ?? []);
       this.applyFoliateAppearance();
@@ -12296,8 +12955,8 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       this.renderToolbar();
       this.renderSidebar();
     } catch (error) {
-      console.error("yh-inklight: EPUB load failed", error);
-      new import_obsidian12.Notice(`\u58A8\u5149 EPUB \u52A0\u8F7D\u5931\u8D25: ${error instanceof Error ? error.message : String(error)}`);
+      console.error("book-note: EPUB load failed", error);
+      new import_obsidian12.Notice(t("epub.loadFailed", { error: error instanceof Error ? error.message : String(error) }));
     }
   }
   /**
@@ -12317,100 +12976,245 @@ var EpubReaderView = class extends import_obsidian12.FileView {
   /**
    * 构建完整的 DOM 布局骨架：
    * 工具栏 → [侧边栏 | 阅读区] → 进度条
+   *
+   * 使用 this.contentEl 而不是 this.containerEl，保留 Obsidian 原生 view-header
+   *（文件图标 / 标题 / 更多菜单），让 EPUB 工具栏位于标题栏下方，从而支持
+   * 在阅读时切换文件和访问文件选项。
    */
   buildLayout() {
-    this.containerEl.empty();
-    this.toolbarEl = this.containerEl.createDiv({ cls: "yh-epub-toolbar" });
-    const body = this.containerEl.createDiv({ cls: "yh-epub-body" });
-    this.sidebarContainerEl = body.createDiv({ cls: "yh-epub-sidebar" });
+    this.contentEl.empty();
+    this.toolbarItems = [];
+    this.toolbarOverflowBtn = null;
+    this.toolbarOverflowEl = null;
+    this.toolbarEl = this.contentEl.createDiv({ cls: "book-note-epub-toolbar" });
+    this.toolbarOverflowEl = this.toolbarEl.createDiv({ cls: "book-note-epub-toolbar-overflow-menu" });
+    const body = this.contentEl.createDiv({ cls: "book-note-epub-body" });
+    this.sidebarContainerEl = body.createDiv({ cls: "book-note-epub-sidebar" });
     this.sidebarContainerEl.toggleClass("is-open", this.sidebarOpen);
-    const sidebarTabs = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-tabs" });
+    const sidebarTabs = this.sidebarContainerEl.createDiv({ cls: "book-note-epub-sidebar-tabs" });
     const tocTab = sidebarTabs.createEl("button", {
-      cls: "yh-epub-sidebar-tab is-active",
-      text: "\u76EE\u5F55",
+      cls: "book-note-epub-sidebar-tab is-active",
+      text: t("epub.toc"),
       attr: { type: "button", "data-tab": "toc" }
     });
     tocTab.addEventListener("click", () => this.renderSidebar());
-    this.sidebarContentEl = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-content" });
-    this.readerContainerEl = body.createDiv({ cls: "yh-epub-reader-area" });
-    this.progressEl = this.containerEl.createDiv({ cls: "yh-epub-progress" });
-    this.containerEl.addEventListener("keydown", (event) => this.handleKeydown(event));
+    this.sidebarContentEl = this.sidebarContainerEl.createDiv({ cls: "book-note-epub-sidebar-content" });
+    this.readerContainerEl = body.createDiv({ cls: "book-note-epub-reader-area" });
+    this.progressEl = this.contentEl.createDiv({ cls: "book-note-epub-progress" });
+    this.contentEl.addEventListener("keydown", (event) => this.handleKeydown(event));
     this.readerContainerEl.addEventListener("wheel", (event) => this.handleWheel(event), { passive: false });
+    this.readerContainerEl.addEventListener("click", (event) => this.handleReaderAreaClick(event));
+    if (import_obsidian12.Platform.isMobile) {
+      const tapHandler = (event) => this.handleTapZone(event);
+      this.readerContainerEl.addEventListener("click", tapHandler);
+      this.mobileTapZoneCleanup = () => {
+        this.readerContainerEl.removeEventListener("click", tapHandler);
+      };
+    }
+  }
+  /**
+   * 监听 Obsidian 原生主题变化（亮/暗切换、主题更换、CSS snippet 变更）。
+   *
+   * 当 Obsidian 修改 body 的 class 或 style 时，重新应用当前 EPUB 主题，确保
+   * obsidian 主题下颜色实时同步，同时让 CSS 变量驱动的外层容器/工具栏立刻生效。
+   */
+  startObsidianThemeWatcher() {
+    this.stopObsidianThemeWatcher();
+    this.themeObserver = new MutationObserver(() => {
+      this.applyFoliateAppearance();
+    });
+    this.themeObserver.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class", "style"]
+    });
+  }
+  stopObsidianThemeWatcher() {
+    if (this.themeObserver) {
+      this.themeObserver.disconnect();
+      this.themeObserver = null;
+    }
   }
   // ================================================================
   // 工具栏
   // ================================================================
   /**
-   * 渲染工具栏：侧边栏切换、书名、字号、主题、翻页模式、导航按钮。
+   * 渲染工具栏：侧边栏切换、字号、主题、翻页模式、导航按钮。
+   *
+   * 书名已由 Obsidian 原生 view-header 显示，因此工具栏内不再重复显示书名。
+   * 工具栏固定为一行，装不下的按钮会自动移入“更多”下拉菜单。
    */
   renderToolbar() {
-    this.toolbarEl.empty();
-    const toggleBtn = this.toolbarEl.createEl("button", {
-      cls: "yh-epub-toolbar-btn",
-      attr: { type: "button", title: "\u5207\u6362\u4FA7\u8FB9\u680F", "aria-label": "\u5207\u6362\u4FA7\u8FB9\u680F" }
+    const children = Array.from(this.toolbarEl.children);
+    for (const child of children) {
+      if (child === this.toolbarOverflowEl) continue;
+      if (child.hasClass("book-note-epub-toolbar-btn") || child.hasClass("book-note-epub-theme-swatches")) {
+        child.remove();
+      }
+    }
+    this.toolbarItems = [];
+    if (this.toolbarOverflowEl) {
+      this.toolbarOverflowEl.empty();
+      this.toolbarOverflowEl.removeClass("is-open");
+    }
+    const createBtn = (opts) => {
+      const btn = this.toolbarEl.createEl("button", {
+        cls: "book-note-epub-toolbar-btn",
+        attr: { type: "button", title: opts.title, "aria-label": opts.title }
+      });
+      if (opts.icon) (0, import_obsidian12.setIcon)(btn, opts.icon);
+      if (opts.text) btn.textContent = opts.text;
+      btn.addEventListener("click", opts.onClick);
+      return btn;
+    };
+    const keyNavBtn = createBtn({
+      icon: import_obsidian12.Platform.isMobile ? this.mobileTapEnabled ? "hand" : "move" : this.pcNavMode === "keyboard" ? "keyboard" : "mouse",
+      title: import_obsidian12.Platform.isMobile ? this.mobileTapEnabled ? t("epub.toggleToSwipe") : t("epub.toggleToTap") : this.pcNavMode === "keyboard" ? t("epub.toggleToWheel") : t("epub.toggleToKeyboard"),
+      onClick: () => this.toggleKeyNav()
     });
-    (0, import_obsidian12.setIcon)(toggleBtn, "menu");
-    toggleBtn.addEventListener("click", () => this.toggleSidebar());
-    this.toolbarEl.createDiv({
-      cls: "yh-epub-toolbar-title",
-      text: this.file?.basename ?? ""
+    this.toolbarItems.push(
+      createBtn({ icon: "menu", title: t("aria.toggleSidebar"), onClick: () => this.toggleSidebar() }),
+      createBtn({ text: "A-", title: t("aria.decreaseFont"), onClick: () => this.changeFontSize(-1) }),
+      createBtn({ text: "A+", title: t("aria.increaseFont"), onClick: () => this.changeFontSize(1) }),
+      createBtn({ icon: "search", title: t("aria.searchFull"), onClick: () => this.toggleToolbarSearch() }),
+      createBtn({
+        icon: this.currentFlowMode === "paginated" ? "lines-of-text" : "scroll",
+        title: this.currentFlowMode === "paginated" ? t("epub.toggleScroll") : t("epub.togglePaginate"),
+        onClick: () => this.toggleFlowMode()
+      }),
+      keyNavBtn,
+      createBtn({ icon: "chevron-left", title: t("aria.prevPage"), onClick: () => this.prevPage() }),
+      createBtn({ icon: "chevron-right", title: t("aria.nextPage"), onClick: () => this.nextPage() }),
+      this.renderThemeSwatches()
+    );
+    this.toolbarOverflowBtn = createBtn({
+      icon: "more-vertical",
+      title: t("common.more"),
+      onClick: () => this.toggleToolbarOverflow()
     });
-    const fontSizeDec = this.toolbarEl.createEl("button", {
-      cls: "yh-epub-toolbar-btn",
-      attr: { type: "button", title: "\u7F29\u5C0F\u5B57\u53F7", "aria-label": "\u7F29\u5C0F\u5B57\u53F7" },
-      text: "A-"
-    });
-    fontSizeDec.addEventListener("click", () => this.changeFontSize(-1));
-    const fontSizeInc = this.toolbarEl.createEl("button", {
-      cls: "yh-epub-toolbar-btn",
-      attr: { type: "button", title: "\u653E\u5927\u5B57\u53F7", "aria-label": "\u653E\u5927\u5B57\u53F7" },
-      text: "A+"
-    });
-    fontSizeInc.addEventListener("click", () => this.changeFontSize(1));
-    this.renderThemeSwatches();
-    const searchBtn = this.toolbarEl.createEl("button", {
-      cls: "yh-epub-toolbar-btn",
-      attr: { type: "button", title: "\u641C\u7D22\u5168\u6587", "aria-label": "\u641C\u7D22\u5168\u6587" }
-    });
-    (0, import_obsidian12.setIcon)(searchBtn, "search");
-    searchBtn.addEventListener("click", () => this.toggleToolbarSearch());
-    const flowBtn = this.toolbarEl.createEl("button", {
-      cls: "yh-epub-toolbar-btn",
-      attr: { type: "button", title: this.currentFlowMode === "paginated" ? "\u5207\u6362\u4E3A\u6EDA\u52A8" : "\u5207\u6362\u4E3A\u5206\u9875" }
-    });
-    (0, import_obsidian12.setIcon)(flowBtn, this.currentFlowMode === "paginated" ? "lines-of-text" : "sheets");
-    flowBtn.addEventListener("click", () => this.toggleFlowMode());
-    const prevBtn = this.toolbarEl.createEl("button", {
-      cls: "yh-epub-toolbar-btn",
-      attr: { type: "button", title: "\u4E0A\u4E00\u9875", "aria-label": "\u4E0A\u4E00\u9875" }
-    });
-    (0, import_obsidian12.setIcon)(prevBtn, "chevron-left");
-    prevBtn.addEventListener("click", () => this.prevPage());
-    const nextBtn = this.toolbarEl.createEl("button", {
-      cls: "yh-epub-toolbar-btn",
-      attr: { type: "button", title: "\u4E0B\u4E00\u9875", "aria-label": "\u4E0B\u4E00\u9875" }
-    });
-    (0, import_obsidian12.setIcon)(nextBtn, "chevron-right");
-    nextBtn.addEventListener("click", () => this.nextPage());
+    this.toolbarOverflowBtn.addClass("book-note-epub-toolbar-overflow-btn");
+    this.toolbarItems.push(this.toolbarOverflowBtn);
+    for (const item of this.toolbarItems) {
+      if (item !== this.toolbarOverflowBtn) {
+        this.toolbarEl.appendChild(item);
+      }
+    }
+    if (this.toolbarOverflowBtn) {
+      this.toolbarEl.appendChild(this.toolbarOverflowBtn);
+    }
+    if (this.toolbarOverflowEl) {
+      this.toolbarEl.appendChild(this.toolbarOverflowEl);
+    }
+    this.setupToolbarOverflow();
+    this.layoutToolbarOverflow();
   }
   /**
    * 在工具栏中渲染主题色块选择器，点击切换阅读主题。
+   * @returns 主题色块容器元素
    */
   renderThemeSwatches() {
-    const container = this.toolbarEl.createDiv({ cls: "yh-epub-theme-swatches" });
+    const container = this.toolbarEl.createDiv({ cls: "book-note-epub-theme-swatches" });
     for (const theme of EPUB_READING_THEMES) {
       const swatch = container.createEl("button", {
-        cls: "yh-epub-theme-swatch",
+        cls: "book-note-epub-theme-swatch",
         attr: {
           type: "button",
           title: theme.label,
-          "aria-label": `\u4E3B\u9898: ${theme.label}`,
+          "aria-label": `${t("aria.theme", { label: theme.label })}`,
           "data-theme": theme.id
         }
       });
       swatch.style.background = theme.swatch;
       swatch.toggleClass("is-active", theme.id === this.currentTheme);
       swatch.addEventListener("click", () => this.switchTheme(theme.id));
+    }
+    return container;
+  }
+  /**
+   * 设置工具栏溢出下拉菜单的 ResizeObserver 与点击外部关闭监听。
+   */
+  setupToolbarOverflow() {
+    this.destroyToolbarOverflow();
+    this.toolbarResizeObserver = new ResizeObserver(() => {
+      this.layoutToolbarOverflow();
+    });
+    this.toolbarResizeObserver.observe(this.toolbarEl);
+    this.toolbarOverflowOutsideClickHandler = (event) => {
+      if (!this.toolbarOverflowEl?.hasClass("is-open")) return;
+      const target = event.target;
+      if (!this.toolbarOverflowEl.contains(target) && !this.toolbarOverflowBtn?.contains(target)) {
+        this.toolbarOverflowEl.removeClass("is-open");
+      }
+    };
+    document.addEventListener("click", this.toolbarOverflowOutsideClickHandler);
+  }
+  /**
+   * 清理工具栏溢出菜单的监听器。
+   */
+  destroyToolbarOverflow() {
+    if (this.toolbarResizeObserver) {
+      this.toolbarResizeObserver.disconnect();
+      this.toolbarResizeObserver = null;
+    }
+    if (this.toolbarOverflowOutsideClickHandler) {
+      document.removeEventListener("click", this.toolbarOverflowOutsideClickHandler);
+      this.toolbarOverflowOutsideClickHandler = null;
+    }
+  }
+  /**
+   * 切换“更多”下拉菜单的显示/隐藏。
+   */
+  toggleToolbarOverflow() {
+    if (this.toolbarOverflowEl) {
+      this.toolbarOverflowEl.toggleClass("is-open", !this.toolbarOverflowEl.hasClass("is-open"));
+    }
+  }
+  /**
+   * 根据工具栏可用宽度，把放不下的按钮移入“更多”下拉菜单。
+   */
+  layoutToolbarOverflow() {
+    if (!this.toolbarOverflowEl || !this.toolbarOverflowBtn) return;
+    const toolbarWidth = this.toolbarEl.clientWidth;
+    if (toolbarWidth === 0) return;
+    for (const item of this.toolbarItems) {
+      if (item !== this.toolbarOverflowBtn) {
+        this.toolbarEl.appendChild(item);
+      }
+    }
+    this.toolbarEl.appendChild(this.toolbarOverflowBtn);
+    this.toolbarOverflowEl.empty();
+    const gap = 4;
+    const paddingBuffer = 4;
+    const availableWidth = toolbarWidth - paddingBuffer;
+    let plainTotal = 0;
+    for (let i3 = 0; i3 < this.toolbarItems.length; i3++) {
+      const item = this.toolbarItems[i3];
+      if (item === this.toolbarOverflowBtn) continue;
+      plainTotal += item.offsetWidth + (i3 > 0 ? gap : 0);
+    }
+    if (plainTotal <= availableWidth) {
+      this.toolbarOverflowBtn.addClass("is-hidden");
+      return;
+    }
+    this.toolbarOverflowBtn.removeClass("is-hidden");
+    const moreBtnWidth = this.toolbarOverflowBtn.offsetWidth;
+    let usedWidth = moreBtnWidth + gap;
+    let overflowIndex = -1;
+    for (let i3 = 0; i3 < this.toolbarItems.length; i3++) {
+      const item = this.toolbarItems[i3];
+      if (item === this.toolbarOverflowBtn) continue;
+      const itemWidth = item.offsetWidth + (i3 > 0 ? gap : 0);
+      if (usedWidth + itemWidth > availableWidth) {
+        overflowIndex = i3;
+        break;
+      }
+      usedWidth += itemWidth;
+    }
+    if (overflowIndex !== -1) {
+      for (let i3 = overflowIndex; i3 < this.toolbarItems.length; i3++) {
+        const item = this.toolbarItems[i3];
+        if (item === this.toolbarOverflowBtn) continue;
+        this.toolbarOverflowEl.appendChild(item);
+      }
     }
   }
   // ================================================================
@@ -12427,8 +13231,21 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     }
   }
   /**
+   * 移动端：点击阅读区域时关闭目录面板。
+   * 只在 Platform.isMobile 为 true 时生效。
+   */
+  handleReaderAreaClick(event) {
+    if (!import_obsidian12.Platform.isMobile || !this.sidebarOpen) {
+      return;
+    }
+    if (event.target instanceof Node && this.sidebarContainerEl.contains(event.target)) {
+      return;
+    }
+    this.toggleSidebar();
+  }
+  /**
    * 渲染侧边栏内容（目录）。
-   * 标注已统一到「墨光批注」共用面板，此处仅保留目录导航。
+   * 标注已统一到「Book Note」共用面板，此处仅保留目录导航。
    */
   renderSidebar() {
     this.sidebarContentEl.empty();
@@ -12439,13 +13256,13 @@ var EpubReaderView = class extends import_obsidian12.FileView {
    */
   renderTocList() {
     if (this.tocEntries.length === 0) {
-      this.sidebarContentEl.createDiv({ cls: "yh-epub-empty", text: "\u672A\u627E\u5230\u76EE\u5F55\u4FE1\u606F\u3002" });
+      this.sidebarContentEl.createDiv({ cls: "book-note-epub-empty", text: t("epub.emptyToc") });
       return;
     }
-    const list = this.sidebarContentEl.createDiv({ cls: "yh-epub-toc-list" });
+    const list = this.sidebarContentEl.createDiv({ cls: "book-note-epub-toc-list" });
     for (const entry of this.tocEntries) {
       const item = list.createEl("button", {
-        cls: "yh-epub-toc-item",
+        cls: "book-note-epub-toc-item",
         text: entry.label,
         attr: { type: "button" }
       });
@@ -12466,7 +13283,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
    */
   configureFoliateView(view) {
     const element = view;
-    element.addClass("yh-epub-foliate-view");
+    element.addClass("book-note-epub-foliate-view");
     element.setAttribute("flow", this.currentFlowMode);
     element.setAttribute("margin", this.currentFlowMode === "paginated" ? "28px" : "0px");
     element.setAttribute("gap", "8%");
@@ -12519,15 +13336,15 @@ var EpubReaderView = class extends import_obsidian12.FileView {
    */
   showContextMenu(left, top, text, cfiRange) {
     this.dismissContextMenu();
-    const menu = document.body.createDiv({ cls: "yh-epub-context-menu" });
-    const colorRow = menu.createDiv({ cls: "yh-epub-context-colors" });
+    const menu = document.body.createDiv({ cls: "book-note-epub-context-menu" });
+    const colorRow = menu.createDiv({ cls: "book-note-epub-context-colors" });
     for (const color of ANNOTATION_COLORS) {
       const dot = colorRow.createEl("button", {
-        cls: `yh-epub-context-dot yh-dot--${color}`,
+        cls: `book-note-epub-context-dot book-note-dot--${color}`,
         attr: {
           type: "button",
           title: COLOR_LABELS[color],
-          "aria-label": `${COLOR_LABELS[color]}\u753B\u7EBF`
+          "aria-label": t("aria.colorHighlight", { color: COLOR_LABELS[color] })
         }
       });
       dot.style.background = EPUB_COLOR_MAP[color];
@@ -12537,8 +13354,8 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       });
     }
     const noteBtn = menu.createEl("button", {
-      cls: "yh-epub-context-note-btn",
-      attr: { type: "button", title: "\u6DFB\u52A0\u6807\u6CE8" },
+      cls: "book-note-epub-context-note-btn",
+      attr: { type: "button", title: t("aria.addAnnotation") },
       text: "\u{1F4DD}"
     });
     noteBtn.addEventListener("click", () => {
@@ -12611,10 +13428,10 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       this.renderAnnotationOnRendition(annotation);
       this.renderSidebar();
       this.refreshAnnotations();
-      new import_obsidian12.Notice(`\u5DF2\u6DFB\u52A0${COLOR_LABELS[color]}\u753B\u7EBF`);
+      new import_obsidian12.Notice(t("epub.highlightAdded", { color: COLOR_LABELS[color] }));
     } catch (error) {
-      console.error("yh-inklight: EPUB highlight creation failed", error);
-      new import_obsidian12.Notice("\u753B\u7EBF\u521B\u5EFA\u5931\u8D25");
+      console.error("book-note: EPUB highlight creation failed", error);
+      new import_obsidian12.Notice(t("epub.highlightCreateFailed"));
     }
   }
   /**
@@ -12664,10 +13481,10 @@ var EpubReaderView = class extends import_obsidian12.FileView {
           this.renderAnnotationOnRendition(annotation);
           this.renderSidebar();
           this.refreshAnnotations();
-          new import_obsidian12.Notice("\u5DF2\u6DFB\u52A0\u6807\u6CE8");
+          new import_obsidian12.Notice(t("epub.noteAdded"));
         } catch (error) {
-          console.error("yh-inklight: EPUB comment creation failed", error);
-          new import_obsidian12.Notice("\u6807\u6CE8\u521B\u5EFA\u5931\u8D25");
+          console.error("book-note: EPUB comment creation failed", error);
+          new import_obsidian12.Notice(t("epub.noteCreateFailed"));
         }
       }
     ).open();
@@ -12729,10 +13546,10 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       this.refreshRenditionAnnotations();
       this.renderSidebar();
       this.refreshAnnotations();
-      new import_obsidian12.Notice("\u6807\u6CE8\u5DF2\u5220\u9664");
+      new import_obsidian12.Notice(t("epub.noteDeleted"));
     } catch (error) {
-      console.error("yh-inklight: EPUB annotation deletion failed", error);
-      new import_obsidian12.Notice("\u6807\u6CE8\u5220\u9664\u5931\u8D25");
+      console.error("book-note: EPUB annotation deletion failed", error);
+      new import_obsidian12.Notice(t("epub.noteDeleteFailed"));
     }
   }
   /**
@@ -12759,12 +13576,23 @@ var EpubReaderView = class extends import_obsidian12.FileView {
    * 处理 foliate relocate 事件。
    * 更新当前章节、百分比、进度条显示，并触发进度保存。
    *
+   * 滚动模式下的跨章翻页由 relocate 事件驱动：
+   * foliate-js 在 #container 滚动后经 250ms 防抖触发 #afterScroll('scroll')，
+   * 进而 dispatch CustomEvent('relocate', { detail: { reason, start, end, viewSize } })。
+   * 此时 renderer.start/end/viewSize 已是终值，零时序问题。
+   *
+   * 注意：不能使用 detail.fraction 做边界检测——fraction = start / viewSize，
+   * 当内容 2x viewport 时最大 fraction 仅 0.5，>= 0.98 永远不触发。
+   * 正确做法：直接读 renderer.start/end/viewSize，与 foliate 内部 #scrollPrev/#scrollNext
+   * 使用相同的边界条件（start <= 0 / viewSize - end <= 2）。
+   *
    * @param detail - foliate relocate event detail
    */
   handleRelocated(detail) {
     const cfi = normalizeCfi(detail?.cfi);
     const percent = normalizePercent(detail?.fraction ?? this.currentPercent);
-    const spineIndex = typeof detail.index === "number" ? detail.index : this.currentSectionIndex;
+    const rawIndex = detail?.section?.current ?? detail?.index;
+    const spineIndex = typeof rawIndex === "number" ? rawIndex : this.currentSectionIndex;
     this.currentCfi = cfi || this.currentCfi;
     this.currentSectionIndex = Number.isFinite(spineIndex) ? spineIndex : 0;
     this.currentChapter = detail?.tocItem?.label ?? resolveChapterLabel(this.tocEntries, this.currentSectionIndex);
@@ -12779,18 +13607,18 @@ var EpubReaderView = class extends import_obsidian12.FileView {
    */
   updateProgressBar(percent) {
     this.progressEl.empty();
-    const bar = this.progressEl.createDiv({ cls: "yh-epub-progress-bar" });
+    const bar = this.progressEl.createDiv({ cls: "book-note-epub-progress-bar" });
     bar.createDiv({
-      cls: "yh-epub-progress-fill"
+      cls: "book-note-epub-progress-fill"
     });
-    const fill = bar.querySelector(".yh-epub-progress-fill");
+    const fill = bar.querySelector(".book-note-epub-progress-fill");
     if (fill) {
       fill.style.width = `${Math.round(percent * 100)}%`;
     }
     const percentText = `${Math.round(percent * 100)}%`;
     const remaining = this.formatRemainingTime();
     this.progressEl.createDiv({
-      cls: "yh-epub-progress-text",
+      cls: "book-note-epub-progress-text",
       text: remaining ? `${percentText}  \xB7  ${remaining}` : percentText
     });
   }
@@ -12806,14 +13634,14 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     }
     const remainingFraction = 1 - this.currentPercent;
     if (remainingFraction <= 0) {
-      return "\u5DF2\u8BFB\u5B8C";
+      return t("epub.readDone");
     }
     const estimatedRemainingSeconds = this.readingTimeSeconds / this.currentPercent * remainingFraction;
     const estimatedRemainingMinutes = Math.round(estimatedRemainingSeconds / 60);
     if (estimatedRemainingMinutes < 1) {
-      return "\u5269\u4F59\u4E0D\u5230 1 \u5206\u949F";
+      return t("epub.remainingLessThanMinute");
     }
-    return `\u5269\u4F59\u7EA6 ${estimatedRemainingMinutes} \u5206\u949F`;
+    return t("bookshelf.remaining", { minutes: estimatedRemainingMinutes });
   }
   /**
    * 防抖保存阅读进度。
@@ -12857,7 +13685,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     try {
       await this.store.saveEpubProgress(this.file, progress);
     } catch (error) {
-      console.error("yh-inklight: EPUB progress save failed", error);
+      console.error("book-note: EPUB progress save failed", error);
     }
   }
   /**
@@ -12920,26 +13748,117 @@ var EpubReaderView = class extends import_obsidian12.FileView {
   // 键盘 & 滚轮导航
   // ================================================================
   /**
-   * 处理键盘导航事件。
-   * 方向键左/上 = 上一页，方向键右/下 = 下一页。
+   * 处理键盘导航事件（PC 端，键盘/滚轮互斥）。
+   *
+   * pcNavMode === "keyboard" 时生效：
+   *   翻页模式：← 上一页 / → 下一页；Space 下一页 / Shift+Space 上一页；
+   *             PageUp/PageDown 同向翻页；Home 跳到书首，End 跳到书尾。
+   *   滚动模式：↑ 上一章 / ↓ 下一章；Home 跳到书首，End 跳到书尾；
+   *             其余按键交给 iframe 原生滚动。
+   *
+   * pcNavMode === "wheel" 时：preventDefault 所有导航键（含方向键/Space/
+   *   PageUp/Down/Home/End），阻止滚动模式下的原生滚动和分页模式下 foliate
+   *   自身的键盘处理，确保滚轮模式下键盘完全不干预阅读。
+   *
+   * ⚠️ 阅读正文渲染在 foliate iframe 内，iframe 的键盘事件不会冒泡到父文档，
+   *    因此除 contentEl 监听外，还需在 handleFoliateLoad 中把本方法挂到每个
+   *    section document 上（attachKeyboardNavigation），否则阅读时焦点在
+   *    iframe 内、键盘翻页不生效。
+   *
+   * ⚠️ event.target 可能来自 iframe realm，不能用 instanceof 判断标签
+   *    （跨 realm instanceof 不可靠），改用 tagName 字符串比较。
    *
    * @param event - 键盘事件
    */
   handleKeydown(event) {
-    if (event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLInputElement) {
+    const target = event.target;
+    if (target && typeof target.tagName === "string") {
+      const tag = target.tagName.toUpperCase();
+      if (tag === "TEXTAREA" || tag === "INPUT" || tag === "SELECT" || target.isContentEditable) {
+        return;
+      }
+    }
+    const isPaginated = this.currentFlowMode === "paginated";
+    if (this.pcNavMode !== "keyboard") {
+      switch (event.key) {
+        case "ArrowUp":
+        case "ArrowDown":
+        case "ArrowLeft":
+        case "ArrowRight":
+        case " ":
+        case "PageUp":
+        case "PageDown":
+        case "Home":
+        case "End":
+          event.preventDefault();
+          break;
+        default:
+          break;
+      }
       return;
     }
     switch (event.key) {
-      case "ArrowLeft":
-      case "ArrowUp": {
-        event.preventDefault();
-        this.prevPage();
+      case "ArrowLeft": {
+        if (isPaginated) {
+          event.preventDefault();
+          this.prevPage();
+        }
         break;
       }
-      case "ArrowRight":
+      case "ArrowRight": {
+        if (isPaginated) {
+          event.preventDefault();
+          this.nextPage();
+        }
+        break;
+      }
+      case "ArrowUp": {
+        if (!isPaginated) {
+          event.preventDefault();
+          this.prevPage();
+        }
+        break;
+      }
       case "ArrowDown": {
+        if (!isPaginated) {
+          event.preventDefault();
+          this.nextPage();
+        }
+        break;
+      }
+      case " ": {
+        if (isPaginated) {
+          event.preventDefault();
+          if (event.shiftKey) {
+            this.prevPage();
+          } else {
+            this.nextPage();
+          }
+        }
+        break;
+      }
+      case "PageDown": {
+        if (isPaginated) {
+          event.preventDefault();
+          this.nextPage();
+        }
+        break;
+      }
+      case "PageUp": {
+        if (isPaginated) {
+          event.preventDefault();
+          this.prevPage();
+        }
+        break;
+      }
+      case "Home": {
         event.preventDefault();
-        this.nextPage();
+        this.goToBookStart();
+        break;
+      }
+      case "End": {
+        event.preventDefault();
+        this.goToBookEnd();
         break;
       }
       default:
@@ -12947,12 +13866,86 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     }
   }
   /**
-   * 处理鼠标滚轮事件。
-   * 在分页模式下通过滚轮翻页，带防抖保护。
+   * 处理移动端点击翻页（tap zones）。
+   *
+   * 屏幕左 1/3 = 上一页/章，右 1/3 = 下一页/章，中间 1/3 不触发。
+   * 两种模式（分页/滚动）统一使用 prevPage()/nextPage()。
+   *
+   * ⚠️ iframe 内的点击事件不会冒泡到父文档，因此除 readerContainerEl 上的
+   *    监听外，还需在 attachKeyboardNavigation 中给每个 section document
+   *    单独挂 click 监听（capture 阶段，先于 foliate 自身处理器执行）。
+   *
+   * 排除情况：
+   * - mobileTapEnabled 关闭时不拦截（滑动翻页模式）
+   * - 侧边栏打开时不拦截（让 handleReaderAreaClick 先关侧边栏）
+   * - 点击链接/按钮时不拦截（保证正常跳转和交互）
+   * - 有文本选区时不拦截（防止选完文字后误触翻页）
+   *
+   * @param event - 鼠标点击事件（移动端 touchend 后合成）
+   */
+  handleTapZone(event) {
+    if (!this.mobileTapEnabled) {
+      return;
+    }
+    if (this.sidebarOpen) {
+      return;
+    }
+    const target = event.target;
+    if (target) {
+      let el = target;
+      while (el) {
+        const tag = el.tagName;
+        if (typeof tag === "string") {
+          const upper = tag.toUpperCase();
+          if (upper === "A" || upper === "BUTTON") {
+            return;
+          }
+        }
+        el = el.parentElement;
+      }
+    }
+    const doc = target?.ownerDocument ?? document;
+    const selection = doc.getSelection?.();
+    if (selection && !selection.isCollapsed) {
+      return;
+    }
+    let ratio;
+    if (event.currentTarget === this.readerContainerEl) {
+      const rect = this.readerContainerEl.getBoundingClientRect();
+      ratio = rect.width > 0 ? (event.clientX - rect.left) / rect.width : 0.5;
+    } else {
+      const view = event.view ?? window;
+      ratio = view.innerWidth > 0 ? event.clientX / view.innerWidth : 0.5;
+    }
+    if (ratio < 0.33) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.prevPage();
+    } else if (ratio > 0.67) {
+      event.preventDefault();
+      event.stopPropagation();
+      this.nextPage();
+    }
+  }
+  /**
+   * 处理鼠标滚轮事件（PC 端，键盘/滚轮互斥）。
+   *
+   * pcNavMode === "wheel" 时生效：
+   *   分页模式：滚轮直接翻页，带防抖保护。
+   *   滚动模式：不拦截，交给 foliate 内部 #container 自然滚动；
+   *     跨章翻页由 relocate 事件驱动（handleRelocated 中检测边界）。
+   *
+   * pcNavMode === "keyboard" 时：preventDefault 阻止滚轮在两种模式下的
+   *   原生行为（分页模式无滚动，滚动模式阻止原生滚动），确保键盘模式下
+   *   滚轮完全不干预阅读。
    *
    * @param event - 滚轮事件
    */
   handleWheel(event) {
+    if (this.pcNavMode !== "wheel") {
+      event.preventDefault();
+      return;
+    }
     if (this.currentFlowMode !== "paginated") {
       return;
     }
@@ -12988,6 +13981,200 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     }
     const action = this.foliateView.prev ?? this.foliateView.goLeft;
     void action?.call(this.foliateView);
+  }
+  /**
+   * 跳转到书籍开头（Home 键）。
+   * 优先使用 foliate 的 goToFraction(0)；不支持时回退到 goTo(0)（首个 spine）。
+   */
+  goToBookStart() {
+    if (!this.foliateView) {
+      return;
+    }
+    if (typeof this.foliateView.goToFraction === "function") {
+      void this.foliateView.goToFraction(0);
+    } else {
+      void this.foliateView.goTo(0);
+    }
+  }
+  /**
+   * 跳转到书籍结尾（End 键）。
+   * 依赖 foliate 的 goToFraction(1)；不支持时静默放弃（避免误跳到某个 spine）。
+   */
+  goToBookEnd() {
+    if (!this.foliateView) {
+      return;
+    }
+    if (typeof this.foliateView.goToFraction === "function") {
+      void this.foliateView.goToFraction(1);
+    }
+  }
+  /**
+   * 监听 paginator 的 scroll/touchmove/wheel 事件，在滚动模式下驱动跨章翻页。
+   *
+   * 交互语义：滚动到章节边界后，不会立即跨章；用户需要在边界处再滑动一段距离，
+   * 累积超过阈值后才触发 next/prev。这样可以避免正常滚到边界时意外跳章。
+   *
+   * 三路信号：
+   * - scroll：仅用于在离开边界时清零 overrun，本身不触发跨章。
+   * - wheel：桌面端滚轮，在边界处累积 deltaY，超过阈值后跨章。
+   * - touchmove：触摸滑动，在边界处累积手指位移，超过阈值后跨章。
+   *
+   * foliate #scrollPrev 在 start > 0 时只章内滚动到 0，需第二次 prev() 才跨章。
+   * handler 中用 async 两步调用处理此逻辑。
+   *
+   * 方向冷却：跨章后 300ms 内阻止反方向触发，防止新章节边界事件导致来回跳。
+   */
+  attachPaginatorScrollListener() {
+    if (!this.foliateView?.renderer) return;
+    if (this.paginatorScrollCleanup) {
+      this.paginatorScrollCleanup();
+      this.paginatorScrollCleanup = null;
+    }
+    this.scrollOverrunNext = 0;
+    this.scrollOverrunPrev = 0;
+    const renderer = this.foliateView.renderer;
+    const getBounds = () => {
+      const r3 = this.foliateView?.renderer;
+      if (!r3 || typeof r3.start !== "number" || typeof r3.end !== "number" || typeof r3.viewSize !== "number")
+        return null;
+      return {
+        atBottom: r3.viewSize - r3.end <= 2,
+        atTop: r3.start <= 2,
+        maxIndex: Array.isArray(this.foliateView?.book?.sections) ? this.foliateView.book.sections.length - 1 : 0
+      };
+    };
+    const navigate = (direction) => {
+      if (this.scrolledNavigating) return;
+      if (this.currentFlowMode !== "scrolled") return;
+      const bounds = getBounds();
+      if (!bounds) return;
+      const view = this.foliateView;
+      if (!view) return;
+      if (direction === "next") {
+        if (!bounds.atBottom || this.currentSectionIndex >= bounds.maxIndex) return;
+        if (this.scrolledNavDirection === "prev") return;
+      } else {
+        if (!bounds.atTop || this.currentSectionIndex <= 0) return;
+        if (this.scrolledNavDirection === "next") return;
+      }
+      const fn = direction === "next" ? view.next ?? view.goRight : view.prev ?? view.goLeft;
+      if (typeof fn !== "function") return;
+      this.scrolledNavigating = true;
+      this.scrolledNavDirection = direction;
+      this.scrollOverrunNext = 0;
+      this.scrollOverrunPrev = 0;
+      void (async () => {
+        const sectionBefore = this.currentSectionIndex;
+        await fn.call(view);
+        if (this.currentSectionIndex === sectionBefore) {
+          await fn.call(view);
+        }
+        window.setTimeout(() => {
+          this.scrolledNavigating = false;
+          this.scrolledNavDirection = null;
+        }, 300);
+      })();
+    };
+    const resetOverrunIfLeftBoundary = (bounds) => {
+      if (!bounds) return;
+      if (!bounds.atBottom) this.scrollOverrunNext = 0;
+      if (!bounds.atTop) this.scrollOverrunPrev = 0;
+    };
+    const scrollHandler = () => {
+      if (this.currentFlowMode !== "scrolled") return;
+      if (this.scrolledNavigating) return;
+      resetOverrunIfLeftBoundary(getBounds());
+    };
+    const wheelHandler = (e3) => {
+      if (this.currentFlowMode !== "scrolled") return;
+      if (this.scrolledNavigating) return;
+      const bounds = getBounds();
+      if (!bounds || !bounds.atBottom && !bounds.atTop) {
+        this.scrollOverrunNext = 0;
+        this.scrollOverrunPrev = 0;
+        return;
+      }
+      if (bounds.atBottom && e3.deltaY > 0) {
+        this.scrollOverrunNext += e3.deltaY;
+        if (this.scrollOverrunNext >= SCROLL_OVERRUN_THRESHOLD) {
+          navigate("next");
+        }
+      } else if (bounds.atTop && e3.deltaY < 0) {
+        this.scrollOverrunPrev += Math.abs(e3.deltaY);
+        if (this.scrollOverrunPrev >= SCROLL_OVERRUN_THRESHOLD) {
+          navigate("prev");
+        }
+      } else {
+        resetOverrunIfLeftBoundary(bounds);
+      }
+    };
+    let touchStartY = 0;
+    let lastTouchY = 0;
+    let touchActive = false;
+    const touchStartHandler = (e3) => {
+      if (e3.touches.length !== 1) {
+        touchActive = false;
+        return;
+      }
+      touchStartY = e3.touches[0].clientY;
+      lastTouchY = touchStartY;
+      touchActive = true;
+    };
+    const touchMoveHandler = (e3) => {
+      if (!touchActive || e3.touches.length !== 1) return;
+      if (this.currentFlowMode !== "scrolled") return;
+      if (this.scrolledNavigating) return;
+      const bounds = getBounds();
+      if (!bounds || !bounds.atBottom && !bounds.atTop) {
+        this.scrollOverrunNext = 0;
+        this.scrollOverrunPrev = 0;
+        return;
+      }
+      const currentY = e3.touches[0].clientY;
+      const delta = lastTouchY - currentY;
+      lastTouchY = currentY;
+      if (bounds.atBottom && delta > 0) {
+        this.scrollOverrunNext += delta;
+        if (this.scrollOverrunNext >= SCROLL_OVERRUN_THRESHOLD) {
+          touchActive = false;
+          navigate("next");
+        }
+      } else if (bounds.atTop && delta < 0) {
+        this.scrollOverrunPrev += Math.abs(delta);
+        if (this.scrollOverrunPrev >= SCROLL_OVERRUN_THRESHOLD) {
+          touchActive = false;
+          navigate("prev");
+        }
+      } else {
+        resetOverrunIfLeftBoundary(bounds);
+      }
+    };
+    renderer.addEventListener("scroll", scrollHandler);
+    renderer.addEventListener("wheel", wheelHandler, { passive: true });
+    renderer.addEventListener("touchstart", touchStartHandler, { passive: true });
+    renderer.addEventListener("touchmove", touchMoveHandler, { passive: true });
+    const iframeDocs = [];
+    const loadHandler = (e3) => {
+      const doc = e3.detail?.doc;
+      if (!doc || iframeDocs.includes(doc)) return;
+      iframeDocs.push(doc);
+      doc.addEventListener("touchstart", touchStartHandler, { passive: true });
+      doc.addEventListener("touchmove", touchMoveHandler, { passive: true });
+      doc.addEventListener("wheel", wheelHandler, { passive: true });
+    };
+    renderer.addEventListener("load", loadHandler);
+    this.paginatorScrollCleanup = () => {
+      renderer.removeEventListener("scroll", scrollHandler);
+      renderer.removeEventListener("wheel", wheelHandler);
+      renderer.removeEventListener("touchstart", touchStartHandler);
+      renderer.removeEventListener("touchmove", touchMoveHandler);
+      renderer.removeEventListener("load", loadHandler);
+      for (const doc of iframeDocs) {
+        doc.removeEventListener("touchstart", touchStartHandler);
+        doc.removeEventListener("touchmove", touchMoveHandler);
+        doc.removeEventListener("wheel", wheelHandler);
+      }
+    };
   }
   // ================================================================
   // 导航
@@ -13076,8 +14263,23 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.applyFoliateAppearance();
     this.renderToolbar();
   }
+  /**
+   * 切换导航模式。
+   * PC 端在键盘翻页 / 滚轮翻页之间互斥切换。
+   * 移动端在点按翻页 / 滑动翻页之间切换。
+   */
+  toggleKeyNav() {
+    if (import_obsidian12.Platform.isMobile) {
+      this.mobileTapEnabled = !this.mobileTapEnabled;
+      this.renderToolbar();
+      new import_obsidian12.Notice(this.mobileTapEnabled ? t("epub.tapPageOn") : t("epub.swipePageOn"));
+    } else {
+      this.pcNavMode = this.pcNavMode === "keyboard" ? "wheel" : "keyboard";
+      this.renderToolbar();
+      new import_obsidian12.Notice(this.pcNavMode === "keyboard" ? t("epub.keyboardPageOn") : t("epub.scrollPageOn"));
+    }
+  }
   // ================================================================
-  // 阅读时间追踪
   // ================================================================
   /**
    * 启动阅读时间追踪。
@@ -13168,7 +14370,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     try {
       void this.foliateView.goTo(cfiRange);
     } catch (error) {
-      console.warn("yh-inklight: navigateToCfi failed", error);
+      console.warn("book-note: navigateToCfi failed", error);
     }
   }
   /**
@@ -13187,15 +14389,15 @@ var EpubReaderView = class extends import_obsidian12.FileView {
   // 书内搜索（Phase 4-B P4）
   // ================================================================
   renderSearchBox() {
-    const container = this.sidebarContentEl.createDiv({ cls: "yh-epub-search-box" });
+    const container = this.sidebarContentEl.createDiv({ cls: "book-note-epub-search-box" });
     this.searchInputEl = container.createEl("input", {
-      cls: "yh-epub-search-input",
-      attr: { type: "text", placeholder: "\u641C\u7D22\u5168\u6587\u2026" }
+      cls: "book-note-epub-search-input",
+      attr: { type: "text", placeholder: t("aria.searchPlaceholder") }
     });
     this.searchInputEl.addEventListener("keydown", (ev) => {
       ev.stopPropagation();
     }, { capture: true });
-    this.searchResultsEl = container.createDiv({ cls: "yh-epub-search-results" });
+    this.searchResultsEl = container.createDiv({ cls: "book-note-epub-search-results" });
     this.searchInputEl.addEventListener("input", this.searchDebounce, { passive: true });
   }
   async performSearch() {
@@ -13231,12 +14433,12 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       }
     }
     if (results.length === 0) {
-      this.searchResultsEl.createDiv({ cls: "yh-epub-search-empty", text: "\u672A\u627E\u5230\u5339\u914D" });
+      this.searchResultsEl.createDiv({ cls: "book-note-epub-search-empty", text: t("epub.searchEmpty") });
       return;
     }
     for (const r3 of results) {
-      const item = this.searchResultsEl.createEl("button", { cls: "yh-epub-search-result", attr: { type: "button" } });
-      item.createSpan({ cls: "yh-epub-search-text", text: r3.excerpt.slice(0, 100) });
+      const item = this.searchResultsEl.createEl("button", { cls: "book-note-epub-search-result", attr: { type: "button" } });
+      item.createSpan({ cls: "book-note-epub-search-text", text: r3.excerpt.slice(0, 100) });
       if (r3.cfi) item.addEventListener("click", () => {
         if (this.foliateView) void this.foliateView.goTo(r3.cfi);
       });
@@ -13270,6 +14472,12 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       }
       this.foliateView = null;
     }
+    if (this.paginatorScrollCleanup) {
+      this.paginatorScrollCleanup();
+      this.paginatorScrollCleanup = null;
+    }
+    this.scrolledNavigating = false;
+    this.scrolledNavDirection = null;
     this.renderedAnnotationMeta.clear();
     if (this.readerContainerEl) {
       this.readerContainerEl.empty();
@@ -13301,6 +14509,29 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       return id === href || id === normalizedHref || id.endsWith(normalizedHref);
     });
     return index >= 0 ? index : null;
+  }
+  /**
+   * 聚焦当前活动的 foliate iframe，使键盘/滚轮导航无需先手动点击。
+   *
+   * 翻页模式（paginated）下 foliate next/prev 可能导致 iframe 焦点丢失，
+   * 在 load 和 relocate 事件后调用此方法恢复焦点。
+   * 不抢输入框（搜索框等）焦点，仅在安全时聚焦。
+   */
+  focusActiveIframe() {
+    const active = document.activeElement;
+    if (active) {
+      const tag = active.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || active.isContentEditable) {
+        return;
+      }
+    }
+    const doc = this.currentLoadedDoc;
+    if (!doc) return;
+    const win = doc.defaultView;
+    const frame = win?.frameElement;
+    if (frame instanceof HTMLIFrameElement) {
+      frame.focus();
+    }
   }
   attachSelectionListeners(doc) {
     if (this.documentSelectionCleanups.has(doc)) {
@@ -13356,6 +14587,38 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     };
     this.documentSelectionCleanups.set(doc, cleanup);
   }
+  /**
+   * 为 foliate section iframe 挂载导航监听。
+   *
+   * - PC 端：挂 keydown，使阅读时（焦点在 iframe 内）键盘翻页生效。
+   *   iframe 的键盘事件不会冒泡到父文档，contentEl 上的监听在阅读时
+   *   收不到事件，故需逐 section document 单独挂载。
+   * - 移动端：挂 click（capture 阶段），使点击翻页区在 iframe 内生效。
+   *   capture 阶段先于 foliate 自身的 click 处理器执行，配合
+   *   stopPropagation 避免双重翻页。
+   *
+   * 幂等：同一 doc 只挂一次，cleanup 存入 WeakMap（iframe 销毁时随 GC 回收）。
+   */
+  attachKeyboardNavigation(doc) {
+    if (this.documentKeyboardCleanups.has(doc)) {
+      return;
+    }
+    const cleanups = [];
+    const keyHandler = (event) => this.handleKeydown(event);
+    doc.addEventListener("keydown", keyHandler);
+    cleanups.push(() => doc.removeEventListener("keydown", keyHandler));
+    const wheelHandler = (event) => this.handleWheel(event);
+    doc.addEventListener("wheel", wheelHandler, { passive: false });
+    cleanups.push(() => doc.removeEventListener("wheel", wheelHandler));
+    if (import_obsidian12.Platform.isMobile) {
+      const tapHandler = (event) => this.handleTapZone(event);
+      doc.addEventListener("click", tapHandler, true);
+      cleanups.push(() => doc.removeEventListener("click", tapHandler, true));
+    }
+    this.documentKeyboardCleanups.set(doc, () => {
+      for (const fn of cleanups) fn();
+    });
+  }
   emitFoliateSelection(doc) {
     const selection = doc.getSelection?.() ?? doc.defaultView?.getSelection?.();
     if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
@@ -13387,7 +14650,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     try {
       return normalizeCfi(this.foliateView.getCFI(index, range.cloneRange()));
     } catch (error) {
-      console.warn("yh-inklight: EPUB selection CFI failed", { index, error });
+      console.warn("book-note: EPUB selection CFI failed", { index, error });
       return "";
     }
   }
@@ -13436,7 +14699,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
         highlight.setAttribute("height", String(height));
         highlight.setAttribute("rx", "2");
         highlight.setAttribute("fill", rgba);
-        highlight.setAttribute("style", "mix-blend-mode:multiply;pointer-events:none");
+        highlight.setCssProps({ mixBlendMode: "multiply", pointerEvents: "none" });
         group.appendChild(highlight);
         continue;
       }
@@ -13451,7 +14714,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       if (style2 === "wavy") {
         line.setAttribute("stroke-dasharray", "2 2");
       }
-      line.setAttribute("style", "pointer-events:none");
+      line.setCssProps({ pointerEvents: "none" });
       group.appendChild(line);
     }
     return group;
@@ -13494,8 +14757,9 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     ].join("\n");
     this.foliateView.renderer?.setStyles?.(css);
     this.foliateView.renderer?.render?.();
-    this.foliateView.style.backgroundColor = colors.background;
-    this.readerContainerEl.style.backgroundColor = colors.background;
+    const containerBg = this.currentTheme === "obsidian" ? "var(--background-primary)" : colors.background;
+    this.foliateView.style.backgroundColor = containerBg;
+    this.readerContainerEl.style.backgroundColor = containerBg;
   }
   applyFoliateLayout() {
     if (!this.foliateView) {
@@ -13586,17 +14850,17 @@ var EpubReaderView = class extends import_obsidian12.FileView {
   // 工具栏搜索（从侧栏移到工具栏）
   // ================================================================
   toggleToolbarSearch() {
-    const existing = this.toolbarEl.querySelector(".yh-epub-toolbar-search");
+    const existing = this.toolbarEl.querySelector(".book-note-epub-toolbar-search");
     if (existing) {
       existing.remove();
       return;
     }
-    const container = this.toolbarEl.createDiv({ cls: "yh-epub-toolbar-search" });
+    const container = this.toolbarEl.createDiv({ cls: "book-note-epub-toolbar-search" });
     const input = container.createEl("input", {
-      cls: "yh-epub-toolbar-search-input",
-      attr: { type: "text", placeholder: "\u641C\u7D22\u6B63\u6587\u2026" }
+      cls: "book-note-epub-toolbar-search-input",
+      attr: { type: "text", placeholder: t("aria.searchBody") }
     });
-    const results = container.createDiv({ cls: "yh-epub-toolbar-search-results" });
+    const results = container.createDiv({ cls: "book-note-epub-toolbar-search-results" });
     input.addEventListener("keydown", (ev) => {
       ev.stopPropagation();
     }, { capture: true });
@@ -13623,17 +14887,17 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     if (!query.trim() || query.trim().length < 2 || !this.foliateView) return;
     const searchGen = this.foliateView.search?.({ query: query.trim() });
     if (!searchGen || typeof searchGen[Symbol.asyncIterator] !== "function") {
-      resultsEl.createDiv({ cls: "yh-epub-toolbar-search-empty", text: "\u641C\u7D22\u529F\u80FD\u4E0D\u652F\u6301" });
+      resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-empty", text: t("epub.searchUnsupported") });
       return;
     }
     const hits = [];
     let searching = true;
-    const progressEl = resultsEl.createDiv({ cls: "yh-epub-toolbar-search-progress", text: "\u641C\u7D22\u4E2D..." });
+    const progressEl = resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-progress", text: t("epub.searching") });
     try {
       for await (const result of searchGen) {
         if (result === "done") break;
         if (result.progress !== void 0) {
-          progressEl.textContent = `\u641C\u7D22\u4E2D ${Math.round(result.progress * 100)}%`;
+          progressEl.textContent = t("epub.searchProgress", { percent: Math.round(result.progress * 100) });
           continue;
         }
         if (result.subitems) {
@@ -13647,21 +14911,23 @@ var EpubReaderView = class extends import_obsidian12.FileView {
         if (hits.length >= 100) break;
       }
     } catch (e3) {
-      console.error("yh-inklight: search error", e3);
+      console.error("book-note: search error", e3);
     }
     progressEl.remove();
     if (hits.length === 0) {
-      resultsEl.createDiv({ cls: "yh-epub-toolbar-search-empty", text: "\u672A\u627E\u5230\u5339\u914D\u5185\u5BB9" });
+      resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-empty", text: t("epub.searchNoMatch") });
       return;
     }
     let currentLabel = "";
     for (const h3 of hits) {
       if (h3.label && h3.label !== currentLabel) {
         currentLabel = h3.label;
-        resultsEl.createDiv({ cls: "yh-epub-toolbar-search-chapter", text: currentLabel });
+        resultsEl.createDiv({ cls: "book-note-epub-toolbar-search-chapter", text: currentLabel });
       }
-      const btn = resultsEl.createEl("button", { cls: "yh-epub-toolbar-search-hit", attr: { type: "button" } });
-      btn.innerHTML = `${this.escapeHtml(h3.excerpt.pre)}<strong>${this.escapeHtml(h3.excerpt.match)}</strong>${this.escapeHtml(h3.excerpt.post)}`;
+      const btn = resultsEl.createEl("button", { cls: "book-note-epub-toolbar-search-hit", attr: { type: "button" } });
+      btn.createSpan({ text: h3.excerpt.pre });
+      btn.createEl("strong", { text: h3.excerpt.match });
+      btn.createSpan({ text: h3.excerpt.post });
       btn.addEventListener("click", () => {
         if (this.foliateView) {
           void this.foliateView.goTo(h3.cfi);
@@ -13669,14 +14935,11 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       });
     }
   }
-  escapeHtml(text) {
-    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  }
 };
 
 // src/epub/EpubBookshelfView.ts
 var import_obsidian13 = require("obsidian");
-var EPUB_BOOKSHELF_VIEW_TYPE = "inklight-epub-bookshelf";
+var EPUB_BOOKSHELF_VIEW_TYPE = "book-note-epub-bookshelf";
 var EpubBookshelfView = class extends import_obsidian13.ItemView {
   constructor(leaf, store, onOpen) {
     super(leaf);
@@ -13687,7 +14950,7 @@ var EpubBookshelfView = class extends import_obsidian13.ItemView {
     return EPUB_BOOKSHELF_VIEW_TYPE;
   }
   getDisplayText() {
-    return "EPUB \u4E66\u67B6";
+    return t("bookshelf.displayName");
   }
   getIcon() {
     return "book-open";
@@ -13704,16 +14967,16 @@ var EpubBookshelfView = class extends import_obsidian13.ItemView {
   render() {
     const container = this.contentEl;
     container.empty();
-    container.addClass("yh-epub-bookshelf-view");
+    container.addClass("book-note-epub-bookshelf-view");
     container.createEl("h4", {
       cls: "bookshelf-heading",
-      text: "\u{1F4DA} \u7535\u5B50\u4E66\u4E66\u67B6"
+      text: t("bookshelf.title")
     });
     const bookFiles = this.app.vault.getFiles().filter((f3) => SUPPORTED_BOOK_EXTENSIONS.includes(f3.extension.toLowerCase()));
     if (bookFiles.length === 0) {
       container.createEl("p", {
         cls: "bookshelf-empty",
-        text: "Vault \u4E2D\u6CA1\u6709\u627E\u5230\u7535\u5B50\u4E66\u6587\u4EF6\u3002"
+        text: t("bookshelf.empty")
       });
       return;
     }
@@ -13739,19 +15002,19 @@ var EpubBookshelfView = class extends import_obsidian13.ItemView {
       if (progress) {
         meta.createEl("div", {
           cls: "bookshelf-last-read",
-          text: `\u4E0A\u6B21\u9605\u8BFB\uFF1A${progress.chapter || "\u672A\u77E5\u7AE0\u8282"} \xB7 ${progress.lastRead.slice(0, 10)}`
+          text: `t("bookshelf.lastRead", { chapter: progress.chapter || t("common.unknownChapter"), date: progress.lastRead.slice(0, 10) })`
         });
         const readingSeconds = progress.readingTimeSeconds ?? 0;
         if (readingSeconds > 0) {
           meta.createEl("div", {
             cls: "bookshelf-reading-time",
-            text: `\u5DF2\u8BFB ${this.formatReadingTime(readingSeconds)}`
+            text: `t("bookshelf.readTime", { time: this.formatReadingTime(readingSeconds) })`
           });
         }
         if (progress.estimatedRemainingMinutes != null && progress.estimatedRemainingMinutes > 0) {
           meta.createEl("div", {
             cls: "bookshelf-remaining",
-            text: `\u5269\u4F59\u7EA6 ${Math.ceil(progress.estimatedRemainingMinutes)} \u5206\u949F`
+            text: `t("bookshelf.remaining", { minutes: Math.ceil(progress.estimatedRemainingMinutes) })`
           });
         }
       }
@@ -13767,20 +15030,20 @@ var EpubBookshelfView = class extends import_obsidian13.ItemView {
     const secs = total % 60;
     const parts = [];
     if (hours > 0) {
-      parts.push(`${hours}\u5C0F\u65F6`);
+      parts.push(t("bookshelf.hours", { count: hours }));
     }
     if (minutes > 0 || hours > 0) {
-      parts.push(`${minutes}\u5206`);
+      parts.push(t("bookshelf.minutes", { count: minutes }));
     }
-    parts.push(`${secs}\u79D2`);
+    parts.push(t("bookshelf.seconds", { count: secs }));
     return parts.join("");
   }
 };
 
 // src/epub/EpubGotoHandler.ts
 var import_obsidian14 = require("obsidian");
-var CALLOUT_TYPE = "inklight-epub";
-var CFI_COMMENT_RE = /<!--\s*yh-epub-cfi:\s*(epubcfi\([\s\S]*?\))\s*-->/;
+var CALLOUT_TYPE = "book-note-epub";
+var CFI_COMMENT_RE = /<!--\s*book-note-epub-cfi:\s*(epubcfi\([\s\S]*?\))\s*-->/;
 var SOURCE_EXTENSIONS = ["epub", "mobi", "azw3", "fb2", "fbz", "cbz", "txt"];
 function registerEpubGotoHandler(plugin, openAtCfi, resolveAnn) {
   plugin.registerMarkdownPostProcessor((el, ctx) => {
@@ -13790,7 +15053,7 @@ function registerEpubGotoHandler(plugin, openAtCfi, resolveAnn) {
     el.querySelectorAll("p, pre, code").forEach((node) => {
       const htmlEl = node;
       if (CFI_COMMENT_RE.test(htmlEl.textContent?.trim() ?? "")) {
-        htmlEl.addClass("yh-epub-cfi-hidden");
+        htmlEl.addClass("book-note-epub-cfi-hidden");
       }
     });
     wireCalloutClickHandlers(el, ctx.sourcePath, openAtCfi, resolveAnn, plugin.app);
@@ -13814,15 +15077,15 @@ function wireBackLinks(el, sourcePath, goto, resolveAnn, app) {
 function wireCalloutClickHandlers(el, sourcePath, goto, resolveAnn, app) {
   for (const node of el.querySelectorAll(`[data-callout="${CALLOUT_TYPE}"]`)) {
     const container = node.closest(".callout") ?? node;
-    if (container.dataset.yhEpubGotoWired === "1") {
+    if (container.dataset.bookNoteEpubGotoWired === "1") {
       continue;
     }
     const target = findTargetNear(container, sourcePath, app);
     if (!target) {
       continue;
     }
-    container.dataset.yhEpubGotoWired = "1";
-    container.addClass("yh-epub-goto-callout");
+    container.dataset.bookNoteEpubGotoWired = "1";
+    container.addClass("book-note-epub-goto-callout");
     container.setAttr("title", "Open source annotation");
     container.addEventListener("click", (event) => {
       if (event.target.closest("a")) {
@@ -13835,13 +15098,13 @@ function wireCalloutClickHandlers(el, sourcePath, goto, resolveAnn, app) {
   }
 }
 function wireGotoAnchor(anchor, sourcePath, goto, resolveAnn, app) {
-  if (anchor.dataset.yhEpubGotoWired === "1") {
+  if (anchor.dataset.bookNoteEpubGotoWired === "1") {
     return;
   }
   const callout = anchor.closest(".callout");
   const target = callout ? findTargetNear(callout, sourcePath, app) : null;
-  anchor.dataset.yhEpubGotoWired = "1";
-  anchor.addClass("yh-epub-goto-link");
+  anchor.dataset.bookNoteEpubGotoWired = "1";
+  anchor.addClass("book-note-epub-goto-link");
   anchor.title = "Open source annotation";
   anchor.removeAttribute("href");
   anchor.removeAttribute("data-href");
@@ -13852,7 +15115,7 @@ function wireGotoAnchor(anchor, sourcePath, goto, resolveAnn, app) {
       void goto(target.file, target.cfi);
       return;
     }
-    new import_obsidian14.Notice("Unable to resolve source annotation");
+    new import_obsidian14.Notice(t("notice.unableResolve"));
   });
 }
 function findTargetNear(container, exportPath, app) {
@@ -13868,20 +15131,20 @@ function findTargetNear(container, exportPath, app) {
   return inferredFile ? { file: inferredFile, cfi } : null;
 }
 function findCfiNear(container) {
-  const span = container.querySelector("[data-yh-cfi]");
-  if (span?.dataset?.yhCfi) {
-    return span.dataset.yhCfi;
+  const span = container.querySelector("[data-book-note-cfi]");
+  if (span?.dataset?.bookNoteCfi) {
+    return span.dataset.bookNoteCfi;
   }
   const commentMatch = (container.textContent ?? "").match(CFI_COMMENT_RE);
   if (commentMatch) {
     return commentMatch[1];
   }
-  const textMatch = (container.textContent ?? "").match(/yh-cfi[=:]\s*(epubcfi\([\s\S]*?\))/i);
+  const textMatch = (container.textContent ?? "").match(/book-note-cfi[=:]\s*(epubcfi\([\s\S]*?\))/i);
   return textMatch ? textMatch[1] : null;
 }
 function findSourcePathNear(container) {
-  const span = container.querySelector("[data-yh-source-path]");
-  return span?.dataset?.yhSourcePath ?? null;
+  const span = container.querySelector("[data-book-note-source-path]");
+  return span?.dataset?.bookNoteSourcePath ?? null;
 }
 function findEpubFileFromExportPath(exportPath, app) {
   const basename = exportPath.split("/").pop() ?? "";
@@ -13901,7 +15164,7 @@ function findEpubFileFromExportPath(exportPath, app) {
 }
 
 // main.ts
-var YH_INKLIGHT_ICON = `
+var BOOK_NOTE_ICON = `
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
     <rect x="5" y="5" width="90" height="90" rx="20" ry="20" fill="#F5C518"/>
     <g transform="translate(50,50) rotate(-45) translate(-18,-18)"
@@ -13919,38 +15182,42 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
     this.settings = DEFAULT_SETTINGS;
     this.lastSelection = null;
     this.renameMigrationTimer = null;
+    this.ribbonIconEl = null;
   }
   async onload() {
-    (0, import_obsidian15.addIcon)("yh-inklight-icon", YH_INKLIGHT_ICON);
+    (0, import_obsidian15.addIcon)("book-note-icon", BOOK_NOTE_ICON);
     await this.loadSettings();
-    console.info(`yh-inklight loaded v${this.manifest.version}`);
-    this.store = new AnnotationStore(this.app, () => this.settings.annotationTags);
+    console.info(`book-note loaded v${this.manifest.version}`);
+    this.store = new AnnotationStore(
+      this.app,
+      () => this.settings.annotationTags,
+      () => ({
+        baseDir: this.settings.storagePath,
+        sidecarLocation: this.settings.sidecarLocation
+      }),
+      () => this.loadData(),
+      (data) => this.saveData(data)
+    );
     await this.store.initialize();
     this.registerView(ANNOTATION_SIDEBAR_VIEW, (leaf) => new AnnotationSidebarView(leaf, this));
     this.registerView(EPUB_READER_VIEW_TYPE, (leaf) => new EpubReaderView(leaf, this.store, this.settings, () => this.refreshAnnotations()));
     try {
       this.registerExtensions([...SUPPORTED_BOOK_EXTENSIONS], EPUB_READER_VIEW_TYPE);
     } catch (error) {
-      console.warn("yh-inklight: \u6CE8\u518C\u7535\u5B50\u4E66\u6269\u5C55\u540D\u5931\u8D25\uFF08\u53EF\u80FD\u4E0E\u5176\u4ED6\u63D2\u4EF6\u51B2\u7A81\uFF09", error);
+      console.warn("book-note: \u6CE8\u518C\u7535\u5B50\u4E66\u6269\u5C55\u540D\u5931\u8D25\uFF08\u53EF\u80FD\u4E0E\u5176\u4ED6\u63D2\u4EF6\u51B2\u7A81\uFF09", error);
     }
     this.registerView(
       EPUB_BOOKSHELF_VIEW_TYPE,
       (leaf) => new EpubBookshelfView(leaf, this.store, (file) => this.openEpubBook(file))
     );
-    this.registerEditorExtension([
-      createHighlightExtension({
-        getDocument: (filePath) => this.store.getCachedDocument(filePath),
-        getVersion: () => this.store.version,
-        rememberSelection: (filePath, startOffset, endOffset, selectedText) => {
-          this.lastSelection = { filePath, startOffset, endOffset, selectedText };
-        }
-      })
-    ]);
     this.toolbar = new SelectionToolbar({
       onHighlight: (color) => this.createHighlight(color),
       onComment: () => this.createComment(),
       onCopy: () => this.copySelection(),
-      onOpenSidebar: () => this.activateSidebar()
+      onOpenSidebar: () => this.activateSidebar(),
+      // The global toolbar drives PDF annotations. EPUB has its own in-reader
+      // toolbar; Markdown is no longer annotated by this plugin.
+      isEnabled: () => this.pdfLayer.isPdfActive()
     });
     this.popover = new AnnotationPopover({ app: this.app, component: this });
     this.pdfViewerAdapter = new PdfViewerAdapter(this.app, this);
@@ -13997,23 +15264,22 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
       if (!detail?.page || detail.page < 1) return;
       void this.gotoPdfPage(detail.page);
     };
-    document.addEventListener("yh-pdf-goto-page", gotoPageHandler);
-    this.register(() => document.removeEventListener("yh-pdf-goto-page", gotoPageHandler));
+    document.addEventListener("book-note-pdf-goto-page", gotoPageHandler);
+    this.register(() => document.removeEventListener("book-note-pdf-goto-page", gotoPageHandler));
     registerEpubGotoHandler(this, (file, cfi) => this.openEpubAtCfi(file, cfi));
-    this.registerObsidianProtocolHandler("inklight", (params) => {
+    this.registerObsidianProtocolHandler("book-note", (params) => {
       void this.annotationLinks.open({
         file: readProtocolParam(params.file),
         id: readProtocolParam(params.id)
       });
     });
-    this.registerObsidianProtocolHandler("inklight-epub", (params) => {
+    this.registerObsidianProtocolHandler("book-note-epub", (params) => {
       const filePath = readProtocolParam(params.file);
       const cfi = readProtocolParam(params.cfi);
       if (filePath && cfi) {
         void this.annotationLinks.openLegacyEpub(filePath, cfi);
       }
     });
-    this.registerMarkdownPostProcessor((element, context) => this.renderReadingHighlights(element, context));
   }
   onunload() {
     if (this.renameMigrationTimer !== null) {
@@ -14021,8 +15287,8 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
     }
     this.toolbar?.destroy();
     this.popover?.destroy();
-    this.app.workspace.detachLeavesOfType(ANNOTATION_SIDEBAR_VIEW);
-    this.app.workspace.detachLeavesOfType(EPUB_BOOKSHELF_VIEW_TYPE);
+    this.ribbonIconEl?.remove();
+    this.ribbonIconEl = null;
   }
   async loadSettings() {
     const stored = await this.loadData() ?? {};
@@ -14056,58 +15322,78 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
         view.refreshExternalAnnotations();
       }
     }
-    const activeFile = this.app.workspace.getActiveFile();
-    if (activeFile && activeFile.extension === "md") {
-      await this.refreshActiveReadingViewHighlights(activeFile.path);
-    }
   }
   /** 跳转到 PDF 指定页（侧栏批注卡片和深链回跳共用）。 */
   async gotoPdfPage(pageNumber) {
     const ok = await this.pdfViewerAdapter.goToPage(pageNumber, { flash: true, block: "center" });
     if (!ok) {
-      new import_obsidian15.Notice(`\u672A\u627E\u5230\u7B2C ${pageNumber} \u9875`);
+      new import_obsidian15.Notice(t("notice.pageNotFound", { page: pageNumber }));
     }
   }
+  /** 根据 settings.showRibbonIcon 增删左侧栏高亮笔图标（即时生效，无需重载插件）。 */
   registerRibbonIcon() {
-    const icon = this.addRibbonIcon("highlighter", "\u6253\u5F00\u58A8\u5149\u6279\u6CE8", () => {
-      void this.activateSidebar();
-    });
-    icon.addClass("yh-ribbon-icon");
+    this.updateRibbonIcon();
+  }
+  /** 设置面板切换开关时调用，即时增删 ribbon 图标。 */
+  updateRibbonIcon() {
+    if (this.settings.showRibbonIcon) {
+      if (!this.ribbonIconEl) {
+        const icon = this.addRibbonIcon("highlighter", t("ribbon.open"), () => {
+          void this.activateSidebar();
+        });
+        icon.addClass("book-note-ribbon-icon");
+        this.ribbonIconEl = icon;
+      }
+    } else if (this.ribbonIconEl) {
+      this.ribbonIconEl.remove();
+      this.ribbonIconEl = null;
+    }
+  }
+  /**
+   * Book Note 仅对 PDF 与电子书格式（EPUB 及 foliate 支持的其他书籍扩展名）激活。
+   * Markdown 及其它格式不再触发本插件（进度、选区批注等）。
+   */
+  isSupportedFile(file) {
+    if (!(file instanceof import_obsidian15.TFile)) {
+      return false;
+    }
+    const ext = file.extension.toLowerCase();
+    return ext === "pdf" || SUPPORTED_BOOK_EXTENSIONS.includes(ext);
   }
   registerCommands() {
     this.addCommand({
       id: "highlight-selection",
-      name: "\u9AD8\u4EAE\u9009\u4E2D\u6587\u672C",
+      name: t("command.highlight"),
       hotkeys: [{ modifiers: ["Mod", "Shift"], key: "h" }],
       callback: () => this.createHighlight(this.settings.defaultHighlightColor)
     });
     this.addCommand({
       id: "add-sticky-note",
-      name: "\u4E3A\u9009\u4E2D\u6587\u672C\u6DFB\u52A0\u4FBF\u7B7E",
+      name: t("command.addNote"),
       hotkeys: [{ modifiers: ["Mod", "Alt"], key: "m" }],
       callback: () => this.createComment()
     });
     this.addCommand({
       id: "open-annotation-sidebar",
-      name: "\u6253\u5F00\u6279\u6CE8\u603B\u89C8",
+      name: t("command.openSidebar"),
       callback: () => this.activateSidebar()
     });
     this.addCommand({
       id: "open-epub-bookshelf",
-      name: "\u6253\u5F00 EPUB \u4E66\u67B6",
+      name: t("command.openBookshelf"),
       callback: () => this.activateBookshelf()
     });
     this.addCommand({
       id: "show-pdf-outline",
-      name: "\u663E\u793A PDF \u76EE\u5F55",
+      name: t("command.showPdfOutline"),
       callback: async () => {
         if (!this.pdfLayer.isPdfActive()) {
-          new import_obsidian15.Notice("\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A PDF \u6587\u4EF6");
+          new import_obsidian15.Notice(t("notice.openPdfFirst"));
           return;
         }
         const outline = await this.pdfLayer.getOutline();
         if (outline.length === 0) {
-          new import_obsidian15.Notice("\u8BE5 PDF \u6CA1\u6709\u76EE\u5F55");
+          new import_obsidian15.Notice(t("notice.pdfNoOutline"));
           return;
         }
         const lines = outline.map((item) => {
@@ -14115,19 +15401,18 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
           const children = item.children.filter((c2) => c2.pageNumber > 0).map((c2) => `  \u2514 ${c2.title} \u2192 p.${c2.pageNumber}`).join("\n");
           return `${item.title}${pageInfo}${children ? "\n" + children : ""}`;
         });
-        new import_obsidian15.Notice(`PDF \u76EE\u5F55\uFF08${outline.length} \u9879\uFF09\uFF1A
-${lines.slice(0, 8).join("\n")}`);
+        new import_obsidian15.Notice(t("notice.pdfOutline", { count: outline.length, lines: lines.slice(0, 8).join("\n") }));
       }
     });
     this.addCommand({
       id: "test-annotation-storage",
-      name: "\u6D4B\u8BD5\u58A8\u5149\u6279\u6CE8\u5B58\u50A8",
+      name: t("command.testStorage"),
       callback: async () => {
         try {
           const path = await this.store.testWriteAccess();
-          new import_obsidian15.Notice(`\u58A8\u5149\u6279\u6CE8\u5B58\u50A8\u53EF\u5199\uFF1A${path}`);
+          new import_obsidian15.Notice(t("notice.storageWritable", { path }));
         } catch {
-          new import_obsidian15.Notice("\u58A8\u5149\u6279\u6CE8\u5B58\u50A8\u4E0D\u53EF\u5199\uFF0C\u8BF7\u68C0\u67E5 .obsidian-annotations \u76EE\u5F55\u6743\u9650\u6216\u540C\u6B65\u72B6\u6001\u3002");
+          new import_obsidian15.Notice(t("notice.storageNotWritable"));
         }
       }
     });
@@ -14135,7 +15420,7 @@ ${lines.slice(0, 8).join("\n")}`);
   registerEvents() {
     this.registerDomEvent(document, "selectionchange", () => this.toolbar.showForSelection());
     this.registerDomEvent(document, "mousedown", (event) => {
-      if (!(event.target instanceof HTMLElement) || !event.target.closest(".yh-selection-toolbar")) {
+      if (!(event.target instanceof HTMLElement) || !event.target.closest(".book-note-selection-toolbar")) {
         window.setTimeout(() => this.toolbar.showForSelection(), 0);
       }
     });
@@ -14144,7 +15429,7 @@ ${lines.slice(0, 8).join("\n")}`);
     });
     this.registerEvent(
       this.app.vault.on("modify", async (file) => {
-        if (!(file instanceof import_obsidian15.TFile) || file.extension !== "md") {
+        if (!(file instanceof import_obsidian15.TFile) || !this.isSupportedFile(file)) {
           return;
         }
         const document2 = await this.store.getDocument(file);
@@ -14160,13 +15445,7 @@ ${lines.slice(0, 8).join("\n")}`);
     );
     this.registerEvent(
       this.app.vault.on("rename", async (file, oldPath) => {
-        if (!this.settings.migrateOnRename || !(file instanceof import_obsidian15.TFile)) {
-          return;
-        }
-        const ext = file.extension.toLowerCase();
-        const isMarkdown = ext === "md";
-        const isBook = SUPPORTED_BOOK_EXTENSIONS.includes(ext);
-        if (!isMarkdown && !isBook && ext !== "pdf") {
+        if (!this.settings.migrateOnRename || !(file instanceof import_obsidian15.TFile) || !this.isSupportedFile(file)) {
           return;
         }
         if (this.renameMigrationTimer !== null) {
@@ -14181,7 +15460,7 @@ ${lines.slice(0, 8).join("\n")}`);
     );
     this.registerEvent(
       this.app.workspace.on("file-open", async (file) => {
-        if (file instanceof import_obsidian15.TFile && ["md", "pdf"].includes(file.extension.toLowerCase())) {
+        if (file instanceof import_obsidian15.TFile && this.isSupportedFile(file)) {
           this.popover.hide();
           await this.store.getDocument(file);
           await this.refreshAnnotations();
@@ -14190,149 +15469,38 @@ ${lines.slice(0, 8).join("\n")}`);
     );
   }
   async createHighlight(color) {
-    if (this.pdfLayer.isPdfActive()) {
-      await this.pdfLayer.createHighlight(color);
+    if (!this.pdfLayer.isPdfActive()) {
+      const activeFile = this.app.workspace.getActiveFile();
+      if (!(activeFile instanceof import_obsidian15.TFile) || !this.isSupportedFile(activeFile)) {
+        new import_obsidian15.Notice(t("notice.onlyPdfEpubAnnotations"));
+      }
       this.toolbar.hide();
       return;
     }
-    const snapshot = await this.resolveSelection();
-    if (!snapshot) {
-      new import_obsidian15.Notice("\u8BF7\u5148\u9009\u4E2D\u6587\u672C\u3002");
-      return;
-    }
-    const file = this.app.vault.getAbstractFileByPath(snapshot.filePath);
-    if (!(file instanceof import_obsidian15.TFile)) {
-      return;
-    }
-    const highlight = {
-      id: crypto.randomUUID(),
-      color,
-      anchor: createAnchorForSnapshot(await this.app.vault.cachedRead(file), snapshot),
-      createdAt: (/* @__PURE__ */ new Date()).toISOString()
-    };
-    await this.store.addHighlight(file, highlight);
-    await this.refreshActiveReadingViewHighlights(file.path);
-    await this.refreshAnnotations();
+    await this.pdfLayer.createHighlight(color);
     this.toolbar.hide();
   }
   async createComment() {
-    if (this.pdfLayer.isPdfActive()) {
-      const note2 = await new CommentModal(this.app, this.settings.annotationTags, "", "").openAndRead();
-      if (note2 !== null) {
-        await this.pdfLayer.createComment(
-          this.settings.defaultHighlightColor,
-          note2.content,
-          this.settings.defaultAuthor,
-          note2.legacyTitle,
-          note2.tagId,
-          note2.tagLabelSnapshot
-        );
+    if (!this.pdfLayer.isPdfActive()) {
+      const activeFile = this.app.workspace.getActiveFile();
+      if (!(activeFile instanceof import_obsidian15.TFile) || !this.isSupportedFile(activeFile)) {
+        new import_obsidian15.Notice(t("notice.onlyPdfEpubAnnotations"));
       }
       this.toolbar.hide();
       return;
     }
-    const snapshot = await this.resolveSelection();
-    if (!snapshot) {
-      new import_obsidian15.Notice("\u8BF7\u5148\u9009\u4E2D\u6587\u672C\u3002");
-      return;
-    }
-    const file = this.app.vault.getAbstractFileByPath(snapshot.filePath);
-    if (!(file instanceof import_obsidian15.TFile)) {
-      return;
-    }
     const note = await new CommentModal(this.app, this.settings.annotationTags, "", "").openAndRead();
-    if (note === null) {
-      return;
-    }
-    const now = (/* @__PURE__ */ new Date()).toISOString();
-    const comment = {
-      id: crypto.randomUUID(),
-      anchor: createAnchorForSnapshot(await this.app.vault.cachedRead(file), snapshot),
-      title: note.legacyTitle,
-      tagId: note.tagId,
-      tagLabelSnapshot: note.tagLabelSnapshot,
-      content: note.content,
-      color: this.settings.defaultHighlightColor,
-      position: { offsetX: 20, offsetY: 0 },
-      collapsed: false,
-      author: this.settings.defaultAuthor,
-      createdAt: now,
-      updatedAt: now,
-      replies: [],
-      resolved: false
-    };
-    await this.store.addComment(file, comment);
-    await this.refreshActiveReadingViewHighlights(file.path);
-    await this.refreshAnnotations();
-    this.toolbar.hide();
-  }
-  async refreshActiveReadingViewHighlights(filePath) {
-    const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (!(file instanceof import_obsidian15.TFile)) {
-      return;
-    }
-    const document2 = this.store.getCachedDocument(filePath) ?? await this.store.getDocument(file);
-    const marks = [...document2.highlights, ...document2.comments].filter((item) => !item.orphaned);
-    if (!marks.length) {
-      return;
-    }
-    for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
-      const view = leaf.view;
-      if (!(view instanceof import_obsidian15.MarkdownView) || view.file?.path !== filePath) {
-        continue;
-      }
-      const previewRoot = findPreviewRoot(view);
-      if (previewRoot) {
-        refreshReadingViewHighlights(previewRoot, marks);
-        continue;
-      }
-      const previewMode = view.previewMode;
-      if (previewMode?.rerender) {
-        await previewMode.rerender(true);
-        const rerenderedRoot = findPreviewRoot(view);
-        if (rerenderedRoot) {
-          refreshReadingViewHighlights(rerenderedRoot, marks);
-        }
-      }
-    }
-  }
-  async resolveSelection() {
-    const editor = this.activeEditor();
-    if (editor?.file) {
-      const selectedText2 = editor.editor.getSelection();
-      if (selectedText2) {
-        const from = editor.editor.posToOffset(editor.editor.getCursor("from"));
-        const to = editor.editor.posToOffset(editor.editor.getCursor("to"));
-        this.lastSelection = { filePath: editor.file.path, startOffset: from, endOffset: to, selectedText: selectedText2 };
-        return this.lastSelection;
-      }
-    }
-    const file = this.app.workspace.getActiveFile();
-    const selection = window.getSelection();
-    const selectedText = selection?.toString().replace(/\r\n/g, "\n").trim() ?? "";
-    if (file && selectedText) {
-      const source = await this.app.vault.cachedRead(file);
-      const located = locateRenderedSelectionInSource(
-        source,
-        selectedText,
-        selection ? renderedOccurrenceBeforeSelection(selection, selectedText) : 0,
-        selection ? isSelectionInsideCallout(selection) : false
+    if (note !== null) {
+      await this.pdfLayer.createComment(
+        this.settings.defaultHighlightColor,
+        note.content,
+        this.settings.defaultAuthor,
+        note.legacyTitle,
+        note.tagId,
+        note.tagLabelSnapshot
       );
-      if (located) {
-        this.lastSelection = {
-          filePath: file.path,
-          startOffset: located.startOffset,
-          endOffset: located.endOffset,
-          selectedText
-        };
-        return this.lastSelection;
-      }
     }
-    if (file && this.lastSelection?.filePath === file.path) {
-      return this.lastSelection;
-    }
-    this.lastSelection = null;
-    return null;
+    this.toolbar.hide();
   }
   activeEditor() {
     const view = this.app.workspace.getActiveViewOfType(import_obsidian15.MarkdownView);
@@ -14377,7 +15545,7 @@ ${lines.slice(0, 8).join("\n")}`);
   }
   async copyAnnotationLink(filePath, annotationId) {
     await navigator.clipboard.writeText(this.annotationLinks.createUri(filePath, annotationId));
-    new import_obsidian15.Notice("\u5DF2\u590D\u5236\u6279\u6CE8\u94FE\u63A5");
+    new import_obsidian15.Notice(t("notice.annotationLinkCopied"));
   }
   async openMarkdownAtAnchor(file, anchor, annotationId) {
     const leaf = this.app.workspace.getLeaf("tab");
@@ -14392,9 +15560,9 @@ ${lines.slice(0, 8).join("\n")}`);
     view.editor.setSelection(from, to);
     view.editor.scrollIntoView({ from, to }, true);
     window.setTimeout(() => {
-      const target = document.querySelector(`[data-yh-id="${CSS.escape(annotationId)}"]`);
-      target?.addClass("yh-flash-target");
-      window.setTimeout(() => target?.removeClass("yh-flash-target"), 850);
+      const target = document.querySelector(`[data-book-note-id="${CSS.escape(annotationId)}"]`);
+      target?.addClass("book-note-flash-target");
+      window.setTimeout(() => target?.removeClass("book-note-flash-target"), 850);
     }, 100);
     return true;
   }
@@ -14408,7 +15576,7 @@ ${lines.slice(0, 8).join("\n")}`);
       }
       await new Promise((resolve) => window.setTimeout(resolve, 100));
     }
-    new import_obsidian15.Notice("PDF \u9605\u8BFB\u89C6\u56FE\u672A\u80FD\u53CA\u65F6\u5C31\u7EEA");
+    new import_obsidian15.Notice(t("notice.pdfViewNotReady"));
     return false;
   }
   async openEpubAtAnchor(file, cfi, annotationId) {
@@ -14418,9 +15586,9 @@ ${lines.slice(0, 8).join("\n")}`);
     const opened = await this.navigateEpubToCfi(file, cfi);
     if (opened && annotationId) {
       window.setTimeout(() => {
-        const target = document.querySelector(`[data-yh-id="${CSS.escape(annotationId)}"]`);
-        target?.addClass("yh-flash-target");
-        window.setTimeout(() => target?.removeClass("yh-flash-target"), 850);
+        const target = document.querySelector(`[data-book-note-id="${CSS.escape(annotationId)}"]`);
+        target?.addClass("book-note-flash-target");
+        window.setTimeout(() => target?.removeClass("book-note-flash-target"), 850);
       }, 100);
     }
     return opened;
@@ -14432,7 +15600,7 @@ ${lines.slice(0, 8).join("\n")}`);
   async openEpubAtCfi(filePath, cfi) {
     const file = this.app.vault.getAbstractFileByPath(filePath);
     if (!(file instanceof import_obsidian15.TFile) || !SUPPORTED_BOOK_EXTENSIONS.includes(file.extension.toLowerCase())) {
-      new import_obsidian15.Notice("\u65E0\u6CD5\u627E\u5230\u5BF9\u5E94\u7684\u7535\u5B50\u4E66\u6587\u4EF6");
+      new import_obsidian15.Notice(t("notice.epubFileNotFound"));
       return;
     }
     await this.openEpubAtAnchor(file, cfi, "");
@@ -14455,14 +15623,14 @@ ${lines.slice(0, 8).join("\n")}`);
       }
       await new Promise((resolve) => window.setTimeout(resolve, 100));
     }
-    new import_obsidian15.Notice("\u7535\u5B50\u4E66\u9605\u8BFB\u89C6\u56FE\u672A\u80FD\u53CA\u65F6\u5C31\u7EEA");
+    new import_obsidian15.Notice(t("notice.epubViewNotReady"));
     return false;
   }
   copySelection() {
     const text = window.getSelection()?.toString() || this.activeEditor()?.editor.getSelection() || "";
     if (text) {
       navigator.clipboard.writeText(text);
-      new import_obsidian15.Notice("Copied selection");
+      new import_obsidian15.Notice(t("notice.selectionCopied"));
     }
   }
   async handleAnnotationClick(event) {
@@ -14471,14 +15639,14 @@ ${lines.slice(0, 8).join("\n")}`);
       this.popover.hide();
       return;
     }
-    const mark = target.closest(".yh-highlight, .yh-reading-highlight");
+    const mark = target.closest(".book-note-highlight, .book-note-reading-highlight");
     if (!mark) {
-      if (!target.closest(".yh-annotation-popover")) {
+      if (!target.closest(".book-note-annotation-popover")) {
         this.popover.hide();
       }
       return;
     }
-    const annotationId = mark.dataset.yhId;
+    const annotationId = mark.dataset.bookNoteId;
     const file = this.app.workspace.getActiveFile();
     if (!annotationId || !(file instanceof import_obsidian15.TFile)) {
       return;
@@ -14501,55 +15669,7 @@ ${lines.slice(0, 8).join("\n")}`);
       items
     });
   }
-  async renderReadingHighlights(element, context) {
-    if (!context.sourcePath) {
-      return;
-    }
-    await sleep(100);
-    const file = this.app.vault.getAbstractFileByPath(context.sourcePath);
-    if (!(file instanceof import_obsidian15.TFile)) {
-      return;
-    }
-    const document2 = await this.store.getDocument(file);
-    const marks = [...document2.highlights, ...document2.comments].filter((item) => !item.orphaned);
-    installReadingViewHighlights({ root: element, context, marks });
-  }
 };
-function locateRenderedSelectionInSource(source, selectedText, occurrenceIndex = 0, preferRendered = false) {
-  const exact = nthIndexOf(source, selectedText, occurrenceIndex);
-  if (exact >= 0) {
-    return {
-      startOffset: exact,
-      endOffset: exact + selectedText.length
-    };
-  }
-  if (preferRendered) {
-    const rendered = locateSelectionIgnoringQuoteMarkers(source, selectedText, occurrenceIndex);
-    if (rendered) {
-      return rendered;
-    }
-  }
-  return locateSelectionIgnoringQuoteMarkers(source, selectedText, occurrenceIndex);
-}
-function createAnchorForSnapshot(source, snapshot) {
-  const anchor = createTextAnchor(source, snapshot.startOffset, snapshot.endOffset);
-  const selectedText = snapshot.selectedText.replace(/\r\n/g, "\n").trim();
-  const sourceText = anchor.selectedText.replace(/\r\n/g, "\n").trim();
-  if (!selectedText || selectedText === sourceText) {
-    return anchor;
-  }
-  return {
-    ...anchor,
-    selectedText
-  };
-}
-function sleep(ms) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-function findPreviewRoot(view) {
-  const previewMode = view.previewMode;
-  return view.containerEl.querySelector(".markdown-preview-view") ?? view.containerEl.querySelector(".markdown-preview-section") ?? view.containerEl.querySelector(".mod-preview") ?? previewMode?.containerEl?.querySelector(".markdown-preview-section") ?? previewMode?.containerEl ?? null;
-}
 function unwrapStaleHighlight(mark) {
   const parent = mark.parentNode;
   if (!parent) {
@@ -14561,104 +15681,6 @@ function unwrapStaleHighlight(mark) {
   }
   parent.removeChild(mark);
   parent.normalize();
-}
-function locateSelectionIgnoringQuoteMarkers(source, selectedText, occurrenceIndex = 0) {
-  const normalizedSelection = selectedText.replace(/\r\n/g, "\n");
-  const sourceToRendered = [];
-  let rendered = "";
-  let lineStart = true;
-  let quotePrefix = false;
-  let index = 0;
-  while (index < source.length) {
-    const char = source[index];
-    if (lineStart && char === ">") {
-      quotePrefix = true;
-      lineStart = false;
-      index += 1;
-      continue;
-    }
-    if (quotePrefix && char === " ") {
-      quotePrefix = false;
-      index += 1;
-      continue;
-    }
-    if (!quotePrefix && char === "[" && source.slice(index).match(/^\[![\w-]+\]/)) {
-      while (index < source.length && source[index] !== "\n") {
-        index += 1;
-      }
-      quotePrefix = false;
-      continue;
-    }
-    quotePrefix = false;
-    rendered += char;
-    sourceToRendered.push(index);
-    lineStart = char === "\n";
-    index += 1;
-  }
-  const renderedStart = nthIndexOf(rendered, normalizedSelection, occurrenceIndex);
-  if (renderedStart < 0) {
-    return null;
-  }
-  const renderedEnd = renderedStart + normalizedSelection.length - 1;
-  return {
-    startOffset: sourceToRendered[renderedStart],
-    endOffset: sourceToRendered[renderedEnd] + 1
-  };
-}
-function renderedOccurrenceBeforeSelection(selection, selectedText) {
-  if (!selection.rangeCount || !selectedText) {
-    return 0;
-  }
-  const range = selection.getRangeAt(0);
-  const root = selectionRoot(range);
-  if (!root) {
-    return 0;
-  }
-  const before = document.createRange();
-  before.selectNodeContents(root);
-  before.setEnd(range.startContainer, range.startOffset);
-  const beforeText = before.toString().replace(/\r\n/g, "\n");
-  before.detach();
-  return countOccurrences(beforeText, selectedText);
-}
-function selectionRoot(range) {
-  const container = range.commonAncestorContainer instanceof HTMLElement ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
-  return container?.closest(".markdown-preview-view") ?? container?.closest(".markdown-preview-section") ?? container?.closest(".mod-preview") ?? null;
-}
-function isSelectionInsideCallout(selection) {
-  if (!selection.rangeCount) {
-    return false;
-  }
-  const range = selection.getRangeAt(0);
-  const container = range.commonAncestorContainer instanceof HTMLElement ? range.commonAncestorContainer : range.commonAncestorContainer.parentElement;
-  return Boolean(container?.closest(".callout, .callout-content"));
-}
-function countOccurrences(source, target) {
-  if (!target) {
-    return 0;
-  }
-  let count = 0;
-  let cursor = source.indexOf(target);
-  while (cursor >= 0) {
-    count += 1;
-    cursor = source.indexOf(target, cursor + target.length);
-  }
-  return count;
-}
-function nthIndexOf(source, target, occurrenceIndex) {
-  if (!target) {
-    return -1;
-  }
-  let cursor = source.indexOf(target);
-  let seen = 0;
-  while (cursor >= 0) {
-    if (seen >= occurrenceIndex) {
-      return cursor;
-    }
-    seen += 1;
-    cursor = source.indexOf(target, cursor + target.length);
-  }
-  return -1;
 }
 var CommentModal = class extends import_obsidian15.Modal {
   constructor(app, tags, initialTitle, initialContent, initialTagId) {
@@ -14677,27 +15699,27 @@ var CommentModal = class extends import_obsidian15.Modal {
   }
   onOpen() {
     this.contentEl.empty();
-    this.contentEl.createEl("h2", { text: "\u4FBF\u7B7E" });
-    const titleRow = this.contentEl.createDiv({ cls: "yh-modal-row" });
-    titleRow.createEl("label", { cls: "yh-modal-label", text: "\u6807\u7B7E" });
-    const tagSelect = titleRow.createEl("select", { cls: "yh-modal-select" });
+    this.contentEl.createEl("h2", { text: t("modal.sticky.title") });
+    const titleRow = this.contentEl.createDiv({ cls: "book-note-modal-row" });
+    titleRow.createEl("label", { cls: "book-note-modal-label", text: t("common.tag") });
+    const tagSelect = titleRow.createEl("select", { cls: "book-note-modal-select" });
     const resolvedInitial = resolveAnnotationTag(this.tags, { tagId: this.initialTagId, title: this.initialTitle });
     const selectableTags = this.tags.filter((tag) => tag.enabled || tag.id === resolvedInitial?.id);
     for (const tag of selectableTags) {
-      const suffix = tag.enabled ? "" : "\uFF08\u5DF2\u505C\u7528\uFF09";
+      const suffix = tag.enabled ? "" : t("modal.sticky.disabledSuffix");
       tagSelect.createEl("option", { text: `${tag.name}${suffix}`, attr: { value: tag.id } });
     }
     tagSelect.value = resolvedInitial?.id ?? selectableTags[0]?.id ?? "";
-    const contentRow = this.contentEl.createDiv({ cls: "yh-modal-row" });
-    contentRow.createEl("label", { cls: "yh-modal-label", text: "\u7B14\u8BB0" });
+    const contentRow = this.contentEl.createDiv({ cls: "book-note-modal-row" });
+    contentRow.createEl("label", { cls: "book-note-modal-label", text: t("modal.sticky.note") });
     const input = contentRow.createEl("textarea", {
-      cls: "yh-modal-textarea",
-      attr: { rows: "8", placeholder: "\u5199\u4E0B\u4F60\u7684\u60F3\u6CD5..." }
+      cls: "book-note-modal-textarea",
+      attr: { rows: "8", placeholder: t("modal.sticky.placeholder") }
     });
     input.value = this.initialContent;
-    const actions = this.contentEl.createDiv({ cls: "yh-modal-actions" });
-    const cancel = actions.createEl("button", { text: "\u53D6\u6D88", cls: "yh-modal-cancel", attr: { type: "button" } });
-    const save = actions.createEl("button", { text: "\u4FDD\u5B58", cls: "yh-modal-save", attr: { type: "button" } });
+    const actions = this.contentEl.createDiv({ cls: "book-note-modal-actions" });
+    const cancel = actions.createEl("button", { text: t("common.cancel"), cls: "book-note-modal-cancel", attr: { type: "button" } });
+    const save = actions.createEl("button", { text: t("common.save"), cls: "book-note-modal-save", attr: { type: "button" } });
     const cancelValue = () => {
       this.value = null;
       this.close();

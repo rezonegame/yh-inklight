@@ -6,6 +6,7 @@
  */
 
 import { App, Component, MarkdownRenderer, Notice, setIcon, TFile } from "obsidian";
+import { t } from "../i18n";
 
 import {
   AnnotationColor,
@@ -87,7 +88,7 @@ export class PdfAnnotationLayer {
   async createHighlight(color: AnnotationColor): Promise<boolean> {
     const snapshot = this.resolveSelection();
     if (!snapshot) {
-      new Notice("请先在 PDF 中选中文本。");
+      new Notice(t("pdf.selectTextFirst"));
       return true;
     }
 
@@ -112,7 +113,7 @@ export class PdfAnnotationLayer {
   ): Promise<boolean> {
     const snapshot = this.resolveSelection();
     if (!snapshot) {
-      new Notice("请先在 PDF 中选中文本。");
+      new Notice(t("pdf.selectTextFirst"));
       return true;
     }
 
@@ -189,7 +190,7 @@ export class PdfAnnotationLayer {
         result.push({ title, pageNumber: pageNum, children });
       }
     } catch (e) {
-      console.warn("yh-inklight: PDF getOutline failed", e);
+      console.warn("book-note: PDF getOutline failed", e);
     }
     return result;
   }
@@ -306,11 +307,11 @@ export class PdfAnnotationLayer {
 
     const document = await this.options.getDocument(file);
     const host = viewer.closest<HTMLElement>(".workspace-leaf-content") ?? viewer;
-    host.addClass("yh-pdf-host");
+    host.addClass("book-note-pdf-host");
 
     if (!this.root || this.root.parentElement !== host) {
       this.root?.remove();
-      this.root = host.createDiv({ cls: "yh-pdf-layer" });
+      this.root = host.createDiv({ cls: "book-note-pdf-layer" });
     }
 
     this.renderHighlights(host, document);
@@ -324,7 +325,7 @@ export class PdfAnnotationLayer {
       return;
     }
 
-    this.root.querySelectorAll(".yh-pdf-highlight").forEach((item) => item.remove());
+    this.root.querySelectorAll(".book-note-pdf-highlight").forEach((item) => item.remove());
     const hostRect = host.getBoundingClientRect();
     const annotations = [...document.pdfHighlights, ...document.pdfComments].filter((item) => !item.orphaned);
 
@@ -337,10 +338,10 @@ export class PdfAnnotationLayer {
 
         const pageRect = page.getBoundingClientRect();
         const highlight = this.root.createDiv({
-          cls: `yh-pdf-highlight yh-pdf-highlight--${annotation.color}`,
+          cls: `book-note-pdf-highlight book-note-pdf-highlight--${annotation.color}`,
           attr: {
-            "data-yh-id": annotation.id,
-            "data-yh-color": annotation.color,
+            "data-book-note-id": annotation.id,
+            "data-book-note-color": annotation.color,
           },
         });
         highlight.style.left = `${pageRect.left - hostRect.left + rect.left * pageRect.width}px`;
@@ -432,16 +433,16 @@ export class PdfAnnotationLayer {
       return;
     }
 
-    const highlight = target.closest<HTMLElement>(".yh-pdf-highlight");
+    const highlight = target.closest<HTMLElement>(".book-note-pdf-highlight");
     if (!highlight) {
-      if (!target.closest(".yh-pdf-popover")) {
+      if (!target.closest(".book-note-pdf-popover")) {
         this.hidePopover();
       }
       return;
     }
 
     const file = this.activePdfFile();
-    const id = highlight.dataset.yhId;
+    const id = highlight.dataset.bookNoteId;
     if (!file || !id) {
       return;
     }
@@ -460,20 +461,20 @@ export class PdfAnnotationLayer {
 
   private showPopover(sourcePath: string, rect: DOMRect, annotation: PdfHighlightAnnotation | PdfCommentAnnotation): void {
     this.hidePopover();
-    this.popover = document.body.createDiv({ cls: "yh-pdf-popover yh-annotation-popover is-visible" });
-    const header = this.popover.createDiv({ cls: "yh-popover-header" });
-    header.createSpan({ cls: "yh-popover-title", text: `PDF 第 ${annotation.anchor.pageNumber} 页` });
-    const close = header.createEl("button", { cls: "yh-icon-button", attr: { type: "button", title: "关闭" } });
+    this.popover = document.body.createDiv({ cls: "book-note-pdf-popover book-note-annotation-popover is-visible" });
+    const header = this.popover.createDiv({ cls: "book-note-popover-header" });
+    header.createSpan({ cls: "book-note-popover-title", text: `t("pdf.popoverTitle", { page: annotation.anchor.pageNumber })` });
+    const close = header.createEl("button", { cls: "book-note-icon-button", attr: { type: "button", title: t("common.close") } });
     setIcon(close, "x");
     close.addEventListener("click", () => this.hidePopover());
 
     const card = this.popover.createDiv({
-      cls: "yh-popover-card",
-      attr: { "data-yh-color": annotation.color, "data-yh-id": annotation.id },
+      cls: "book-note-popover-card",
+      attr: { "data-book-note-color": annotation.color, "data-book-note-id": annotation.id },
     });
-    card.createDiv({ cls: "yh-popover-quote", text: annotation.anchor.selectedText });
+    card.createDiv({ cls: "book-note-popover-quote", text: annotation.anchor.selectedText });
     if ("content" in annotation && annotation.content) {
-      const body = card.createDiv({ cls: "yh-popover-body" });
+      const body = card.createDiv({ cls: "book-note-popover-body" });
       MarkdownRenderer.render(this.options.app, annotation.content, body, sourcePath, this.options.component);
     }
 

@@ -6,9 +6,10 @@
  */
 
 import { App, MarkdownPostProcessorContext, Notice, Plugin } from "obsidian";
+import { t } from "../i18n";
 
-const CALLOUT_TYPE = "inklight-epub";
-const CFI_COMMENT_RE = /<!--\s*yh-epub-cfi:\s*(epubcfi\([\s\S]*?\))\s*-->/;
+const CALLOUT_TYPE = "book-note-epub";
+const CFI_COMMENT_RE = /<!--\s*book-note-epub-cfi:\s*(epubcfi\([\s\S]*?\))\s*-->/;
 const SOURCE_EXTENSIONS = ["epub", "mobi", "azw3", "fb2", "fbz", "cbz", "txt"];
 
 export interface EpubGotoResolver {
@@ -28,7 +29,7 @@ export function registerEpubGotoHandler(
     el.querySelectorAll("p, pre, code").forEach((node) => {
       const htmlEl = node as HTMLElement;
       if (CFI_COMMENT_RE.test(htmlEl.textContent?.trim() ?? "")) {
-        htmlEl.addClass("yh-epub-cfi-hidden");
+        htmlEl.addClass("book-note-epub-cfi-hidden");
       }
     });
 
@@ -68,7 +69,7 @@ function wireCalloutClickHandlers(
 ): void {
   for (const node of el.querySelectorAll(`[data-callout="${CALLOUT_TYPE}"]`)) {
     const container = (node.closest(".callout") ?? node) as HTMLElement;
-    if (container.dataset.yhEpubGotoWired === "1") {
+    if (container.dataset.bookNoteEpubGotoWired === "1") {
       continue;
     }
 
@@ -77,8 +78,8 @@ function wireCalloutClickHandlers(
       continue;
     }
 
-    container.dataset.yhEpubGotoWired = "1";
-    container.addClass("yh-epub-goto-callout");
+    container.dataset.bookNoteEpubGotoWired = "1";
+    container.addClass("book-note-epub-goto-callout");
     container.setAttr("title", "Open source annotation");
     container.addEventListener("click", (event) => {
       if ((event.target as HTMLElement).closest("a")) {
@@ -98,15 +99,15 @@ function wireGotoAnchor(
   resolveAnn: EpubGotoResolver | undefined,
   app: App,
 ): void {
-  if (anchor.dataset.yhEpubGotoWired === "1") {
+  if (anchor.dataset.bookNoteEpubGotoWired === "1") {
     return;
   }
 
   const callout = anchor.closest(".callout");
   const target = callout ? findTargetNear(callout as HTMLElement, sourcePath, app) : null;
 
-  anchor.dataset.yhEpubGotoWired = "1";
-  anchor.addClass("yh-epub-goto-link");
+  anchor.dataset.bookNoteEpubGotoWired = "1";
+  anchor.addClass("book-note-epub-goto-link");
   anchor.title = "Open source annotation";
   anchor.removeAttribute("href");
   anchor.removeAttribute("data-href");
@@ -117,7 +118,7 @@ function wireGotoAnchor(
       void goto(target.file, target.cfi);
       return;
     }
-    new Notice("Unable to resolve source annotation");
+    new Notice(t("notice.unableResolve"));
   });
 }
 
@@ -137,9 +138,9 @@ function findTargetNear(container: HTMLElement, exportPath: string, app: App): {
 }
 
 function findCfiNear(container: HTMLElement): string | null {
-  const span = container.querySelector("[data-yh-cfi]") as HTMLElement | null;
-  if (span?.dataset?.yhCfi) {
-    return span.dataset.yhCfi;
+  const span = container.querySelector("[data-book-note-cfi]") as HTMLElement | null;
+  if (span?.dataset?.bookNoteCfi) {
+    return span.dataset.bookNoteCfi;
   }
 
   const commentMatch = (container.textContent ?? "").match(CFI_COMMENT_RE);
@@ -147,13 +148,13 @@ function findCfiNear(container: HTMLElement): string | null {
     return commentMatch[1];
   }
 
-  const textMatch = (container.textContent ?? "").match(/yh-cfi[=:]\s*(epubcfi\([\s\S]*?\))/i);
+  const textMatch = (container.textContent ?? "").match(/book-note-cfi[=:]\s*(epubcfi\([\s\S]*?\))/i);
   return textMatch ? textMatch[1] : null;
 }
 
 function findSourcePathNear(container: HTMLElement): string | null {
-  const span = container.querySelector("[data-yh-source-path]") as HTMLElement | null;
-  return span?.dataset?.yhSourcePath ?? null;
+  const span = container.querySelector("[data-book-note-source-path]") as HTMLElement | null;
+  return span?.dataset?.bookNoteSourcePath ?? null;
 }
 
 function findEpubFileFromExportPath(exportPath: string, app: App): string | null {

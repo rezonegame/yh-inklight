@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 全局 customElements 注册表
  * [OUTPUT]: installFoliateCustomElementGuard，防止 foliate 自定义元素与其他 foliate 插件重复注册冲突
- * [POS]: epub 模块的 foliate 引擎基础设施，迁移自 obsidian-weave-reader 并适配 yh-inklight
+ * [POS]: epub 模块的 foliate 引擎基础设施，迁移自 obsidian-weave-reader 并适配 book-note
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  *
  * 背景：foliate-js 通过 customElements.define 注册 <foliate-view>/<foliate-fxl>/<foliate-paginator>。
