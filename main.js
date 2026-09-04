@@ -14396,15 +14396,21 @@ function findEpubFileFromExportPath(exportPath, app) {
 
 // main.ts
 var YH_INKLIGHT_ICON = `
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-    <rect x="5" y="5" width="90" height="90" rx="20" ry="20" fill="#F5C518"/>
-    <g transform="translate(50,50) rotate(-45) translate(-18,-18)"
-      fill="none" stroke="#000" stroke-width="6"
-      stroke-linecap="round" stroke-linejoin="round">
-      <rect x="8" y="2" width="20" height="28" rx="3" fill="#000" stroke="none"/>
-      <polygon points="8,30 28,30 18,42" fill="#000" stroke="none"/>
-      <line x1="8" y1="10" x2="28" y2="10" stroke="#F5C518" stroke-width="3"/>
-    </g>
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+    <path
+      d="M18 27h19c7.2 0 13 5.8 13 13v38c-3.6-2.9-8-4.4-13-4.4H18V27Z"
+      fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="6"
+      stroke-linejoin="round"/>
+    <path
+      d="M82 27H63c-7.2 0-13 5.8-13 13v38c3.6-2.9 8-4.4 13-4.4h19V27Z"
+      fill="currentColor" fill-opacity=".12" stroke="currentColor" stroke-width="6"
+      stroke-linejoin="round"/>
+    <path d="M50 40.5V78" stroke="currentColor" stroke-width="6" stroke-linecap="round"/>
+    <path
+      d="M50 11c-5.4 8.1-9.2 13-9.2 18.3a9.2 9.2 0 0 0 18.4 0C59.2 24 55.4 19.1 50 11Z"
+      fill="currentColor"/>
+    <path d="M28 48h13M28 59h10M59 48h13M62 59h10"
+      stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
   </svg>
 `;
 var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
