@@ -22,7 +22,7 @@ const OBSIDIAN_CSS_VARS = {
 
 // ---- 静态主题颜色定义 ----
 
-interface ThemeColors {
+export interface ThemeColors {
 	background: string;
 	textColor: string;
 	linkColor: string;

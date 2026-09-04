@@ -1982,6 +1982,25 @@ a.yh-epub-goto-link:hover {
   padding: 4px 6px;
 }
 
+.yh-epub-search-progress {
+  padding: 8px 6px;
+  color: var(--text-muted);
+  font-size: var(--yh-font-sm);
+  text-align: center;
+}
+
+.yh-epub-search-chapter {
+  padding: 8px 6px 4px;
+  border-top: 1px solid var(--yh-border);
+  color: var(--text-muted);
+  font-size: var(--yh-font-xs);
+  font-weight: 600;
+}
+
+.yh-epub-search-chapter:first-child {
+  border-top: none;
+}
+
 .yh-epub-paragraph-hint {
   padding: 6px 8px;
   margin-top: 8px;
@@ -1989,90 +2008,4 @@ a.yh-epub-goto-link:hover {
   color: var(--text-muted);
   text-align: center;
   border-top: 1px solid var(--yh-border);
-}
-.yh-epub-toolbar-search {
-  position: absolute;
-  top: 100%;
-  margin-top: 4px;
-  right: 12px;
-  z-index: var(--layer-popover, 100000);
-  width: 320px;
-  max-height: 400px;
-  background: var(--background-primary);
-  border: 1px solid var(--yh-border);
-  border-radius: var(--yh-radius);
-  box-shadow: var(--yh-shadow-lg);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.yh-epub-toolbar-search-input {
-  padding: 8px 12px;
-  border: none;
-  border-bottom: 1px solid var(--yh-border);
-  background: transparent;
-  color: var(--text-normal);
-  font-size: var(--yh-font-base);
-  outline: none;
-  flex-shrink: 0;
-}
-
-.yh-epub-toolbar-search-results {
-  max-height: 300px;
-  overflow-y: auto;
-}
-
-.yh-epub-toolbar-search-hit {
-  display: block;
-  width: 100%;
-  padding: 6px 12px;
-  border: none;
-  background: transparent;
-  color: var(--text-normal);
-  font-size: 12px;
-  cursor: pointer;
-  text-align: left;
-  line-height: 1.4;
-}
-
-.yh-epub-toolbar-search-hit:hover {
-  background: var(--background-modifier-hover);
-}
-
-.yh-epub-toolbar-search-empty {
-  padding: 12px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: var(--yh-font-sm);
-}
-
-.yh-epub-toolbar-search-progress {
-  padding: 8px 12px;
-  text-align: center;
-  color: var(--text-muted);
-  font-size: var(--yh-font-sm);
-  font-style: italic;
-}
-
-.yh-epub-toolbar-search-chapter {
-  padding: 8px 12px 4px;
-  font-size: var(--yh-font-xs);
-  font-weight: 600;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  border-top: 1px solid var(--yh-border);
-  margin-top: 4px;
-}
-
-.yh-epub-toolbar-search-chapter:first-child {
-  border-top: none;
-  margin-top: 0;
-}
-
-.yh-epub-toolbar-search-hit strong {
-  background-color: var(--text-highlight-bg, rgba(245, 197, 24, 0.3));
-  color: inherit;
-  padding: 0 1px;
-  border-radius: 2px;
 }

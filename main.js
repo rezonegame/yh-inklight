@@ -12355,12 +12355,380 @@ var EpubNoteModal = class extends import_obsidian11.Modal {
   }
 };
 
+// src/epub/EpubLayoutController.ts
+function getEpubLayoutAttributes(flow) {
+  return {
+    flow,
+    margin: flow === "paginated" ? "28px" : "0px",
+    gap: "8%",
+    "max-inline-size": "760px"
+  };
+}
+var EpubLayoutController = class {
+  constructor(view, flow) {
+    this.view = view;
+    this.flow = flow;
+  }
+  initialize() {
+    this.view.classList.add("yh-epub-foliate-view");
+    this.apply();
+  }
+  setFlow(flow) {
+    this.flow = flow;
+    this.apply();
+  }
+  apply() {
+    const attrs = getEpubLayoutAttributes(this.flow);
+    const host = this.view;
+    const renderer = this.view.renderer;
+    for (const [name, value] of Object.entries(attrs)) {
+      host.setAttribute(name, value);
+      renderer?.setAttribute?.(name, value);
+    }
+    this.view.renderer?.render?.();
+  }
+  applyAppearance(colors, size, readerContainer) {
+    const css = [
+      ":root { color-scheme: light dark; }",
+      "body {",
+      `  background-color: ${colors.background} !important;`,
+      `  color: ${colors.textColor} !important;`,
+      `  font-size: ${size}px !important;`,
+      "  line-height: 1.72 !important;",
+      "}",
+      "p, div, span, li, h1, h2, h3, h4, h5, h6, blockquote, td, th, dt, dd {",
+      `  color: ${colors.textColor} !important;`,
+      "}",
+      `a, a:link, a:visited { color: ${colors.linkColor} !important; }`,
+      `::selection { background: ${colors.selectionBg} !important; }`,
+      "img { max-width: 100% !important; height: auto !important; }"
+    ].join("\n");
+    this.view.renderer?.setStyles?.(css);
+    this.view.renderer?.render?.();
+    this.view.style.backgroundColor = colors.background;
+    readerContainer.style.backgroundColor = colors.background;
+  }
+};
+
+// src/epub/EpubSearch.ts
+function normalizeEpubSearchResult(raw, label = "") {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const item = raw;
+  const cfi = typeof item.cfi === "string" ? item.cfi : typeof item.value === "string" ? item.value : "";
+  const excerptValue = item.excerpt;
+  let excerpt = "";
+  if (typeof excerptValue === "string") {
+    excerpt = excerptValue;
+  } else if (excerptValue && typeof excerptValue === "object") {
+    const parts = excerptValue;
+    excerpt = [parts.pre, parts.match, parts.post].filter((part) => typeof part === "string").join("");
+  } else if (typeof item.text === "string") {
+    excerpt = item.text;
+  }
+  if (!cfi && !excerpt) {
+    return null;
+  }
+  return {
+    cfi,
+    excerpt,
+    label: label || (typeof item.label === "string" ? item.label : void 0)
+  };
+}
+function normalizeEpubSearchResults(raw, label = "") {
+  if (Array.isArray(raw)) {
+    return raw.flatMap((item2) => normalizeEpubSearchResults(item2, label));
+  }
+  if (!raw || typeof raw !== "object") {
+    return [];
+  }
+  const item = raw;
+  const itemLabel = typeof item.label === "string" ? item.label : label;
+  if (Array.isArray(item.subitems)) {
+    return item.subitems.flatMap((subitem) => normalizeEpubSearchResults(subitem, itemLabel));
+  }
+  if (Array.isArray(item.results)) {
+    return item.results.flatMap((result2) => normalizeEpubSearchResults(result2, itemLabel));
+  }
+  const result = normalizeEpubSearchResult(raw, itemLabel);
+  return result ? [result] : [];
+}
+function isEpubSearchTokenCurrent(token, currentToken) {
+  return token === currentToken;
+}
+var EpubSearchController = class {
+  constructor(containerEl, host) {
+    this.containerEl = containerEl;
+    this.host = host;
+    this.inputEl = null;
+    this.resultsEl = null;
+    this.searchTimer = null;
+    this.searchToken = 0;
+    this.disposed = false;
+  }
+  render(initialQuery = "") {
+    this.containerEl.empty();
+    const box = this.containerEl.createDiv({ cls: "yh-epub-search-box" });
+    this.inputEl = box.createEl("input", {
+      cls: "yh-epub-search-input",
+      attr: { type: "text", placeholder: "\u641C\u7D22\u5168\u6587\u2026" }
+    });
+    this.inputEl.value = initialQuery;
+    this.inputEl.addEventListener("keydown", (event) => {
+      event.stopPropagation();
+      if (event.key === "Enter") {
+        void this.search();
+      }
+    }, { capture: true });
+    this.resultsEl = box.createDiv({ cls: "yh-epub-search-results" });
+    this.inputEl.addEventListener("input", () => this.scheduleSearch(), { passive: true });
+  }
+  focus() {
+    this.inputEl?.focus();
+    this.inputEl?.select();
+  }
+  dispose() {
+    this.disposed = true;
+    this.searchToken += 1;
+    if (this.searchTimer !== null) {
+      window.clearTimeout(this.searchTimer);
+      this.searchTimer = null;
+    }
+    this.inputEl = null;
+    this.resultsEl = null;
+  }
+  scheduleSearch() {
+    if (this.searchTimer !== null) {
+      window.clearTimeout(this.searchTimer);
+    }
+    this.searchTimer = window.setTimeout(() => {
+      this.searchTimer = null;
+      void this.search();
+    }, 300);
+  }
+  async search() {
+    const input = this.inputEl;
+    const resultsEl = this.resultsEl;
+    const view = this.host.getFoliateView();
+    if (!input || !resultsEl || !view || this.disposed) {
+      return;
+    }
+    const query = input.value.trim().toLowerCase();
+    const token = ++this.searchToken;
+    resultsEl.empty();
+    if (query.length < 2) {
+      return;
+    }
+    let results = await this.searchWithFoliate(view, query, token, resultsEl);
+    if (!isEpubSearchTokenCurrent(token, this.searchToken) || this.disposed) {
+      return;
+    }
+    if (results.length === 0) {
+      results = this.searchVisibleContents(query);
+    }
+    if (!isEpubSearchTokenCurrent(token, this.searchToken) || this.disposed) {
+      return;
+    }
+    if (results.length === 0) {
+      resultsEl.createDiv({ cls: "yh-epub-search-empty", text: "\u672A\u627E\u5230\u5339\u914D" });
+      return;
+    }
+    let currentLabel = "";
+    for (const result of results.slice(0, 100)) {
+      if (result.label && result.label !== currentLabel) {
+        currentLabel = result.label;
+        resultsEl.createDiv({ cls: "yh-epub-search-chapter", text: currentLabel });
+      }
+      const item = resultsEl.createEl("button", {
+        cls: "yh-epub-search-result",
+        attr: { type: "button" }
+      });
+      item.createSpan({ cls: "yh-epub-search-text", text: result.excerpt.slice(0, 160) });
+      if (result.cfi) {
+        item.addEventListener("click", () => this.host.onNavigate(result.cfi));
+      }
+    }
+  }
+  async searchWithFoliate(view, query, token, resultsEl) {
+    const searcher = view.search;
+    if (typeof searcher !== "function") {
+      return [];
+    }
+    for (const argument of [query, { query }]) {
+      try {
+        const results = await this.consumeSearchResult(searcher.call(view, argument), token, resultsEl);
+        if (results.length > 0 || !isEpubSearchTokenCurrent(token, this.searchToken)) {
+          return results;
+        }
+      } catch (error) {
+        console.warn("yh-inklight: EPUB search failed", error);
+      }
+    }
+    return [];
+  }
+  async consumeSearchResult(raw, token, resultsEl) {
+    const resolved = await raw;
+    if (resolved && typeof resolved[Symbol.asyncIterator] === "function") {
+      const results = [];
+      const progressEl = resultsEl.createDiv({ cls: "yh-epub-search-progress", text: "\u641C\u7D22\u4E2D\u2026" });
+      try {
+        for await (const item of resolved) {
+          if (!isEpubSearchTokenCurrent(token, this.searchToken) || this.disposed) {
+            return [];
+          }
+          if (item === "done") {
+            break;
+          }
+          if (item && typeof item === "object" && typeof item.progress === "number") {
+            progressEl.textContent = `\u641C\u7D22\u4E2D ${Math.round(Number(item.progress) * 100)}%`;
+            continue;
+          }
+          results.push(...normalizeEpubSearchResults(item));
+          if (results.length >= 100) {
+            break;
+          }
+        }
+        return results;
+      } finally {
+        progressEl.remove();
+      }
+    }
+    return normalizeEpubSearchResults(resolved);
+  }
+  searchVisibleContents(query) {
+    const results = [];
+    for (const content of this.host.getSearchContents()) {
+      if (!content.doc?.body) {
+        continue;
+      }
+      const text = content.doc.body.textContent || "";
+      const lower = text.toLowerCase();
+      let index = lower.indexOf(query);
+      while (index >= 0 && results.length < 50) {
+        const start = Math.max(0, index - 40);
+        const end = Math.min(text.length, index + query.length + 60);
+        let excerpt = text.slice(start, end).replace(/\n/g, " ");
+        if (start > 0) excerpt = `\u2026${excerpt}`;
+        if (end < text.length) excerpt = `${excerpt}\u2026`;
+        results.push({ cfi: "", excerpt });
+        index = lower.indexOf(query, index + query.length);
+      }
+      if (results.length > 0) {
+        break;
+      }
+    }
+    return results;
+  }
+};
+
+// src/epub/EpubSelectionController.ts
+var SELECTION_SYNC_RETRY_DELAY_MS = 120;
+var EpubSelectionController = class {
+  constructor(host) {
+    this.host = host;
+    this.cleanups = /* @__PURE__ */ new Map();
+  }
+  attach(doc, sectionIndex) {
+    if (this.cleanups.has(doc)) {
+      return;
+    }
+    let pendingFrame = 0;
+    let pendingRetry = 0;
+    const scheduleEmit = () => {
+      if (pendingFrame) {
+        window.cancelAnimationFrame(pendingFrame);
+      }
+      pendingFrame = window.requestAnimationFrame(() => {
+        pendingFrame = 0;
+        if (!this.emit(doc, sectionIndex)) {
+          if (pendingRetry) {
+            window.clearTimeout(pendingRetry);
+          }
+          pendingRetry = window.setTimeout(() => {
+            pendingRetry = 0;
+            this.emit(doc, sectionIndex);
+          }, SELECTION_SYNC_RETRY_DELAY_MS);
+        }
+      });
+    };
+    const eventOptions = { capture: true };
+    const win = doc.defaultView;
+    for (const eventName of ["selectionchange", "mouseup", "pointerup", "touchend", "keyup", "contextmenu"]) {
+      doc.addEventListener(eventName, scheduleEmit, eventOptions);
+    }
+    for (const eventName of ["mouseup", "pointerup", "touchend"]) {
+      win?.addEventListener(eventName, scheduleEmit, eventOptions);
+    }
+    this.cleanups.set(doc, () => {
+      if (pendingFrame) window.cancelAnimationFrame(pendingFrame);
+      if (pendingRetry) window.clearTimeout(pendingRetry);
+      for (const eventName of ["selectionchange", "mouseup", "pointerup", "touchend", "keyup", "contextmenu"]) {
+        doc.removeEventListener(eventName, scheduleEmit, true);
+      }
+      for (const eventName of ["mouseup", "pointerup", "touchend"]) {
+        win?.removeEventListener(eventName, scheduleEmit, true);
+      }
+    });
+  }
+  dispose() {
+    for (const cleanup of this.cleanups.values()) {
+      cleanup();
+    }
+    this.cleanups.clear();
+  }
+  emit(doc, sectionIndex) {
+    const view = this.host.getFoliateView();
+    const selection = doc.getSelection?.() ?? doc.defaultView?.getSelection?.();
+    if (!view?.getCFI || !selection || selection.isCollapsed || selection.rangeCount === 0) {
+      return false;
+    }
+    const range = selection.getRangeAt(0);
+    const text = selection.toString().trim();
+    if (!text) {
+      return false;
+    }
+    let cfiRange = "";
+    try {
+      cfiRange = normalizeCfi(view.getCFI(sectionIndex, range.cloneRange()));
+    } catch (error) {
+      console.warn("yh-inklight: EPUB selection CFI failed", { sectionIndex, error });
+    }
+    if (!cfiRange) {
+      return false;
+    }
+    const rect = this.createViewportRect(doc, range);
+    if (!rect) {
+      return false;
+    }
+    this.host.onSelection({ doc, range: range.cloneRange(), text, cfiRange, rect });
+    return true;
+  }
+  createViewportRect(doc, range) {
+    const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
+    const rawRect = rects[rects.length - 1] ?? range.getBoundingClientRect();
+    if (!rawRect || rawRect.width <= 0 || rawRect.height <= 0) {
+      return null;
+    }
+    const frame = this.host.getIframeForDocument(doc);
+    const frameRect = frame?.getBoundingClientRect();
+    if (!frameRect) {
+      return new DOMRect(rawRect.left, rawRect.top, rawRect.width, rawRect.height);
+    }
+    return new DOMRect(
+      rawRect.left + frameRect.left,
+      rawRect.top + frameRect.top,
+      rawRect.width,
+      rawRect.height
+    );
+  }
+};
+
 // src/epub/EpubReaderView.ts
 var EPUB_READER_VIEW_TYPE = "inklight-epub-reader";
 var READING_TIME_FLUSH_INTERVAL_MS = 6e4;
 var WHEEL_DEBOUNCE_MS = 400;
 var PROGRESS_SAVE_DEBOUNCE_MS = 2e3;
-var SELECTION_SYNC_RETRY_DELAY_MS = 120;
 var EpubReaderView = class extends import_obsidian12.FileView {
   // ================================================================
   // 构造 & 生命周期
@@ -12369,9 +12737,8 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     super(leaf);
     // ---- foliate 实例 ----
     this.foliateView = null;
-    this.loadedSectionDocs = /* @__PURE__ */ new WeakMap();
-    this.documentSelectionCleanups = /* @__PURE__ */ new WeakMap();
-    /** 最近一次 foliate load 事件的 section doc，供工具栏全文搜索使用（getContents 不可靠时的可靠来源） */
+    this.layoutController = null;
+    /** 最近一次 foliate load 事件的 section doc，供侧栏全文搜索使用（getContents 不可靠时的可靠来源） */
     this.currentLoadedDoc = null;
     // 跟踪 foliate 高亮层实际已渲染的标注（id → 渲染时传入 foliate 的 meta）。
     // 全量刷新时据此 remove，不依赖 sidecar 缓存——否则外部删除（侧栏）后被删的标注无法从 foliate 层移除。
@@ -12383,21 +12750,11 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.currentChapter = "";
     this.currentPercent = 0;
     this.sidebarOpen = false;
+    this.activeSidebarTab = "toc";
+    this.searchController = null;
     this.contextMenuEl = null;
     this.lastSelectedCfiRange = "";
     this.lastSelectedText = "";
-    this.searchInputEl = null;
-    this.searchResultsEl = null;
-    this.searchTimer = null;
-    this.searchDebounce = () => {
-      if (this.searchTimer !== null) {
-        window.clearTimeout(this.searchTimer);
-      }
-      this.searchTimer = window.setTimeout(() => {
-        this.searchTimer = null;
-        void this.performSearch();
-      }, 300);
-    };
     this.canvasSendBtn = null;
     // ---- 定时器 / 追踪 ----
     this.readingTimeSeconds = 0;
@@ -12420,11 +12777,10 @@ var EpubReaderView = class extends import_obsidian12.FileView {
         return;
       }
       const index = typeof detail.index === "number" ? detail.index : this.currentSectionIndex;
-      this.loadedSectionDocs.set(doc, index);
       this.currentLoadedDoc = doc;
       stripScriptsFromDocument(doc);
       void inlineBlockedStylesheets({ document: doc });
-      this.attachSelectionListeners(doc);
+      this.selectionController.attach(doc, index);
       this.handleRendered();
     };
     this.handleFoliateRelocate = (event) => {
@@ -12444,6 +12800,11 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.refreshAnnotations = refreshAnnotations;
     this.offerAnnotationUndo = offerAnnotationUndo;
     this.themeManager = new EpubThemeManager();
+    this.selectionController = new EpubSelectionController({
+      getFoliateView: () => this.foliateView,
+      getIframeForDocument: (doc) => this.findIframeForDocument(doc),
+      onSelection: (snapshot) => this.handleTextSelected(snapshot)
+    });
     this.currentFlowMode = settings.epubDefaultFlow;
     this.currentFontSize = settings.epubFontSize;
     this.currentTheme = settings.epubReadingTheme;
@@ -12530,7 +12891,13 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       text: "\u76EE\u5F55",
       attr: { type: "button", "data-tab": "toc" }
     });
-    tocTab.addEventListener("click", () => this.renderSidebar());
+    tocTab.addEventListener("click", () => this.setSidebarTab("toc"));
+    const searchTab = sidebarTabs.createEl("button", {
+      cls: "yh-epub-sidebar-tab",
+      text: "\u641C\u7D22",
+      attr: { type: "button", "data-tab": "search" }
+    });
+    searchTab.addEventListener("click", () => this.setSidebarTab("search"));
     this.sidebarContentEl = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-content" });
     this.readerContainerEl = body.createDiv({ cls: "yh-epub-reader-area" });
     this.progressEl = this.containerEl.createDiv({ cls: "yh-epub-progress" });
@@ -12573,7 +12940,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       attr: { type: "button", title: "\u641C\u7D22\u5168\u6587", "aria-label": "\u641C\u7D22\u5168\u6587" }
     });
     (0, import_obsidian12.setIcon)(searchBtn, "search");
-    searchBtn.addEventListener("click", () => this.toggleToolbarSearch());
+    searchBtn.addEventListener("click", () => this.openSidebarTab("search"));
     const flowBtn = this.toolbarEl.createEl("button", {
       cls: "yh-epub-toolbar-btn",
       attr: { type: "button", title: this.currentFlowMode === "paginated" ? "\u5207\u6362\u4E3A\u6EDA\u52A8" : "\u5207\u6362\u4E3A\u5206\u9875" }
@@ -12626,12 +12993,45 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       this.renderSidebar();
     }
   }
+  setSidebarTab(tab) {
+    this.activeSidebarTab = tab;
+    this.sidebarContainerEl.querySelectorAll(".yh-epub-sidebar-tab").forEach((button) => {
+      button.toggleClass("is-active", button.dataset.tab === tab);
+    });
+    this.renderSidebar();
+  }
+  openSidebarTab(tab) {
+    this.activeSidebarTab = tab;
+    if (!this.sidebarOpen) {
+      this.sidebarOpen = true;
+      this.sidebarContainerEl.toggleClass("is-open", true);
+    }
+    this.sidebarContainerEl.querySelectorAll(".yh-epub-sidebar-tab").forEach((button) => {
+      button.toggleClass("is-active", button.dataset.tab === tab);
+    });
+    this.renderSidebar();
+    if (tab === "search") {
+      this.searchController?.focus();
+    }
+  }
   /**
-   * 渲染侧边栏内容（目录）。
-   * 标注已统一到「墨光批注」共用面板，此处仅保留目录导航。
+   * 渲染侧边栏内容。搜索与目录共享同一侧栏入口，避免重复搜索 UI。
    */
   renderSidebar() {
+    this.searchController?.dispose();
+    this.searchController = null;
     this.sidebarContentEl.empty();
+    if (this.activeSidebarTab === "search") {
+      this.searchController = new EpubSearchController(this.sidebarContentEl, {
+        getFoliateView: () => this.foliateView,
+        getSearchContents: () => this.collectFoliateDocs().map((doc) => ({ doc })),
+        onNavigate: (cfi) => {
+          if (this.foliateView) void this.foliateView.goTo(cfi);
+        }
+      });
+      this.searchController.render();
+      return;
+    }
     this.renderTocList();
   }
   refreshAnnotationsFromStore() {
@@ -12669,12 +13069,8 @@ var EpubReaderView = class extends import_obsidian12.FileView {
    * 配置 foliate-view 的布局属性。
    */
   configureFoliateView(view) {
-    const element = view;
-    element.addClass("yh-epub-foliate-view");
-    element.setAttribute("flow", this.currentFlowMode);
-    element.setAttribute("margin", this.currentFlowMode === "paginated" ? "28px" : "0px");
-    element.setAttribute("gap", "8%");
-    element.setAttribute("max-inline-size", "760px");
+    this.layoutController = new EpubLayoutController(view, this.currentFlowMode);
+    this.layoutController.initialize();
   }
   /**
    * 注册 foliate 事件：section load、位置变更、标注绘制、标注点击。
@@ -13274,9 +13670,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     if (!this.foliateView) {
       return;
     }
-    const element = this.foliateView;
-    element.setAttribute("flow", nextMode);
-    this.applyFoliateLayout();
+    this.layoutController?.setFlow(nextMode);
     this.applyFoliateAppearance();
     this.renderToolbar();
   }
@@ -13388,65 +13782,6 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.renderSidebar();
   }
   // ================================================================
-  // 书内搜索（Phase 4-B P4）
-  // ================================================================
-  renderSearchBox() {
-    const container = this.sidebarContentEl.createDiv({ cls: "yh-epub-search-box" });
-    this.searchInputEl = container.createEl("input", {
-      cls: "yh-epub-search-input",
-      attr: { type: "text", placeholder: "\u641C\u7D22\u5168\u6587\u2026" }
-    });
-    this.searchInputEl.addEventListener("keydown", (ev) => {
-      ev.stopPropagation();
-    }, { capture: true });
-    this.searchResultsEl = container.createDiv({ cls: "yh-epub-search-results" });
-    this.searchInputEl.addEventListener("input", this.searchDebounce, { passive: true });
-  }
-  async performSearch() {
-    if (!this.searchResultsEl || !this.searchInputEl || !this.foliateView) return;
-    const query = this.searchInputEl.value.trim().toLowerCase();
-    this.searchResultsEl.empty();
-    if (query.length < 2) return;
-    let results = [];
-    if (typeof this.foliateView.search === "function") {
-      try {
-        const sr = await this.foliateView.search(query);
-        if (Array.isArray(sr)) results = sr.map((i3) => ({ cfi: String(i3.cfi || i3.value || ""), excerpt: String(i3.excerpt || i3.text || "") }));
-      } catch {
-      }
-    }
-    if (results.length === 0) {
-      const contents = this.foliateView.renderer?.getContents?.() ?? [];
-      for (const c2 of contents) {
-        if (!c2.doc?.body) continue;
-        const text = c2.doc.body.textContent || "";
-        const lower = text.toLowerCase();
-        let idx = lower.indexOf(query);
-        while (idx >= 0 && results.length < 50) {
-          const start = Math.max(0, idx - 40);
-          const end = Math.min(text.length, idx + query.length + 60);
-          let excerpt = text.slice(start, end).replace(/\n/g, " ");
-          if (start > 0) excerpt = "\u2026" + excerpt;
-          if (end < text.length) excerpt = excerpt + "\u2026";
-          results.push({ cfi: "", excerpt });
-          idx = lower.indexOf(query, idx + query.length);
-        }
-        if (results.length > 0) break;
-      }
-    }
-    if (results.length === 0) {
-      this.searchResultsEl.createDiv({ cls: "yh-epub-search-empty", text: "\u672A\u627E\u5230\u5339\u914D" });
-      return;
-    }
-    for (const r3 of results) {
-      const item = this.searchResultsEl.createEl("button", { cls: "yh-epub-search-result", attr: { type: "button" } });
-      item.createSpan({ cls: "yh-epub-search-text", text: r3.excerpt.slice(0, 100) });
-      if (r3.cfi) item.addEventListener("click", () => {
-        if (this.foliateView) void this.foliateView.goTo(r3.cfi);
-      });
-    }
-  }
-  // ================================================================
   // 脚注预览 & 段落模式（Phase 4-B P3，均未实现）
   // ================================================================
   // ================================================================
@@ -13464,6 +13799,10 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       window.clearTimeout(this.wheelDebounceTimer);
       this.wheelDebounceTimer = null;
     }
+    this.searchController?.dispose();
+    this.searchController = null;
+    this.selectionController.dispose();
+    this.layoutController = null;
     if (this.foliateView) {
       try {
         this.foliateView.removeEventListener("load", this.handleFoliateLoad);
@@ -13505,120 +13844,6 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       return id === href || id === normalizedHref || id.endsWith(normalizedHref);
     });
     return index >= 0 ? index : null;
-  }
-  attachSelectionListeners(doc) {
-    if (this.documentSelectionCleanups.has(doc)) {
-      return;
-    }
-    let pendingFrame = 0;
-    let pendingRetry = 0;
-    const scheduleEmit = () => {
-      if (pendingFrame) {
-        window.cancelAnimationFrame(pendingFrame);
-      }
-      pendingFrame = window.requestAnimationFrame(() => {
-        pendingFrame = 0;
-        const emitted = this.emitFoliateSelection(doc);
-        if (!emitted) {
-          if (pendingRetry) {
-            window.clearTimeout(pendingRetry);
-          }
-          pendingRetry = window.setTimeout(() => {
-            pendingRetry = 0;
-            this.emitFoliateSelection(doc);
-          }, SELECTION_SYNC_RETRY_DELAY_MS);
-        }
-      });
-    };
-    const eventOptions = { capture: true };
-    const win = doc.defaultView;
-    doc.addEventListener("selectionchange", scheduleEmit, eventOptions);
-    doc.addEventListener("mouseup", scheduleEmit, eventOptions);
-    doc.addEventListener("pointerup", scheduleEmit, eventOptions);
-    doc.addEventListener("touchend", scheduleEmit, eventOptions);
-    doc.addEventListener("keyup", scheduleEmit, eventOptions);
-    doc.addEventListener("contextmenu", scheduleEmit, eventOptions);
-    win?.addEventListener("mouseup", scheduleEmit, eventOptions);
-    win?.addEventListener("pointerup", scheduleEmit, eventOptions);
-    win?.addEventListener("touchend", scheduleEmit, eventOptions);
-    const cleanup = () => {
-      if (pendingFrame) {
-        window.cancelAnimationFrame(pendingFrame);
-      }
-      if (pendingRetry) {
-        window.clearTimeout(pendingRetry);
-      }
-      doc.removeEventListener("selectionchange", scheduleEmit, true);
-      doc.removeEventListener("mouseup", scheduleEmit, true);
-      doc.removeEventListener("pointerup", scheduleEmit, true);
-      doc.removeEventListener("touchend", scheduleEmit, true);
-      doc.removeEventListener("keyup", scheduleEmit, true);
-      doc.removeEventListener("contextmenu", scheduleEmit, true);
-      win?.removeEventListener("mouseup", scheduleEmit, true);
-      win?.removeEventListener("pointerup", scheduleEmit, true);
-      win?.removeEventListener("touchend", scheduleEmit, true);
-    };
-    this.documentSelectionCleanups.set(doc, cleanup);
-  }
-  emitFoliateSelection(doc) {
-    const selection = doc.getSelection?.() ?? doc.defaultView?.getSelection?.();
-    if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-      return false;
-    }
-    const range = selection.getRangeAt(0);
-    const text = selection.toString().trim();
-    if (!text || !this.foliateView?.getCFI) {
-      return false;
-    }
-    const cfiRange = this.resolveSelectionCfi(doc, range);
-    if (!cfiRange) {
-      return false;
-    }
-    const rect = this.createSelectionViewportRect(doc, range);
-    if (!rect) {
-      return false;
-    }
-    this.handleTextSelected({ doc, range: range.cloneRange(), text, cfiRange, rect });
-    return true;
-  }
-  resolveSelectionCfi(doc, range) {
-    if (!this.foliateView?.getCFI) {
-      return "";
-    }
-    const knownIndex = this.loadedSectionDocs.get(doc);
-    const contentsIndex = this.foliateView.renderer?.getContents?.().find((content) => content.doc === doc)?.index;
-    const index = knownIndex ?? contentsIndex ?? this.currentSectionIndex;
-    try {
-      return normalizeCfi(this.foliateView.getCFI(index, range.cloneRange()));
-    } catch (error) {
-      console.warn("yh-inklight: EPUB selection CFI failed", { index, error });
-      return "";
-    }
-  }
-  createSelectionViewportRect(doc, range) {
-    const rawRect = this.extractVisibleRangeRect(range);
-    if (!rawRect) {
-      return null;
-    }
-    const frame = this.findIframeForDocument(doc);
-    const frameRect = frame?.getBoundingClientRect();
-    if (!frameRect) {
-      return rawRect;
-    }
-    return new DOMRect(
-      rawRect.left + frameRect.left,
-      rawRect.top + frameRect.top,
-      rawRect.width,
-      rawRect.height
-    );
-  }
-  extractVisibleRangeRect(range) {
-    const rects = Array.from(range.getClientRects()).filter((rect2) => rect2.width > 0 && rect2.height > 0);
-    const rect = rects[rects.length - 1] ?? range.getBoundingClientRect();
-    if (!rect || rect.width <= 0 || rect.height <= 0) {
-      return null;
-    }
-    return new DOMRect(rect.left, rect.top, rect.width, rect.height);
   }
   createAnnotationOverlay(rects, color, style2) {
     const svgNS = "http://www.w3.org/2000/svg";
@@ -13677,47 +13902,14 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.renderedAnnotationMeta.delete(annotation.id);
   }
   applyFoliateAppearance(size = this.currentFontSize) {
-    if (!this.foliateView) {
+    if (!this.foliateView || !this.layoutController) {
       return;
     }
     const colors = this.themeManager.resolveThemeColors(this.currentTheme);
-    const css = [
-      ":root { color-scheme: light dark; }",
-      "body {",
-      `  background-color: ${colors.background} !important;`,
-      `  color: ${colors.textColor} !important;`,
-      `  font-size: ${size}px !important;`,
-      "  line-height: 1.72 !important;",
-      "}",
-      "p, div, span, li, h1, h2, h3, h4, h5, h6, blockquote, td, th, dt, dd {",
-      `  color: ${colors.textColor} !important;`,
-      "}",
-      `a, a:link, a:visited { color: ${colors.linkColor} !important; }`,
-      `::selection { background: ${colors.selectionBg} !important; }`,
-      "img { max-width: 100% !important; height: auto !important; }"
-    ].join("\n");
-    this.foliateView.renderer?.setStyles?.(css);
-    this.foliateView.renderer?.render?.();
-    this.foliateView.style.backgroundColor = colors.background;
-    this.readerContainerEl.style.backgroundColor = colors.background;
+    this.layoutController.applyAppearance(colors, size, this.readerContainerEl);
   }
   applyFoliateLayout() {
-    if (!this.foliateView) {
-      return;
-    }
-    const attrs = {
-      flow: this.currentFlowMode,
-      margin: this.currentFlowMode === "paginated" ? "28px" : "0px",
-      gap: "8%",
-      "max-inline-size": "760px"
-    };
-    const host = this.foliateView;
-    const renderer = this.foliateView.renderer;
-    for (const [name, value] of Object.entries(attrs)) {
-      host.setAttribute(name, value);
-      renderer?.setAttribute?.(name, value);
-    }
-    this.foliateView.renderer?.render?.();
+    this.layoutController?.apply();
   }
   findIframeForDocument(doc) {
     const frameElement = doc.defaultView?.frameElement;
@@ -13785,96 +13977,6 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       docs.push(this.currentLoadedDoc);
     }
     return docs;
-  }
-  // ================================================================
-  // 工具栏搜索（从侧栏移到工具栏）
-  // ================================================================
-  toggleToolbarSearch() {
-    const existing = this.toolbarEl.querySelector(".yh-epub-toolbar-search");
-    if (existing) {
-      existing.remove();
-      return;
-    }
-    const container = this.toolbarEl.createDiv({ cls: "yh-epub-toolbar-search" });
-    const input = container.createEl("input", {
-      cls: "yh-epub-toolbar-search-input",
-      attr: { type: "text", placeholder: "\u641C\u7D22\u6B63\u6587\u2026" }
-    });
-    const results = container.createDiv({ cls: "yh-epub-toolbar-search-results" });
-    input.addEventListener("keydown", (ev) => {
-      ev.stopPropagation();
-    }, { capture: true });
-    let timer = null;
-    input.addEventListener("input", () => {
-      if (timer !== null) window.clearTimeout(timer);
-      timer = window.setTimeout(() => {
-        timer = null;
-        void this.doToolbarSearch(input.value, results);
-      }, 300);
-    }, { passive: true });
-    input.addEventListener("keydown", (ev) => {
-      if (ev.key === "Escape") {
-        container.remove();
-      }
-      if (ev.key === "Enter") {
-        void this.doToolbarSearch(input.value, results);
-      }
-    });
-    input.focus();
-  }
-  async doToolbarSearch(query, resultsEl) {
-    resultsEl.empty();
-    if (!query.trim() || query.trim().length < 2 || !this.foliateView) return;
-    const searchGen = this.foliateView.search?.({ query: query.trim() });
-    if (!searchGen || typeof searchGen[Symbol.asyncIterator] !== "function") {
-      resultsEl.createDiv({ cls: "yh-epub-toolbar-search-empty", text: "\u641C\u7D22\u529F\u80FD\u4E0D\u652F\u6301" });
-      return;
-    }
-    const hits = [];
-    let searching = true;
-    const progressEl = resultsEl.createDiv({ cls: "yh-epub-toolbar-search-progress", text: "\u641C\u7D22\u4E2D..." });
-    try {
-      for await (const result of searchGen) {
-        if (result === "done") break;
-        if (result.progress !== void 0) {
-          progressEl.textContent = `\u641C\u7D22\u4E2D ${Math.round(result.progress * 100)}%`;
-          continue;
-        }
-        if (result.subitems) {
-          for (const item of result.subitems) {
-            hits.push({ cfi: item.cfi, label: result.label || "", excerpt: item.excerpt });
-            if (hits.length >= 100) break;
-          }
-        } else if (result.cfi) {
-          hits.push({ cfi: result.cfi, label: result.label || "", excerpt: result.excerpt });
-        }
-        if (hits.length >= 100) break;
-      }
-    } catch (e3) {
-      console.error("yh-inklight: search error", e3);
-    }
-    progressEl.remove();
-    if (hits.length === 0) {
-      resultsEl.createDiv({ cls: "yh-epub-toolbar-search-empty", text: "\u672A\u627E\u5230\u5339\u914D\u5185\u5BB9" });
-      return;
-    }
-    let currentLabel = "";
-    for (const h3 of hits) {
-      if (h3.label && h3.label !== currentLabel) {
-        currentLabel = h3.label;
-        resultsEl.createDiv({ cls: "yh-epub-toolbar-search-chapter", text: currentLabel });
-      }
-      const btn = resultsEl.createEl("button", { cls: "yh-epub-toolbar-search-hit", attr: { type: "button" } });
-      btn.innerHTML = `${this.escapeHtml(h3.excerpt.pre)}<strong>${this.escapeHtml(h3.excerpt.match)}</strong>${this.escapeHtml(h3.excerpt.post)}`;
-      btn.addEventListener("click", () => {
-        if (this.foliateView) {
-          void this.foliateView.goTo(h3.cfi);
-        }
-      });
-    }
-  }
-  escapeHtml(text) {
-    return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 };
 

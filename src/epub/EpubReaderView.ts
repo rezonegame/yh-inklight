@@ -5,7 +5,7 @@
  *          EpubThemeManager 的主题颜色解析
  * [OUTPUT]: 对外提供 EpubReaderView，将 foliate-js 渲染引擎嵌入 Obsidian leaf，
  *          承载工具栏、侧边栏（目录/标注）、阅读区（iframe）、进度条、
- *          选区上下文菜单、标注 CRUD、进度持久化与阅读时间追踪
+ *          选区上下文菜单、标注 CRUD、进度持久化与阅读时间追踪；搜索、选区和布局由专用控制器承载
  * [POS]: epub 模块的唯一视图入口，由插件主类通过 registerView 注册
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -45,6 +45,9 @@ import {
 } from "./EpubFoliateLoader";
 import { EpubNoteModal, EpubNoteResult } from "./EpubNoteModal";
 import { legacyNoteTypeForTag } from "../tags/tagDomain";
+import { EpubLayoutController } from "./EpubLayoutController";
+import { EpubSearchController } from "./EpubSearch";
+import { EpubSelectionController, EpubSelectionSnapshot } from "./EpubSelectionController";
 
 // ---- 常量 ----
 
@@ -62,9 +65,6 @@ const PROGRESS_SAVE_DEBOUNCE_MS = 2_000;
 
 /** 浮动上下文菜单消失延迟（毫秒） */
 const CONTEXT_MENU_DISMISS_MS = 300;
-
-/** foliate iframe 内选区稳定后再同步，参考 weave 的 SelectionToolbar 同步节奏 */
-const SELECTION_SYNC_RETRY_DELAY_MS = 120;
 
 // ---- 辅助类型 ----
 
@@ -105,14 +105,6 @@ interface FoliateDrawAnnotationDetail {
 	) => void;
 }
 
-	interface EpubSelectionSnapshot {
-	doc: Document;
-	range: Range;
-	text: string;
-	cfiRange: string;
-	rect: DOMRect;
-}
-
 // ---- EpubReaderView ----
 
 /**
@@ -140,9 +132,9 @@ export class EpubReaderView extends FileView {
 	// ---- foliate 实例 ----
 
 	private foliateView: FoliateViewHandle | null = null;
-	private loadedSectionDocs = new WeakMap<Document, number>();
-	private documentSelectionCleanups = new WeakMap<Document, () => void>();
-	/** 最近一次 foliate load 事件的 section doc，供工具栏全文搜索使用（getContents 不可靠时的可靠来源） */
+	private readonly selectionController: EpubSelectionController;
+	private layoutController: EpubLayoutController | null = null;
+	/** 最近一次 foliate load 事件的 section doc，供侧栏全文搜索使用（getContents 不可靠时的可靠来源） */
 	private currentLoadedDoc: Document | null = null;
 	// 跟踪 foliate 高亮层实际已渲染的标注（id → 渲染时传入 foliate 的 meta）。
 	// 全量刷新时据此 remove，不依赖 sidecar 缓存——否则外部删除（侧栏）后被删的标注无法从 foliate 层移除。
@@ -159,21 +151,11 @@ export class EpubReaderView extends FileView {
 	private currentFontSize: number;
 	private currentTheme: EpubReadingTheme;
 	private sidebarOpen = false;
-private contextMenuEl: HTMLElement | null = null;
-		private lastSelectedCfiRange = "";
-		private lastSelectedText = "";
-		private searchInputEl: HTMLInputElement | null = null;
-	private searchResultsEl: HTMLElement | null = null;
-	private searchTimer: number | null = null;
-	private readonly searchDebounce = (): void => {
-		if (this.searchTimer !== null) {
-			window.clearTimeout(this.searchTimer);
-		}
-		this.searchTimer = window.setTimeout(() => {
-			this.searchTimer = null;
-			void this.performSearch();
-		}, 300);
-	};
+	private activeSidebarTab: "toc" | "search" = "toc";
+	private searchController: EpubSearchController | null = null;
+	private contextMenuEl: HTMLElement | null = null;
+	private lastSelectedCfiRange = "";
+	private lastSelectedText = "";
 	private canvasSendBtn: HTMLElement | null = null;
 
 	// ---- 定时器 / 追踪 ----
@@ -213,6 +195,11 @@ private contextMenuEl: HTMLElement | null = null;
 		this.refreshAnnotations = refreshAnnotations;
 		this.offerAnnotationUndo = offerAnnotationUndo;
 		this.themeManager = new EpubThemeManager();
+		this.selectionController = new EpubSelectionController({
+			getFoliateView: () => this.foliateView,
+			getIframeForDocument: (doc) => this.findIframeForDocument(doc),
+			onSelection: (snapshot) => this.handleTextSelected(snapshot),
+		});
 		this.currentFlowMode = settings.epubDefaultFlow;
 		this.currentFontSize = settings.epubFontSize;
 		this.currentTheme = settings.epubReadingTheme;
@@ -316,7 +303,13 @@ private contextMenuEl: HTMLElement | null = null;
 			text: "目录",
 			attr: { type: "button", "data-tab": "toc" },
 		});
-		tocTab.addEventListener("click", () => this.renderSidebar());
+		tocTab.addEventListener("click", () => this.setSidebarTab("toc"));
+		const searchTab = sidebarTabs.createEl("button", {
+			cls: "yh-epub-sidebar-tab",
+			text: "搜索",
+			attr: { type: "button", "data-tab": "search" },
+		});
+		searchTab.addEventListener("click", () => this.setSidebarTab("search"));
 
 		this.sidebarContentEl = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-content" });
 
@@ -367,15 +360,14 @@ private contextMenuEl: HTMLElement | null = null;
 
 		this.renderThemeSwatches();
 
-			// 搜索按钮（Phase 4-B P4 - 移到工具栏）
-			const searchBtn = this.toolbarEl.createEl("button", {
+		// 搜索按钮打开侧栏搜索标签，搜索输入框不再挂在工具栏中。
+		const searchBtn = this.toolbarEl.createEl("button", {
 				cls: "yh-epub-toolbar-btn",
 				attr: { type: "button", title: "搜索全文", "aria-label": "搜索全文" },
 			});
-			setIcon(searchBtn, "search");
-			searchBtn.addEventListener("click", () => this.toggleToolbarSearch());
+		setIcon(searchBtn, "search");
+		searchBtn.addEventListener("click", () => this.openSidebarTab("search"));
 
-			
 		const flowBtn = this.toolbarEl.createEl("button", {
 			cls: "yh-epub-toolbar-btn",
 			attr: { type: "button", title: this.currentFlowMode === "paginated" ? "切换为滚动" : "切换为分页" },
@@ -435,12 +427,47 @@ private contextMenuEl: HTMLElement | null = null;
 		}
 	}
 
+	private setSidebarTab(tab: "toc" | "search"): void {
+		this.activeSidebarTab = tab;
+		this.sidebarContainerEl.querySelectorAll<HTMLElement>(".yh-epub-sidebar-tab").forEach((button) => {
+			button.toggleClass("is-active", button.dataset.tab === tab);
+		});
+		this.renderSidebar();
+	}
+
+	private openSidebarTab(tab: "toc" | "search"): void {
+		this.activeSidebarTab = tab;
+		if (!this.sidebarOpen) {
+			this.sidebarOpen = true;
+			this.sidebarContainerEl.toggleClass("is-open", true);
+		}
+		this.sidebarContainerEl.querySelectorAll<HTMLElement>(".yh-epub-sidebar-tab").forEach((button) => {
+			button.toggleClass("is-active", button.dataset.tab === tab);
+		});
+		this.renderSidebar();
+		if (tab === "search") {
+			this.searchController?.focus();
+		}
+	}
+
 	/**
-	 * 渲染侧边栏内容（目录）。
-	 * 标注已统一到「墨光批注」共用面板，此处仅保留目录导航。
+	 * 渲染侧边栏内容。搜索与目录共享同一侧栏入口，避免重复搜索 UI。
 	 */
 	private renderSidebar(): void {
+		this.searchController?.dispose();
+		this.searchController = null;
 		this.sidebarContentEl.empty();
+		if (this.activeSidebarTab === "search") {
+			this.searchController = new EpubSearchController(this.sidebarContentEl, {
+				getFoliateView: () => this.foliateView,
+				getSearchContents: () => this.collectFoliateDocs().map((doc) => ({ doc })),
+				onNavigate: (cfi) => {
+					if (this.foliateView) void this.foliateView.goTo(cfi);
+				},
+			});
+			this.searchController.render();
+			return;
+		}
 		this.renderTocList();
 	}
 
@@ -485,12 +512,8 @@ private contextMenuEl: HTMLElement | null = null;
 	 * 配置 foliate-view 的布局属性。
 	 */
 	private configureFoliateView(view: FoliateViewHandle): void {
-		const element = view as unknown as HTMLElement;
-		element.addClass("yh-epub-foliate-view");
-		element.setAttribute("flow", this.currentFlowMode);
-		element.setAttribute("margin", this.currentFlowMode === "paginated" ? "28px" : "0px");
-		element.setAttribute("gap", "8%");
-		element.setAttribute("max-inline-size", "760px");
+		this.layoutController = new EpubLayoutController(view, this.currentFlowMode);
+		this.layoutController.initialize();
 	}
 
 	/**
@@ -1196,9 +1219,7 @@ private contextMenuEl: HTMLElement | null = null;
 			return;
 		}
 
-		const element = this.foliateView as unknown as HTMLElement;
-		element.setAttribute("flow", nextMode);
-		this.applyFoliateLayout();
+		this.layoutController?.setFlow(nextMode);
 		this.applyFoliateAppearance();
 		this.renderToolbar();
 	}
@@ -1326,65 +1347,6 @@ private contextMenuEl: HTMLElement | null = null;
 	}
 
 	// ================================================================
-	// 书内搜索（Phase 4-B P4）
-	// ================================================================
-
-	private renderSearchBox(): void {
-		const container = this.sidebarContentEl.createDiv({ cls: "yh-epub-search-box" });
-		this.searchInputEl = container.createEl("input", {
-			cls: "yh-epub-search-input",
-			attr: { type: "text", placeholder: "搜索全文…" },
-		}) as HTMLInputElement;
-		this.searchInputEl.addEventListener("keydown", (ev: KeyboardEvent) => {
-			ev.stopPropagation();
-		}, { capture: true });
-		this.searchResultsEl = container.createDiv({ cls: "yh-epub-search-results" });
-		this.searchInputEl.addEventListener("input", this.searchDebounce, { passive: true });
-	}
-
-	private async performSearch(): Promise<void> {
-		if (!this.searchResultsEl || !this.searchInputEl || !this.foliateView) return;
-		const query = this.searchInputEl.value.trim().toLowerCase();
-		this.searchResultsEl.empty();
-		if (query.length < 2) return;
-		let results: Array<{ cfi: string; excerpt: string }> = [];
-		if (typeof (this.foliateView as any).search === "function") {
-			try {
-				const sr: unknown = await ((this.foliateView as any).search as (q: string) => Promise<unknown>)(query);
-				if (Array.isArray(sr)) results = (sr as any[]).map((i: any) => ({ cfi: String(i.cfi || i.value || ""), excerpt: String(i.excerpt || i.text || "") }));
-			} catch { /* ignore */ }
-		}
-		if (results.length === 0) {
-			const contents = this.foliateView.renderer?.getContents?.() ?? [];
-			for (const c of contents) {
-				if (!c.doc?.body) continue;
-				const text = c.doc.body.textContent || "";
-				const lower = text.toLowerCase();
-				let idx = lower.indexOf(query);
-				while (idx >= 0 && results.length < 50) {
-					const start = Math.max(0, idx - 40);
-					const end = Math.min(text.length, idx + query.length + 60);
-					let excerpt = text.slice(start, end).replace(/\n/g, " ");
-					if (start > 0) excerpt = "…" + excerpt;
-					if (end < text.length) excerpt = excerpt + "…";
-					results.push({ cfi: "", excerpt });
-					idx = lower.indexOf(query, idx + query.length);
-				}
-				if (results.length > 0) break;
-			}
-		}
-		if (results.length === 0) {
-			this.searchResultsEl.createDiv({ cls: "yh-epub-search-empty", text: "未找到匹配" });
-			return;
-		}
-		for (const r of results) {
-			const item = this.searchResultsEl.createEl("button", { cls: "yh-epub-search-result", attr: { type: "button" } });
-			item.createSpan({ cls: "yh-epub-search-text", text: r.excerpt.slice(0, 100) });
-			if (r.cfi) item.addEventListener("click", () => { if (this.foliateView) void this.foliateView.goTo(r.cfi); });
-		}
-	}
-
-	// ================================================================
 	// 脚注预览 & 段落模式（Phase 4-B P3，均未实现）
 	// ================================================================
 
@@ -1405,6 +1367,10 @@ private contextMenuEl: HTMLElement | null = null;
 			window.clearTimeout(this.wheelDebounceTimer);
 			this.wheelDebounceTimer = null;
 		}
+		this.searchController?.dispose();
+		this.searchController = null;
+		this.selectionController.dispose();
+		this.layoutController = null;
 
 		if (this.foliateView) {
 			try {
@@ -1460,11 +1426,10 @@ private contextMenuEl: HTMLElement | null = null;
 			return;
 		}
 		const index = typeof detail.index === "number" ? detail.index : this.currentSectionIndex;
-		this.loadedSectionDocs.set(doc, index);
 		this.currentLoadedDoc = doc;
 		stripScriptsFromDocument(doc);
 		void inlineBlockedStylesheets({ document: doc });
-		this.attachSelectionListeners(doc);
+		this.selectionController.attach(doc, index);
 		this.handleRendered();
 	};
 
@@ -1481,134 +1446,6 @@ private contextMenuEl: HTMLElement | null = null;
 		const style = detail.annotation.style ?? this.pluginSettings.epubHighlightStyle;
 		detail.draw((rects) => this.createAnnotationOverlay(rects, color, style));
 	};
-
-	private attachSelectionListeners(doc: Document): void {
-		if (this.documentSelectionCleanups.has(doc)) {
-			return;
-		}
-
-		let pendingFrame = 0;
-		let pendingRetry = 0;
-		const scheduleEmit = () => {
-			if (pendingFrame) {
-				window.cancelAnimationFrame(pendingFrame);
-			}
-			pendingFrame = window.requestAnimationFrame(() => {
-				pendingFrame = 0;
-				const emitted = this.emitFoliateSelection(doc);
-				if (!emitted) {
-					if (pendingRetry) {
-						window.clearTimeout(pendingRetry);
-					}
-					pendingRetry = window.setTimeout(() => {
-						pendingRetry = 0;
-						this.emitFoliateSelection(doc);
-					}, SELECTION_SYNC_RETRY_DELAY_MS);
-				}
-			});
-		};
-
-		const eventOptions: AddEventListenerOptions = { capture: true };
-		const win = doc.defaultView;
-
-		doc.addEventListener("selectionchange", scheduleEmit, eventOptions);
-		doc.addEventListener("mouseup", scheduleEmit, eventOptions);
-		doc.addEventListener("pointerup", scheduleEmit, eventOptions);
-		doc.addEventListener("touchend", scheduleEmit, eventOptions);
-		doc.addEventListener("keyup", scheduleEmit, eventOptions);
-		doc.addEventListener("contextmenu", scheduleEmit, eventOptions);
-		win?.addEventListener("mouseup", scheduleEmit, eventOptions);
-		win?.addEventListener("pointerup", scheduleEmit, eventOptions);
-		win?.addEventListener("touchend", scheduleEmit, eventOptions);
-
-		const cleanup = () => {
-			if (pendingFrame) {
-				window.cancelAnimationFrame(pendingFrame);
-			}
-			if (pendingRetry) {
-				window.clearTimeout(pendingRetry);
-			}
-			doc.removeEventListener("selectionchange", scheduleEmit, true);
-			doc.removeEventListener("mouseup", scheduleEmit, true);
-			doc.removeEventListener("pointerup", scheduleEmit, true);
-			doc.removeEventListener("touchend", scheduleEmit, true);
-			doc.removeEventListener("keyup", scheduleEmit, true);
-			doc.removeEventListener("contextmenu", scheduleEmit, true);
-			win?.removeEventListener("mouseup", scheduleEmit, true);
-			win?.removeEventListener("pointerup", scheduleEmit, true);
-			win?.removeEventListener("touchend", scheduleEmit, true);
-		};
-		this.documentSelectionCleanups.set(doc, cleanup);
-	}
-
-	private emitFoliateSelection(doc: Document): boolean {
-		const selection = doc.getSelection?.() ?? doc.defaultView?.getSelection?.();
-		if (!selection || selection.isCollapsed || selection.rangeCount === 0) {
-			return false;
-		}
-		const range = selection.getRangeAt(0);
-		const text = selection.toString().trim();
-		if (!text || !this.foliateView?.getCFI) {
-			return false;
-		}
-		const cfiRange = this.resolveSelectionCfi(doc, range);
-		if (!cfiRange) {
-			return false;
-		}
-		const rect = this.createSelectionViewportRect(doc, range);
-		if (!rect) {
-			return false;
-		}
-		this.handleTextSelected({ doc, range: range.cloneRange(), text, cfiRange, rect });
-		return true;
-	}
-
-	private resolveSelectionCfi(doc: Document, range: Range): string {
-		if (!this.foliateView?.getCFI) {
-			return "";
-		}
-
-		const knownIndex = this.loadedSectionDocs.get(doc);
-		const contentsIndex = this.foliateView.renderer?.getContents?.()
-			.find((content) => content.doc === doc)?.index;
-		const index = knownIndex ?? contentsIndex ?? this.currentSectionIndex;
-
-		try {
-			return normalizeCfi(this.foliateView.getCFI(index, range.cloneRange()));
-		} catch (error) {
-			console.warn("yh-inklight: EPUB selection CFI failed", { index, error });
-			return "";
-		}
-	}
-
-	private createSelectionViewportRect(doc: Document, range: Range): DOMRect | null {
-		const rawRect = this.extractVisibleRangeRect(range);
-		if (!rawRect) {
-			return null;
-		}
-
-		const frame = this.findIframeForDocument(doc);
-		const frameRect = frame?.getBoundingClientRect();
-		if (!frameRect) {
-			return rawRect;
-		}
-
-		return new DOMRect(
-			rawRect.left + frameRect.left,
-			rawRect.top + frameRect.top,
-			rawRect.width,
-			rawRect.height,
-		);
-	}
-
-	private extractVisibleRangeRect(range: Range): DOMRect | null {
-		const rects = Array.from(range.getClientRects()).filter((rect) => rect.width > 0 && rect.height > 0);
-		const rect = rects[rects.length - 1] ?? range.getBoundingClientRect();
-		if (!rect || rect.width <= 0 || rect.height <= 0) {
-			return null;
-		}
-		return new DOMRect(rect.left, rect.top, rect.width, rect.height);
-	}
 
 	private createAnnotationOverlay(
 		rects: Array<DOMRect | { left: number; top: number; width: number; height: number }>,
@@ -1678,48 +1515,15 @@ private contextMenuEl: HTMLElement | null = null;
 	}
 
 	private applyFoliateAppearance(size = this.currentFontSize): void {
-		if (!this.foliateView) {
+		if (!this.foliateView || !this.layoutController) {
 			return;
 		}
 		const colors = this.themeManager.resolveThemeColors(this.currentTheme);
-		const css = [
-			":root { color-scheme: light dark; }",
-			"body {",
-			`  background-color: ${colors.background} !important;`,
-			`  color: ${colors.textColor} !important;`,
-			`  font-size: ${size}px !important;`,
-			"  line-height: 1.72 !important;",
-			"}",
-			"p, div, span, li, h1, h2, h3, h4, h5, h6, blockquote, td, th, dt, dd {",
-			`  color: ${colors.textColor} !important;`,
-			"}",
-			`a, a:link, a:visited { color: ${colors.linkColor} !important; }`,
-			`::selection { background: ${colors.selectionBg} !important; }`,
-			"img { max-width: 100% !important; height: auto !important; }",
-		].join("\n");
-		this.foliateView.renderer?.setStyles?.(css);
-		this.foliateView.renderer?.render?.();
-		(this.foliateView as unknown as HTMLElement).style.backgroundColor = colors.background;
-		this.readerContainerEl.style.backgroundColor = colors.background;
+		this.layoutController.applyAppearance(colors, size, this.readerContainerEl);
 	}
 
 	private applyFoliateLayout(): void {
-		if (!this.foliateView) {
-			return;
-		}
-		const attrs: Record<string, string> = {
-			flow: this.currentFlowMode,
-			margin: this.currentFlowMode === "paginated" ? "28px" : "0px",
-			gap: "8%",
-			"max-inline-size": "760px",
-		};
-		const host = this.foliateView as unknown as HTMLElement;
-		const renderer = this.foliateView.renderer as unknown as HTMLElement | undefined;
-		for (const [name, value] of Object.entries(attrs)) {
-			host.setAttribute(name, value);
-			renderer?.setAttribute?.(name, value);
-		}
-		this.foliateView.renderer?.render?.();
+		this.layoutController?.apply();
 	}
 
 	private findIframeForDocument(doc: Document): HTMLIFrameElement | null {
@@ -1797,96 +1601,4 @@ private contextMenuEl: HTMLElement | null = null;
 		return docs;
 	}
 
-	// ================================================================
-	// 工具栏搜索（从侧栏移到工具栏）
-	// ================================================================
-
-	private toggleToolbarSearch(): void {
-		const existing = this.toolbarEl.querySelector(".yh-epub-toolbar-search");
-		if (existing) { existing.remove(); return; }
-		const container = this.toolbarEl.createDiv({ cls: "yh-epub-toolbar-search" });
-		const input = container.createEl("input", {
-			cls: "yh-epub-toolbar-search-input",
-			attr: { type: "text", placeholder: "搜索正文…" },
-		}) as HTMLInputElement;
-		const results = container.createDiv({ cls: "yh-epub-toolbar-search-results" });
-		input.addEventListener("keydown", (ev: KeyboardEvent) => { ev.stopPropagation(); }, { capture: true });
-		let timer: number | null = null;
-		input.addEventListener("input", () => {
-			if (timer !== null) window.clearTimeout(timer);
-			timer = window.setTimeout(() => { timer = null; void this.doToolbarSearch(input.value, results); }, 300);
-		}, { passive: true });
-		input.addEventListener("keydown", (ev) => {
-			if (ev.key === "Escape") { container.remove(); }
-			if (ev.key === "Enter") { void this.doToolbarSearch(input.value, results); }
-		});
-		input.focus();
-	}
-
-	private async doToolbarSearch(query: string, resultsEl: HTMLElement): Promise<void> {
-		resultsEl.empty();
-		if (!query.trim() || query.trim().length < 2 || !this.foliateView) return;
-
-		// 使用 foliate 内置全书搜索（支持跨章节、返回 CFI 可直接导航）
-		const searchGen = (this.foliateView as any).search?.({ query: query.trim() });
-		if (!searchGen || typeof searchGen[Symbol.asyncIterator] !== 'function') {
-			// foliate 不支持 search，回退到当前 section
-			resultsEl.createDiv({ cls: "yh-epub-toolbar-search-empty", text: "搜索功能不支持" });
-			return;
-		}
-
-		const hits: Array<{ cfi: string; label: string; excerpt: { pre: string; match: string; post: string } }> = [];
-		let searching = true;
-
-		// 添加进度指示
-		const progressEl = resultsEl.createDiv({ cls: "yh-epub-toolbar-search-progress", text: "搜索中..." });
-
-		try {
-			for await (const result of searchGen) {
-				if (result === 'done') break;
-				if (result.progress !== undefined) {
-					progressEl.textContent = `搜索中 ${Math.round(result.progress * 100)}%`;
-					continue;
-				}
-				if (result.subitems) {
-					for (const item of result.subitems) {
-						hits.push({ cfi: item.cfi, label: result.label || '', excerpt: item.excerpt });
-						if (hits.length >= 100) break;
-					}
-				} else if (result.cfi) {
-					hits.push({ cfi: result.cfi, label: result.label || '', excerpt: result.excerpt });
-				}
-				if (hits.length >= 100) break;
-			}
-		} catch (e) {
-			console.error("yh-inklight: search error", e);
-		}
-
-		progressEl.remove();
-
-		if (hits.length === 0) {
-			resultsEl.createDiv({ cls: "yh-epub-toolbar-search-empty", text: "未找到匹配内容" });
-			return;
-		}
-
-		// 按章节分组显示
-		let currentLabel = '';
-		for (const h of hits) {
-			if (h.label && h.label !== currentLabel) {
-				currentLabel = h.label;
-				resultsEl.createDiv({ cls: "yh-epub-toolbar-search-chapter", text: currentLabel });
-			}
-			const btn = resultsEl.createEl("button", { cls: "yh-epub-toolbar-search-hit", attr: { type: "button" } });
-			btn.innerHTML = `${this.escapeHtml(h.excerpt.pre)}<strong>${this.escapeHtml(h.excerpt.match)}</strong>${this.escapeHtml(h.excerpt.post)}`;
-			btn.addEventListener("click", () => {
-				if (this.foliateView) {
-					void this.foliateView.goTo(h.cfi);
-				}
-			});
-		}
-	}
-
-	private escapeHtml(text: string): string {
-		return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-	}
 }
