@@ -2,7 +2,8 @@
 > L2 | 父级: /Users/epiphanyxiao/Documents/Playground/obsidian-annotation-plugin/src/AGENTS.md
 
 成员清单
-settingsTab.ts: Obsidian 设置页，暴露默认颜色、统一标签、EPUB 偏好、PDF 阅读进度、作者和迁移策略。
+settingsTab.ts: Obsidian 设置页，暴露默认颜色、统一标签、EPUB 阅读排版 profile、PDF 阅读进度、作者和迁移策略。
+EpubReadingSettingsModal.ts: EPUB 书内统一排版面板，修改同一份全局 profile 并即时预览。
 
 法则: 设置即配置·修改后刷新投影·默认值稳定
 

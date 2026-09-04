@@ -1255,26 +1255,6 @@ span.yh-ov-expand-btn:hover {
   border-color: var(--yh-yellow);
 }
 
-.yh-epub-theme-swatches {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-left: 4px;
-}
-
-.yh-epub-theme-swatch {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 1px solid var(--yh-border);
-  cursor: pointer;
-  padding: 0;
-}
-
-.yh-epub-theme-swatch.is-active {
-  box-shadow: 0 0 0 2px var(--yh-yellow);
-}
-
 .yh-epub-style-chips {
   display: inline-flex;
   align-items: center;

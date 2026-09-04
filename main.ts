@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 Obsidian Plugin API、CM6 扩展、sidecar AnnotationStore、锚点算法、视图与设置模块
- * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、设置和 vault 事件
+ * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、EPUB 阅读排版设置和 vault 事件
  * [POS]: 插件装配根，协调模块但不修改用户 Markdown 原文
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -27,8 +27,10 @@ import {
   AnnotationColor,
   AnnotationPluginSettings,
   CommentAnnotation,
+  createEpubReadingProfileFromLegacy,
   DEFAULT_SETTINGS,
   HighlightAnnotation,
+  normalizeEpubReadingProfile,
   PdfAnchor,
   SelectionSnapshot,
   SUPPORTED_BOOK_EXTENSIONS,
@@ -95,6 +97,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         this.settings,
         () => this.refreshAnnotations(),
         (file, annotationId, label) => this.offerAnnotationUndo(file, annotationId, label),
+        () => this.saveSettings(),
       ),
     );
     // 把 foliate 支持的所有电子书格式绑定到阅读器视图：registerView 只注册视图工厂，
@@ -208,11 +211,23 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
   async loadSettings(): Promise<void> {
     const stored = (await this.loadData()) ?? {};
+    const storedSettings = stored as Partial<AnnotationPluginSettings>;
+    const readingProfile = storedSettings.epubReadingProfile
+      ? normalizeEpubReadingProfile(storedSettings.epubReadingProfile)
+      : createEpubReadingProfileFromLegacy(storedSettings);
     this.settings = {
       ...DEFAULT_SETTINGS,
       ...stored,
       annotationTags: normalizeAnnotationTags((stored as Partial<AnnotationPluginSettings>).annotationTags),
+      epubReadingProfile: readingProfile,
     };
+    if (!storedSettings.epubReadingProfile) {
+      try {
+        await this.saveData(this.settings);
+      } catch (error) {
+        console.warn("yh-inklight: EPUB 阅读排版迁移保存失败，将在下次启动重试", error);
+      }
+    }
   }
 
   async saveSettings(): Promise<void> {
@@ -239,6 +254,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       const view = leaf.view;
       if (view instanceof EpubReaderView) {
         view.refreshExternalAnnotations();
+        view.refreshExternalSettings();
       }
     }
     // 刷新 Markdown 阅读视图高亮：从侧栏删除/编辑 MD 批注后，阅读区高亮 DOM 也需同步移除。

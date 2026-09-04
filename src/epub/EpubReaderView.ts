@@ -4,7 +4,7 @@
  *          EpubFoliateLoader 的引擎加载与 EpubStylesheetInliner 的安全过滤、
  *          EpubThemeManager 的主题颜色解析
  * [OUTPUT]: 对外提供 EpubReaderView，将 foliate-js 渲染引擎嵌入 Obsidian leaf，
- *          承载工具栏、侧边栏（目录/标注）、阅读区（iframe）、进度条、
+ *          承载工具栏、侧边栏（目录/搜索）、阅读区（iframe）、进度条、
  *          选区上下文菜单、标注 CRUD、进度持久化与阅读时间追踪；搜索、选区和布局由专用控制器承载
  * [POS]: epub 模块的唯一视图入口，由插件主类通过 registerView 注册
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
@@ -18,14 +18,16 @@ import {
 	AnnotationPluginSettings,
 	COLOR_LABELS,
 	EPUB_COLOR_MAP,
-	EPUB_READING_THEMES,
 	EpubCfiAnchor,
 	EpubCommentAnnotation,
 	EpubFlowMode,
+	EpubReadingProfile,
 	EpubHighlightAnnotation,
 	EpubHighlightStyle,
 	EpubReadingProgress,
 	EpubReadingTheme,
+	createEpubReadingProfileFromLegacy,
+	normalizeEpubReadingProfile,
 	SUPPORTED_BOOK_EXTENSIONS,
 } from "../storage/types";
 import { AnnotationStore } from "../storage/annotationStore";
@@ -48,6 +50,7 @@ import { legacyNoteTypeForTag } from "../tags/tagDomain";
 import { EpubLayoutController } from "./EpubLayoutController";
 import { EpubSearchController } from "./EpubSearch";
 import { EpubSelectionController, EpubSelectionSnapshot } from "./EpubSelectionController";
+import { EpubReadingSettingsModal } from "./EpubReadingSettingsModal";
 
 // ---- 常量 ----
 
@@ -128,6 +131,7 @@ export class EpubReaderView extends FileView {
 	private readonly themeManager: EpubThemeManager;
 	private readonly refreshAnnotations: () => void;
 	private readonly offerAnnotationUndo: (file: TFile, annotationId: string, label: string) => void;
+	private readonly saveSettings: () => Promise<void>;
 
 	// ---- foliate 实例 ----
 
@@ -147,9 +151,14 @@ export class EpubReaderView extends FileView {
 	private tocEntries: TocSpineEntry[] = [];
 	private currentChapter = "";
 	private currentPercent = 0;
-	private currentFlowMode: EpubFlowMode;
-	private currentFontSize: number;
-	private currentTheme: EpubReadingTheme;
+	private currentFlowMode: EpubFlowMode = "scrolled";
+	private currentFontSize = 16;
+	private currentLineHeight = 1.7;
+	private currentContentWidth = 760;
+	private currentFontFamily: EpubReadingProfile["fontFamily"] = "publisher";
+	private currentTextAlign: EpubReadingProfile["textAlign"] = "start";
+	private currentTheme: EpubReadingTheme = "obsidian";
+	private readingProfile: EpubReadingProfile;
 	private sidebarOpen = false;
 	private activeSidebarTab: "toc" | "search" = "toc";
 	private searchController: EpubSearchController | null = null;
@@ -164,6 +173,7 @@ export class EpubReaderView extends FileView {
 	private readingTimeFlushTimer: number | null = null;
 	private progressSaveTimer: number | null = null;
 	private wheelDebounceTimer: number | null = null;
+	private profileSaveTimer: number | null = null;
 	private contextMenuDismissTimer: number | null = null;
 	private visibilityHandler: (() => void) | null = null;
 	private blurHandler: (() => void) | null = null;
@@ -188,21 +198,76 @@ export class EpubReaderView extends FileView {
 		settings: AnnotationPluginSettings,
 		refreshAnnotations: () => void,
 		offerAnnotationUndo: (file: TFile, annotationId: string, label: string) => void,
+		saveSettings: () => Promise<void>,
 	) {
 		super(leaf);
 		this.store = store;
 		this.pluginSettings = settings;
 		this.refreshAnnotations = refreshAnnotations;
 		this.offerAnnotationUndo = offerAnnotationUndo;
+		this.saveSettings = saveSettings;
 		this.themeManager = new EpubThemeManager();
 		this.selectionController = new EpubSelectionController({
 			getFoliateView: () => this.foliateView,
 			getIframeForDocument: (doc) => this.findIframeForDocument(doc),
 			onSelection: (snapshot) => this.handleTextSelected(snapshot),
 		});
-		this.currentFlowMode = settings.epubDefaultFlow;
-		this.currentFontSize = settings.epubFontSize;
-		this.currentTheme = settings.epubReadingTheme;
+		this.readingProfile = settings.epubReadingProfile
+			? normalizeEpubReadingProfile(settings.epubReadingProfile)
+			: createEpubReadingProfileFromLegacy(settings);
+		this.applyProfileState(this.readingProfile);
+	}
+
+	private applyProfileState(profile: EpubReadingProfile): void {
+		this.currentFlowMode = profile.flow;
+		this.currentFontSize = profile.fontSize;
+		this.currentLineHeight = profile.lineHeight;
+		this.currentContentWidth = profile.contentWidth;
+		this.currentFontFamily = profile.fontFamily;
+		this.currentTextAlign = profile.textAlign;
+		this.currentTheme = profile.theme;
+	}
+
+	private updateReadingProfile(profile: EpubReadingProfile, persist = true): void {
+		const next = normalizeEpubReadingProfile(profile);
+		const flowChanged = next.flow !== this.readingProfile.flow;
+		const previousCfi = this.currentCfi;
+		const view = this.foliateView;
+		this.readingProfile = next;
+		this.applyProfileState(next);
+		this.pluginSettings.epubReadingProfile = next;
+		// 保留旧字段，确保降级到 0.20.x 时仍能读取字号、主题和流模式。
+		this.pluginSettings.epubFontSize = next.fontSize;
+		this.pluginSettings.epubDefaultFlow = next.flow;
+		this.pluginSettings.epubReadingTheme = next.theme;
+
+		this.layoutController?.setLayout(next.flow, next.contentWidth);
+		this.applyFoliateAppearance();
+		if (view && previousCfi) {
+			window.setTimeout(() => {
+				if (this.foliateView === view) void view.goTo(previousCfi);
+			}, 0);
+		}
+		if (flowChanged && this.toolbarEl) {
+			this.renderToolbar();
+		}
+		if (persist) {
+			this.scheduleProfileSave();
+		}
+	}
+
+	private scheduleProfileSave(): void {
+		if (this.profileSaveTimer !== null) {
+			window.clearTimeout(this.profileSaveTimer);
+		}
+		this.profileSaveTimer = window.setTimeout(() => {
+			this.profileSaveTimer = null;
+			void this.saveSettings();
+		}, 350);
+	}
+
+	private openReadingSettings(): void {
+		new EpubReadingSettingsModal(this.app, this.readingProfile, (profile) => this.updateReadingProfile(profile)).open();
 	}
 
 	/** 视图类型标识，供 Obsidian workspace 路由 */
@@ -327,7 +392,7 @@ export class EpubReaderView extends FileView {
 	// ================================================================
 
 	/**
-	 * 渲染工具栏：侧边栏切换、书名、字号、主题、翻页模式、导航按钮。
+	 * 渲染工具栏：侧边栏切换、书名、阅读设置、搜索、翻页模式和导航按钮。
 	 */
 	private renderToolbar(): void {
 		this.toolbarEl.empty();
@@ -344,27 +409,18 @@ export class EpubReaderView extends FileView {
 			text: this.file?.basename ?? "",
 		});
 
-		const fontSizeDec = this.toolbarEl.createEl("button", {
+		const settingsBtn = this.toolbarEl.createEl("button", {
 			cls: "yh-epub-toolbar-btn",
-			attr: { type: "button", title: "缩小字号", "aria-label": "缩小字号" },
-			text: "A-",
+			attr: { type: "button", title: "阅读排版设置", "aria-label": "阅读排版设置" },
 		});
-		fontSizeDec.addEventListener("click", () => this.changeFontSize(-1));
-
-		const fontSizeInc = this.toolbarEl.createEl("button", {
-			cls: "yh-epub-toolbar-btn",
-			attr: { type: "button", title: "放大字号", "aria-label": "放大字号" },
-			text: "A+",
-		});
-		fontSizeInc.addEventListener("click", () => this.changeFontSize(1));
-
-		this.renderThemeSwatches();
+		setIcon(settingsBtn, "settings");
+		settingsBtn.addEventListener("click", () => this.openReadingSettings());
 
 		// 搜索按钮打开侧栏搜索标签，搜索输入框不再挂在工具栏中。
 		const searchBtn = this.toolbarEl.createEl("button", {
-				cls: "yh-epub-toolbar-btn",
-				attr: { type: "button", title: "搜索全文", "aria-label": "搜索全文" },
-			});
+			cls: "yh-epub-toolbar-btn",
+			attr: { type: "button", title: "搜索全文", "aria-label": "搜索全文" },
+		});
 		setIcon(searchBtn, "search");
 		searchBtn.addEventListener("click", () => this.openSidebarTab("search"));
 
@@ -388,28 +444,6 @@ export class EpubReaderView extends FileView {
 		});
 		setIcon(nextBtn, "chevron-right");
 		nextBtn.addEventListener("click", () => this.nextPage());
-	}
-
-	/**
-	 * 在工具栏中渲染主题色块选择器，点击切换阅读主题。
-	 */
-	private renderThemeSwatches(): void {
-		const container = this.toolbarEl.createDiv({ cls: "yh-epub-theme-swatches" });
-
-		for (const theme of EPUB_READING_THEMES) {
-			const swatch = container.createEl("button", {
-				cls: "yh-epub-theme-swatch",
-				attr: {
-					type: "button",
-					title: theme.label,
-					"aria-label": `主题: ${theme.label}`,
-					"data-theme": theme.id,
-				},
-			});
-			swatch.style.background = theme.swatch;
-			swatch.toggleClass("is-active", theme.id === this.currentTheme);
-			swatch.addEventListener("click", () => this.switchTheme(theme.id));
-		}
 	}
 
 	// ================================================================
@@ -512,7 +546,7 @@ export class EpubReaderView extends FileView {
 	 * 配置 foliate-view 的布局属性。
 	 */
 	private configureFoliateView(view: FoliateViewHandle): void {
-		this.layoutController = new EpubLayoutController(view, this.currentFlowMode);
+		this.layoutController = new EpubLayoutController(view, this.currentFlowMode, this.currentContentWidth);
 		this.layoutController.initialize();
 	}
 
@@ -1167,61 +1201,11 @@ export class EpubReaderView extends FileView {
 	// ================================================================
 
 	/**
-	 * 调整阅读字号。
-	 *
-	 * @param delta - 字号变化量（正数增大，负数缩小）
-	 */
-	private changeFontSize(delta: number): void {
-		const nextSize = Math.max(12, Math.min(28, this.currentFontSize + delta));
-		if (nextSize === this.currentFontSize) {
-			return;
-		}
-
-		this.currentFontSize = nextSize;
-		this.applyFontSize(nextSize);
-		this.renderToolbar();
-	}
-
-	/**
-	 * 将字号应用到 foliate 主题样式。
-	 *
-	 * @param size - 字号像素值
-	 */
-	private applyFontSize(size: number): void {
-		this.applyFoliateAppearance(size);
-	}
-
-	/**
-	 * 切换阅读主题。
-	 *
-	 * @param themeId - 目标主题 ID
-	 */
-	private switchTheme(themeId: EpubReadingTheme): void {
-		if (themeId === this.currentTheme) {
-			return;
-		}
-
-		this.currentTheme = themeId;
-
-		this.applyFoliateAppearance();
-
-		this.renderToolbar();
-	}
-
-	/**
-	 * 切换翻页模式（分页/滚动）。
+	 * 快速切换翻页模式；完整排版设置在阅读设置面板中维护。
 	 */
 	private toggleFlowMode(): void {
 		const nextMode: EpubFlowMode = this.currentFlowMode === "paginated" ? "scrolled" : "paginated";
-		this.currentFlowMode = nextMode;
-
-		if (!this.foliateView) {
-			return;
-		}
-
-		this.layoutController?.setFlow(nextMode);
-		this.applyFoliateAppearance();
-		this.renderToolbar();
+		this.updateReadingProfile({ ...this.readingProfile, flow: nextMode });
 	}
 
 	// ================================================================
@@ -1346,6 +1330,17 @@ export class EpubReaderView extends FileView {
 		this.renderSidebar();
 	}
 
+	/** 设置页保存 EPUB 排版后，同步已打开的阅读视图。 */
+	refreshExternalSettings(): void {
+		const next = this.pluginSettings.epubReadingProfile
+			? normalizeEpubReadingProfile(this.pluginSettings.epubReadingProfile)
+			: createEpubReadingProfileFromLegacy(this.pluginSettings);
+		if (JSON.stringify(next) === JSON.stringify(this.readingProfile)) {
+			return;
+		}
+		this.updateReadingProfile(next, false);
+	}
+
 	// ================================================================
 	// 脚注预览 & 段落模式（Phase 4-B P3，均未实现）
 	// ================================================================
@@ -1366,6 +1361,10 @@ export class EpubReaderView extends FileView {
 		if (this.wheelDebounceTimer !== null) {
 			window.clearTimeout(this.wheelDebounceTimer);
 			this.wheelDebounceTimer = null;
+		}
+		if (this.profileSaveTimer !== null) {
+			window.clearTimeout(this.profileSaveTimer);
+			this.profileSaveTimer = null;
 		}
 		this.searchController?.dispose();
 		this.searchController = null;
@@ -1514,12 +1513,19 @@ export class EpubReaderView extends FileView {
 		this.renderedAnnotationMeta.delete(annotation.id);
 	}
 
-	private applyFoliateAppearance(size = this.currentFontSize): void {
+	private applyFoliateAppearance(): void {
 		if (!this.foliateView || !this.layoutController) {
 			return;
 		}
 		const colors = this.themeManager.resolveThemeColors(this.currentTheme);
-		this.layoutController.applyAppearance(colors, size, this.readerContainerEl);
+		this.layoutController.applyAppearance(
+			colors,
+			this.currentFontSize,
+			this.currentLineHeight,
+			this.currentFontFamily,
+			this.currentTextAlign,
+			this.readerContainerEl,
+		);
 	}
 
 	private applyFoliateLayout(): void {

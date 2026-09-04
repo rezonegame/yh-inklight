@@ -12,11 +12,16 @@ import {
   ANNOTATION_COLORS,
   AnnotationColor,
   COLOR_LABELS,
+  DEFAULT_EPUB_READING_PROFILE,
   EPUB_HIGHLIGHT_STYLES,
   EPUB_READING_THEMES,
+  EpubFontFamily,
   EpubFlowMode,
   EpubHighlightStyle,
+  EpubReadingProfile,
   EpubReadingTheme,
+  EpubTextAlign,
+  normalizeEpubReadingProfile,
 } from "../storage/types";
 import {
   cloneDefaultAnnotationTags,
@@ -190,23 +195,73 @@ export class AnnotationSettingsTab extends PluginSettingTab {
     refreshValidation();
   }
 
-  /** EPUB 阅读相关设置：字号 / 主题 / 翻页 / 高亮样式 / 摘录目录 / 段落模式 / 脚注 / 回显 */
+  /** EPUB 阅读相关设置：统一排版 profile 与批注高亮样式。 */
   private renderEpubSettings(): void {
     const { containerEl } = this;
     containerEl.createEl("h3", { text: "EPUB 阅读" });
 
+    const profile = this.getEpubProfile();
+
+    new Setting(containerEl)
+      .setName("字体")
+      .setDesc("仅使用本机或书籍已有字体，不下载字体文件。")
+      .addDropdown((dropdown) => {
+        dropdown.addOption("publisher", "跟随书籍");
+        dropdown.addOption("serif", "衬线字体");
+        dropdown.addOption("sans", "无衬线字体");
+        dropdown.addOption("kaiti", "楷体");
+        dropdown.setValue(profile.fontFamily).onChange(async (value) => {
+          await this.updateEpubProfile({ fontFamily: value as EpubFontFamily });
+        });
+      });
+
     new Setting(containerEl)
       .setName("阅读字号")
-      .setDesc("EPUB 正文基础字号（px）。修改后重新打开电子书生效。")
+      .setDesc("EPUB 正文基础字号（px）。")
       .addSlider((slider) => {
         slider
           .setLimits(12, 28, 1)
-          .setValue(this.plugin.settings.epubFontSize)
+          .setValue(profile.fontSize)
           .setDynamicTooltip()
           .onChange(async (value) => {
-            this.plugin.settings.epubFontSize = value;
-            await this.plugin.saveSettings();
+            await this.updateEpubProfile({ fontSize: value });
           });
+      });
+
+    new Setting(containerEl)
+      .setName("行距")
+      .setDesc("正文行高倍数，范围 1.4 至 2.2。")
+      .addSlider((slider) => {
+        slider
+          .setLimits(1.4, 2.2, 0.1)
+          .setValue(profile.lineHeight)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            await this.updateEpubProfile({ lineHeight: value });
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("正文宽度")
+      .setDesc("正文最大宽度（px），范围 520 至 1000。")
+      .addSlider((slider) => {
+        slider
+          .setLimits(520, 1000, 10)
+          .setValue(profile.contentWidth)
+          .setDynamicTooltip()
+          .onChange(async (value) => {
+            await this.updateEpubProfile({ contentWidth: value });
+          });
+      });
+
+    new Setting(containerEl)
+      .setName("正文对齐")
+      .addDropdown((dropdown) => {
+        dropdown.addOption("start", "跟随书籍");
+        dropdown.addOption("justify", "两端对齐");
+        dropdown.setValue(profile.textAlign).onChange(async (value) => {
+          await this.updateEpubProfile({ textAlign: value as EpubTextAlign });
+        });
       });
 
     new Setting(containerEl)
@@ -216,9 +271,8 @@ export class AnnotationSettingsTab extends PluginSettingTab {
         for (const theme of EPUB_READING_THEMES) {
           dropdown.addOption(theme.id, theme.label);
         }
-        dropdown.setValue(this.plugin.settings.epubReadingTheme).onChange(async (value) => {
-          this.plugin.settings.epubReadingTheme = value as EpubReadingTheme;
-          await this.plugin.saveSettings();
+        dropdown.setValue(profile.theme).onChange(async (value) => {
+          await this.updateEpubProfile({ theme: value as EpubReadingTheme });
         });
       });
 
@@ -228,9 +282,8 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       .addDropdown((dropdown) => {
         dropdown.addOption("paginated", "翻页");
         dropdown.addOption("scrolled", "滚动");
-        dropdown.setValue(this.plugin.settings.epubDefaultFlow).onChange(async (value) => {
-          this.plugin.settings.epubDefaultFlow = value as EpubFlowMode;
-          await this.plugin.saveSettings();
+        dropdown.setValue(profile.flow).onChange(async (value) => {
+          await this.updateEpubProfile({ flow: value as EpubFlowMode });
         });
       });
 
@@ -260,5 +313,21 @@ export class AnnotationSettingsTab extends PluginSettingTab {
           await this.plugin.saveSettings();
         });
       });
+  }
+
+  private getEpubProfile(): EpubReadingProfile {
+    return this.plugin.settings.epubReadingProfile
+      ? normalizeEpubReadingProfile(this.plugin.settings.epubReadingProfile)
+      : { ...DEFAULT_EPUB_READING_PROFILE };
+  }
+
+  private async updateEpubProfile(patch: Partial<EpubReadingProfile>): Promise<void> {
+    const profile = normalizeEpubReadingProfile({ ...this.getEpubProfile(), ...patch });
+    this.plugin.settings.epubReadingProfile = profile;
+    // 保留旧字段，供旧版本降级读取。
+    this.plugin.settings.epubFontSize = profile.fontSize;
+    this.plugin.settings.epubDefaultFlow = profile.flow;
+    this.plugin.settings.epubReadingTheme = profile.theme;
+    await this.plugin.saveSettings();
   }
 }

@@ -171,6 +171,75 @@ export interface AnnotationIndex {
   files: Record<string, AnnotationIndexEntry>;
 }
 
+// ===== EPUB 阅读排版 =====
+
+export type EpubReadingTheme = "obsidian" | "white" | "warm" | "green" | "sepia" | "dark";
+export type EpubFlowMode = "paginated" | "scrolled";
+export type EpubFontFamily = "publisher" | "serif" | "sans" | "kaiti";
+export type EpubTextAlign = "start" | "justify";
+
+export interface EpubReadingProfile {
+  fontFamily: EpubFontFamily;
+  fontSize: number;
+  lineHeight: number;
+  contentWidth: number;
+  textAlign: EpubTextAlign;
+  flow: EpubFlowMode;
+  theme: EpubReadingTheme;
+}
+
+export const DEFAULT_EPUB_READING_PROFILE: EpubReadingProfile = {
+  fontFamily: "publisher",
+  fontSize: 16,
+  lineHeight: 1.7,
+  contentWidth: 760,
+  textAlign: "start",
+  flow: "scrolled",
+  theme: "obsidian",
+};
+
+function clampNumber(value: unknown, fallback: number, min: number, max: number, step?: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return fallback;
+  }
+  const clamped = Math.min(max, Math.max(min, value));
+  return step ? Math.round(clamped / step) * step : clamped;
+}
+
+export function createEpubReadingProfileFromLegacy(settings: Partial<Pick<AnnotationPluginSettings, "epubDefaultFlow" | "epubFontSize" | "epubReadingTheme">>): EpubReadingProfile {
+  return {
+    ...DEFAULT_EPUB_READING_PROFILE,
+    fontSize: clampNumber(settings.epubFontSize, DEFAULT_EPUB_READING_PROFILE.fontSize, 12, 28, 1),
+    flow: settings.epubDefaultFlow === "paginated" || settings.epubDefaultFlow === "scrolled"
+      ? settings.epubDefaultFlow
+      : DEFAULT_EPUB_READING_PROFILE.flow,
+    theme: isEpubReadingTheme(settings.epubReadingTheme)
+      ? settings.epubReadingTheme
+      : DEFAULT_EPUB_READING_PROFILE.theme,
+  };
+}
+
+export function normalizeEpubReadingProfile(raw: unknown, fallback = DEFAULT_EPUB_READING_PROFILE): EpubReadingProfile {
+  const value = raw && typeof raw === "object" ? raw as Partial<EpubReadingProfile> : {};
+  return {
+    fontFamily: isEpubFontFamily(value.fontFamily) ? value.fontFamily : fallback.fontFamily,
+    fontSize: clampNumber(value.fontSize, fallback.fontSize, 12, 28, 1),
+    lineHeight: clampNumber(value.lineHeight, fallback.lineHeight, 1.4, 2.2, 0.1),
+    contentWidth: clampNumber(value.contentWidth, fallback.contentWidth, 520, 1000, 10),
+    textAlign: value.textAlign === "justify" ? "justify" : value.textAlign === "start" ? "start" : fallback.textAlign,
+    flow: value.flow === "paginated" || value.flow === "scrolled" ? value.flow : fallback.flow,
+    theme: isEpubReadingTheme(value.theme) ? value.theme : fallback.theme,
+  };
+}
+
+function isEpubFontFamily(value: unknown): value is EpubFontFamily {
+  return value === "publisher" || value === "serif" || value === "sans" || value === "kaiti";
+}
+
+function isEpubReadingTheme(value: unknown): value is EpubReadingTheme {
+  return value === "obsidian" || value === "white" || value === "warm" || value === "green" || value === "sepia" || value === "dark";
+}
+
 export interface AnnotationPluginSettings {
   defaultHighlightColor: AnnotationColor;
   defaultAuthor: string;
@@ -181,6 +250,8 @@ export interface AnnotationPluginSettings {
   epubFontSize: number;
   epubReadingTheme: EpubReadingTheme;
   epubHighlightStyle: EpubHighlightStyle;
+  /** 0.21.0 unified EPUB layout profile; old fields remain for downgrade compatibility. */
+  epubReadingProfile?: EpubReadingProfile;
   // --- PDF 增强 ---
   pdfProgressTracking: boolean;
 }
@@ -202,6 +273,7 @@ export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
   epubFontSize: 16,
   epubReadingTheme: "obsidian",
   epubHighlightStyle: "fill",
+  epubReadingProfile: DEFAULT_EPUB_READING_PROFILE,
   // PDF 增强
   pdfProgressTracking: true,
 };
@@ -294,11 +366,6 @@ export interface CanvasExcerptNode {
   nodeId: string;
   position: { x: number; y: number };
 }
-
-// ===== EPUB 设置 =====
-
-export type EpubReadingTheme = "obsidian" | "white" | "warm" | "green" | "sepia" | "dark";
-export type EpubFlowMode = "paginated" | "scrolled";
 
 export const EPUB_READING_THEMES: { id: EpubReadingTheme; label: string; background: string; text: string; swatch: string }[] = [
   { id: "obsidian", label: "跟随 Obsidian", background: "", text: "", swatch: "linear-gradient(135deg, #ffffff 50%, #1e1e1e 50%)" },

@@ -7758,7 +7758,7 @@ __export(main_exports, {
   default: () => OverlayAnnotationsPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian15 = require("obsidian");
+var import_obsidian16 = require("obsidian");
 
 // src/anchor/fuzzyMatch.ts
 function findBestFuzzyMatch(source, target, expectedStart) {
@@ -8576,6 +8576,48 @@ var COLOR_LABELS = {
   orange: "\u6A59\u8272",
   purple: "\u7D2B\u8272"
 };
+var DEFAULT_EPUB_READING_PROFILE = {
+  fontFamily: "publisher",
+  fontSize: 16,
+  lineHeight: 1.7,
+  contentWidth: 760,
+  textAlign: "start",
+  flow: "scrolled",
+  theme: "obsidian"
+};
+function clampNumber(value, fallback, min, max, step) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return fallback;
+  }
+  const clamped = Math.min(max, Math.max(min, value));
+  return step ? Math.round(clamped / step) * step : clamped;
+}
+function createEpubReadingProfileFromLegacy(settings) {
+  return {
+    ...DEFAULT_EPUB_READING_PROFILE,
+    fontSize: clampNumber(settings.epubFontSize, DEFAULT_EPUB_READING_PROFILE.fontSize, 12, 28, 1),
+    flow: settings.epubDefaultFlow === "paginated" || settings.epubDefaultFlow === "scrolled" ? settings.epubDefaultFlow : DEFAULT_EPUB_READING_PROFILE.flow,
+    theme: isEpubReadingTheme(settings.epubReadingTheme) ? settings.epubReadingTheme : DEFAULT_EPUB_READING_PROFILE.theme
+  };
+}
+function normalizeEpubReadingProfile(raw, fallback = DEFAULT_EPUB_READING_PROFILE) {
+  const value = raw && typeof raw === "object" ? raw : {};
+  return {
+    fontFamily: isEpubFontFamily(value.fontFamily) ? value.fontFamily : fallback.fontFamily,
+    fontSize: clampNumber(value.fontSize, fallback.fontSize, 12, 28, 1),
+    lineHeight: clampNumber(value.lineHeight, fallback.lineHeight, 1.4, 2.2, 0.1),
+    contentWidth: clampNumber(value.contentWidth, fallback.contentWidth, 520, 1e3, 10),
+    textAlign: value.textAlign === "justify" ? "justify" : value.textAlign === "start" ? "start" : fallback.textAlign,
+    flow: value.flow === "paginated" || value.flow === "scrolled" ? value.flow : fallback.flow,
+    theme: isEpubReadingTheme(value.theme) ? value.theme : fallback.theme
+  };
+}
+function isEpubFontFamily(value) {
+  return value === "publisher" || value === "serif" || value === "sans" || value === "kaiti";
+}
+function isEpubReadingTheme(value) {
+  return value === "obsidian" || value === "white" || value === "warm" || value === "green" || value === "sepia" || value === "dark";
+}
 var DEFAULT_SETTINGS = {
   defaultHighlightColor: "yellow",
   defaultAuthor: "\u8BFB\u8005",
@@ -8586,6 +8628,7 @@ var DEFAULT_SETTINGS = {
   epubFontSize: 16,
   epubReadingTheme: "obsidian",
   epubHighlightStyle: "fill",
+  epubReadingProfile: DEFAULT_EPUB_READING_PROFILE,
   // PDF 增强
   pdfProgressTracking: true
 };
@@ -9694,31 +9737,55 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
     renderRows();
     refreshValidation();
   }
-  /** EPUB 阅读相关设置：字号 / 主题 / 翻页 / 高亮样式 / 摘录目录 / 段落模式 / 脚注 / 回显 */
+  /** EPUB 阅读相关设置：统一排版 profile 与批注高亮样式。 */
   renderEpubSettings() {
     const { containerEl } = this;
     containerEl.createEl("h3", { text: "EPUB \u9605\u8BFB" });
-    new import_obsidian6.Setting(containerEl).setName("\u9605\u8BFB\u5B57\u53F7").setDesc("EPUB \u6B63\u6587\u57FA\u7840\u5B57\u53F7\uFF08px\uFF09\u3002\u4FEE\u6539\u540E\u91CD\u65B0\u6253\u5F00\u7535\u5B50\u4E66\u751F\u6548\u3002").addSlider((slider) => {
-      slider.setLimits(12, 28, 1).setValue(this.plugin.settings.epubFontSize).setDynamicTooltip().onChange(async (value) => {
-        this.plugin.settings.epubFontSize = value;
-        await this.plugin.saveSettings();
+    const profile = this.getEpubProfile();
+    new import_obsidian6.Setting(containerEl).setName("\u5B57\u4F53").setDesc("\u4EC5\u4F7F\u7528\u672C\u673A\u6216\u4E66\u7C4D\u5DF2\u6709\u5B57\u4F53\uFF0C\u4E0D\u4E0B\u8F7D\u5B57\u4F53\u6587\u4EF6\u3002").addDropdown((dropdown) => {
+      dropdown.addOption("publisher", "\u8DDF\u968F\u4E66\u7C4D");
+      dropdown.addOption("serif", "\u886C\u7EBF\u5B57\u4F53");
+      dropdown.addOption("sans", "\u65E0\u886C\u7EBF\u5B57\u4F53");
+      dropdown.addOption("kaiti", "\u6977\u4F53");
+      dropdown.setValue(profile.fontFamily).onChange(async (value) => {
+        await this.updateEpubProfile({ fontFamily: value });
+      });
+    });
+    new import_obsidian6.Setting(containerEl).setName("\u9605\u8BFB\u5B57\u53F7").setDesc("EPUB \u6B63\u6587\u57FA\u7840\u5B57\u53F7\uFF08px\uFF09\u3002").addSlider((slider) => {
+      slider.setLimits(12, 28, 1).setValue(profile.fontSize).setDynamicTooltip().onChange(async (value) => {
+        await this.updateEpubProfile({ fontSize: value });
+      });
+    });
+    new import_obsidian6.Setting(containerEl).setName("\u884C\u8DDD").setDesc("\u6B63\u6587\u884C\u9AD8\u500D\u6570\uFF0C\u8303\u56F4 1.4 \u81F3 2.2\u3002").addSlider((slider) => {
+      slider.setLimits(1.4, 2.2, 0.1).setValue(profile.lineHeight).setDynamicTooltip().onChange(async (value) => {
+        await this.updateEpubProfile({ lineHeight: value });
+      });
+    });
+    new import_obsidian6.Setting(containerEl).setName("\u6B63\u6587\u5BBD\u5EA6").setDesc("\u6B63\u6587\u6700\u5927\u5BBD\u5EA6\uFF08px\uFF09\uFF0C\u8303\u56F4 520 \u81F3 1000\u3002").addSlider((slider) => {
+      slider.setLimits(520, 1e3, 10).setValue(profile.contentWidth).setDynamicTooltip().onChange(async (value) => {
+        await this.updateEpubProfile({ contentWidth: value });
+      });
+    });
+    new import_obsidian6.Setting(containerEl).setName("\u6B63\u6587\u5BF9\u9F50").addDropdown((dropdown) => {
+      dropdown.addOption("start", "\u8DDF\u968F\u4E66\u7C4D");
+      dropdown.addOption("justify", "\u4E24\u7AEF\u5BF9\u9F50");
+      dropdown.setValue(profile.textAlign).onChange(async (value) => {
+        await this.updateEpubProfile({ textAlign: value });
       });
     });
     new import_obsidian6.Setting(containerEl).setName("\u9605\u8BFB\u4E3B\u9898").setDesc("EPUB \u9605\u8BFB\u533A\u80CC\u666F\u4E0E\u6587\u5B57\u914D\u8272\u3002").addDropdown((dropdown) => {
       for (const theme of EPUB_READING_THEMES) {
         dropdown.addOption(theme.id, theme.label);
       }
-      dropdown.setValue(this.plugin.settings.epubReadingTheme).onChange(async (value) => {
-        this.plugin.settings.epubReadingTheme = value;
-        await this.plugin.saveSettings();
+      dropdown.setValue(profile.theme).onChange(async (value) => {
+        await this.updateEpubProfile({ theme: value });
       });
     });
     new import_obsidian6.Setting(containerEl).setName("\u7FFB\u9875\u6A21\u5F0F").setDesc("\u7FFB\u9875\u4E3A\u5206\u9875\u5E03\u5C40\uFF1B\u6EDA\u52A8\u4E3A\u8FDE\u7EED\u6EDA\u52A8\u9605\u8BFB\u3002").addDropdown((dropdown) => {
       dropdown.addOption("paginated", "\u7FFB\u9875");
       dropdown.addOption("scrolled", "\u6EDA\u52A8");
-      dropdown.setValue(this.plugin.settings.epubDefaultFlow).onChange(async (value) => {
-        this.plugin.settings.epubDefaultFlow = value;
-        await this.plugin.saveSettings();
+      dropdown.setValue(profile.flow).onChange(async (value) => {
+        await this.updateEpubProfile({ flow: value });
       });
     });
     new import_obsidian6.Setting(containerEl).setName("\u9AD8\u4EAE\u6837\u5F0F").setDesc("EPUB \u6587\u672C\u6807\u6CE8\u7684\u9ED8\u8BA4\u5448\u73B0\u6837\u5F0F\u3002").addDropdown((dropdown) => {
@@ -9740,6 +9807,17 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
         await this.plugin.saveSettings();
       });
     });
+  }
+  getEpubProfile() {
+    return this.plugin.settings.epubReadingProfile ? normalizeEpubReadingProfile(this.plugin.settings.epubReadingProfile) : { ...DEFAULT_EPUB_READING_PROFILE };
+  }
+  async updateEpubProfile(patch) {
+    const profile = normalizeEpubReadingProfile({ ...this.getEpubProfile(), ...patch });
+    this.plugin.settings.epubReadingProfile = profile;
+    this.plugin.settings.epubFontSize = profile.fontSize;
+    this.plugin.settings.epubDefaultFlow = profile.flow;
+    this.plugin.settings.epubReadingTheme = profile.theme;
+    await this.plugin.saveSettings();
   }
 };
 
@@ -11555,7 +11633,7 @@ function isCodeLikeText(text) {
 }
 
 // src/epub/EpubReaderView.ts
-var import_obsidian12 = require("obsidian");
+var import_obsidian13 = require("obsidian");
 
 // src/epub/EpubChapterResolver.ts
 function resolveChapterLabel(entries, spineIndex) {
@@ -12356,29 +12434,49 @@ var EpubNoteModal = class extends import_obsidian11.Modal {
 };
 
 // src/epub/EpubLayoutController.ts
-function getEpubLayoutAttributes(flow) {
+function getEpubLayoutAttributes(flow, contentWidth = 760) {
   return {
     flow,
     margin: flow === "paginated" ? "28px" : "0px",
     gap: "8%",
-    "max-inline-size": "760px"
+    "max-inline-size": `${contentWidth}px`
   };
 }
+function getEpubFontFamilyCss(fontFamily) {
+  switch (fontFamily) {
+    case "serif":
+      return "Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif";
+    case "sans":
+      return "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif";
+    case "kaiti":
+      return "'KaiTi', 'STKaiti', 'Noto Serif CJK SC', serif";
+    default:
+      return "";
+  }
+}
 var EpubLayoutController = class {
-  constructor(view, flow) {
+  constructor(view, flow, contentWidth = 760) {
     this.view = view;
     this.flow = flow;
+    this.contentWidth = contentWidth;
   }
   initialize() {
     this.view.classList.add("yh-epub-foliate-view");
     this.apply();
   }
   setFlow(flow) {
+    this.setLayout(flow, this.contentWidth);
+  }
+  setContentWidth(contentWidth) {
+    this.setLayout(this.flow, contentWidth);
+  }
+  setLayout(flow, contentWidth) {
     this.flow = flow;
+    this.contentWidth = contentWidth;
     this.apply();
   }
   apply() {
-    const attrs = getEpubLayoutAttributes(this.flow);
+    const attrs = getEpubLayoutAttributes(this.flow, this.contentWidth);
     const host = this.view;
     const renderer = this.view.renderer;
     for (const [name, value] of Object.entries(attrs)) {
@@ -12387,14 +12485,17 @@ var EpubLayoutController = class {
     }
     this.view.renderer?.render?.();
   }
-  applyAppearance(colors, size, readerContainer) {
+  applyAppearance(colors, size, lineHeight, fontFamily, textAlign, readerContainer) {
+    const fontFamilyCss = getEpubFontFamilyCss(fontFamily);
     const css = [
       ":root { color-scheme: light dark; }",
       "body {",
       `  background-color: ${colors.background} !important;`,
       `  color: ${colors.textColor} !important;`,
       `  font-size: ${size}px !important;`,
-      "  line-height: 1.72 !important;",
+      `  line-height: ${lineHeight} !important;`,
+      fontFamilyCss ? `  font-family: ${fontFamilyCss} !important;` : "",
+      `  text-align: ${textAlign};`,
       "}",
       "p, div, span, li, h1, h2, h3, h4, h5, h6, blockquote, td, th, dt, dd {",
       `  color: ${colors.textColor} !important;`,
@@ -12724,16 +12825,98 @@ var EpubSelectionController = class {
   }
 };
 
+// src/epub/EpubReadingSettingsModal.ts
+var import_obsidian12 = require("obsidian");
+var FONT_FAMILIES = [
+  { id: "publisher", label: "\u8DDF\u968F\u4E66\u7C4D" },
+  { id: "serif", label: "\u886C\u7EBF\u5B57\u4F53" },
+  { id: "sans", label: "\u65E0\u886C\u7EBF\u5B57\u4F53" },
+  { id: "kaiti", label: "\u6977\u4F53" }
+];
+var EpubReadingSettingsModal = class extends import_obsidian12.Modal {
+  constructor(app, profile, onChange) {
+    super(app);
+    this.onChange = onChange;
+    this.draft = { ...profile };
+  }
+  onOpen() {
+    this.titleEl.setText("\u9605\u8BFB\u6392\u7248");
+    this.render();
+  }
+  render() {
+    const { contentEl } = this;
+    contentEl.empty();
+    contentEl.createDiv({
+      cls: "setting-item-description",
+      text: "\u4FEE\u6539\u4F1A\u7ACB\u5373\u5E94\u7528\u5230\u5F53\u524D EPUB\uFF0C\u5E76\u4FDD\u5B58\u4E3A\u58A8\u5149\u7684\u9ED8\u8BA4\u9605\u8BFB\u6392\u7248\u3002"
+    });
+    new import_obsidian12.Setting(contentEl).setName("\u5B57\u4F53").addDropdown((dropdown) => {
+      for (const family of FONT_FAMILIES) dropdown.addOption(family.id, family.label);
+      dropdown.setValue(this.draft.fontFamily).onChange((value) => {
+        this.update({ fontFamily: value });
+      });
+    });
+    new import_obsidian12.Setting(contentEl).setName("\u5B57\u53F7").setDesc(`${this.draft.fontSize}px`).addSlider((slider) => {
+      slider.setLimits(12, 28, 1).setValue(this.draft.fontSize).setDynamicTooltip().onChange((value) => {
+        this.update({ fontSize: value });
+      });
+    });
+    new import_obsidian12.Setting(contentEl).setName("\u884C\u8DDD").setDesc(this.draft.lineHeight.toFixed(1)).addSlider((slider) => {
+      slider.setLimits(1.4, 2.2, 0.1).setValue(this.draft.lineHeight).setDynamicTooltip().onChange((value) => {
+        this.update({ lineHeight: value });
+      });
+    });
+    new import_obsidian12.Setting(contentEl).setName("\u6B63\u6587\u5BBD\u5EA6").setDesc(`${this.draft.contentWidth}px`).addSlider((slider) => {
+      slider.setLimits(520, 1e3, 10).setValue(this.draft.contentWidth).setDynamicTooltip().onChange((value) => {
+        this.update({ contentWidth: value });
+      });
+    });
+    new import_obsidian12.Setting(contentEl).setName("\u5BF9\u9F50").addDropdown((dropdown) => {
+      dropdown.addOption("start", "\u8DDF\u968F\u4E66\u7C4D");
+      dropdown.addOption("justify", "\u4E24\u7AEF\u5BF9\u9F50");
+      dropdown.setValue(this.draft.textAlign).onChange((value) => {
+        this.update({ textAlign: value });
+      });
+    });
+    new import_obsidian12.Setting(contentEl).setName("\u9605\u8BFB\u6D41\u6A21\u5F0F").addDropdown((dropdown) => {
+      dropdown.addOption("scrolled", "\u6EDA\u52A8");
+      dropdown.addOption("paginated", "\u5206\u9875");
+      dropdown.setValue(this.draft.flow).onChange((value) => {
+        this.update({ flow: value });
+      });
+    });
+    new import_obsidian12.Setting(contentEl).setName("\u9605\u8BFB\u4E3B\u9898").addDropdown((dropdown) => {
+      for (const theme of EPUB_READING_THEMES) dropdown.addOption(theme.id, theme.label);
+      dropdown.setValue(this.draft.theme).onChange((value) => {
+        this.update({ theme: value });
+      });
+    });
+    new import_obsidian12.Setting(contentEl).setName("\u6062\u590D\u9ED8\u8BA4\u6392\u7248").setDesc("\u6062\u590D\u4E3A\u58A8\u5149\u7684\u9ED8\u8BA4\u9605\u8BFB\u6392\u7248").addButton((button) => {
+      button.setTooltip("\u6062\u590D\u9ED8\u8BA4\u6392\u7248");
+      (0, import_obsidian12.setIcon)(button.buttonEl, "rotate-ccw");
+      button.onClick(() => {
+        this.draft = { ...DEFAULT_EPUB_READING_PROFILE };
+        this.onChange(this.draft);
+        this.render();
+      });
+    });
+  }
+  update(patch) {
+    this.draft = { ...this.draft, ...patch };
+    void this.onChange(this.draft);
+  }
+};
+
 // src/epub/EpubReaderView.ts
 var EPUB_READER_VIEW_TYPE = "inklight-epub-reader";
 var READING_TIME_FLUSH_INTERVAL_MS = 6e4;
 var WHEEL_DEBOUNCE_MS = 400;
 var PROGRESS_SAVE_DEBOUNCE_MS = 2e3;
-var EpubReaderView = class extends import_obsidian12.FileView {
+var EpubReaderView = class extends import_obsidian13.FileView {
   // ================================================================
   // 构造 & 生命周期
   // ================================================================
-  constructor(leaf, store, settings, refreshAnnotations, offerAnnotationUndo) {
+  constructor(leaf, store, settings, refreshAnnotations, offerAnnotationUndo, saveSettings) {
     super(leaf);
     // ---- foliate 实例 ----
     this.foliateView = null;
@@ -12749,6 +12932,13 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.tocEntries = [];
     this.currentChapter = "";
     this.currentPercent = 0;
+    this.currentFlowMode = "scrolled";
+    this.currentFontSize = 16;
+    this.currentLineHeight = 1.7;
+    this.currentContentWidth = 760;
+    this.currentFontFamily = "publisher";
+    this.currentTextAlign = "start";
+    this.currentTheme = "obsidian";
     this.sidebarOpen = false;
     this.activeSidebarTab = "toc";
     this.searchController = null;
@@ -12761,6 +12951,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.readingTimeFlushTimer = null;
     this.progressSaveTimer = null;
     this.wheelDebounceTimer = null;
+    this.profileSaveTimer = null;
     this.contextMenuDismissTimer = null;
     this.visibilityHandler = null;
     this.blurHandler = null;
@@ -12799,15 +12990,61 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.pluginSettings = settings;
     this.refreshAnnotations = refreshAnnotations;
     this.offerAnnotationUndo = offerAnnotationUndo;
+    this.saveSettings = saveSettings;
     this.themeManager = new EpubThemeManager();
     this.selectionController = new EpubSelectionController({
       getFoliateView: () => this.foliateView,
       getIframeForDocument: (doc) => this.findIframeForDocument(doc),
       onSelection: (snapshot) => this.handleTextSelected(snapshot)
     });
-    this.currentFlowMode = settings.epubDefaultFlow;
-    this.currentFontSize = settings.epubFontSize;
-    this.currentTheme = settings.epubReadingTheme;
+    this.readingProfile = settings.epubReadingProfile ? normalizeEpubReadingProfile(settings.epubReadingProfile) : createEpubReadingProfileFromLegacy(settings);
+    this.applyProfileState(this.readingProfile);
+  }
+  applyProfileState(profile) {
+    this.currentFlowMode = profile.flow;
+    this.currentFontSize = profile.fontSize;
+    this.currentLineHeight = profile.lineHeight;
+    this.currentContentWidth = profile.contentWidth;
+    this.currentFontFamily = profile.fontFamily;
+    this.currentTextAlign = profile.textAlign;
+    this.currentTheme = profile.theme;
+  }
+  updateReadingProfile(profile, persist = true) {
+    const next = normalizeEpubReadingProfile(profile);
+    const flowChanged = next.flow !== this.readingProfile.flow;
+    const previousCfi = this.currentCfi;
+    const view = this.foliateView;
+    this.readingProfile = next;
+    this.applyProfileState(next);
+    this.pluginSettings.epubReadingProfile = next;
+    this.pluginSettings.epubFontSize = next.fontSize;
+    this.pluginSettings.epubDefaultFlow = next.flow;
+    this.pluginSettings.epubReadingTheme = next.theme;
+    this.layoutController?.setLayout(next.flow, next.contentWidth);
+    this.applyFoliateAppearance();
+    if (view && previousCfi) {
+      window.setTimeout(() => {
+        if (this.foliateView === view) void view.goTo(previousCfi);
+      }, 0);
+    }
+    if (flowChanged && this.toolbarEl) {
+      this.renderToolbar();
+    }
+    if (persist) {
+      this.scheduleProfileSave();
+    }
+  }
+  scheduleProfileSave() {
+    if (this.profileSaveTimer !== null) {
+      window.clearTimeout(this.profileSaveTimer);
+    }
+    this.profileSaveTimer = window.setTimeout(() => {
+      this.profileSaveTimer = null;
+      void this.saveSettings();
+    }, 350);
+  }
+  openReadingSettings() {
+    new EpubReadingSettingsModal(this.app, this.readingProfile, (profile) => this.updateReadingProfile(profile)).open();
   }
   /** 视图类型标识，供 Obsidian workspace 路由 */
   getViewType() {
@@ -12858,7 +13095,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       this.renderSidebar();
     } catch (error) {
       console.error("yh-inklight: EPUB load failed", error);
-      new import_obsidian12.Notice(`\u58A8\u5149 EPUB \u52A0\u8F7D\u5931\u8D25: ${error instanceof Error ? error.message : String(error)}`);
+      new import_obsidian13.Notice(`\u58A8\u5149 EPUB \u52A0\u8F7D\u5931\u8D25: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
   /**
@@ -12908,7 +13145,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
   // 工具栏
   // ================================================================
   /**
-   * 渲染工具栏：侧边栏切换、书名、字号、主题、翻页模式、导航按钮。
+   * 渲染工具栏：侧边栏切换、书名、阅读设置、搜索、翻页模式和导航按钮。
    */
   renderToolbar() {
     this.toolbarEl.empty();
@@ -12916,69 +13153,42 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       cls: "yh-epub-toolbar-btn",
       attr: { type: "button", title: "\u5207\u6362\u4FA7\u8FB9\u680F", "aria-label": "\u5207\u6362\u4FA7\u8FB9\u680F" }
     });
-    (0, import_obsidian12.setIcon)(toggleBtn, "menu");
+    (0, import_obsidian13.setIcon)(toggleBtn, "menu");
     toggleBtn.addEventListener("click", () => this.toggleSidebar());
     this.toolbarEl.createDiv({
       cls: "yh-epub-toolbar-title",
       text: this.file?.basename ?? ""
     });
-    const fontSizeDec = this.toolbarEl.createEl("button", {
+    const settingsBtn = this.toolbarEl.createEl("button", {
       cls: "yh-epub-toolbar-btn",
-      attr: { type: "button", title: "\u7F29\u5C0F\u5B57\u53F7", "aria-label": "\u7F29\u5C0F\u5B57\u53F7" },
-      text: "A-"
+      attr: { type: "button", title: "\u9605\u8BFB\u6392\u7248\u8BBE\u7F6E", "aria-label": "\u9605\u8BFB\u6392\u7248\u8BBE\u7F6E" }
     });
-    fontSizeDec.addEventListener("click", () => this.changeFontSize(-1));
-    const fontSizeInc = this.toolbarEl.createEl("button", {
-      cls: "yh-epub-toolbar-btn",
-      attr: { type: "button", title: "\u653E\u5927\u5B57\u53F7", "aria-label": "\u653E\u5927\u5B57\u53F7" },
-      text: "A+"
-    });
-    fontSizeInc.addEventListener("click", () => this.changeFontSize(1));
-    this.renderThemeSwatches();
+    (0, import_obsidian13.setIcon)(settingsBtn, "settings");
+    settingsBtn.addEventListener("click", () => this.openReadingSettings());
     const searchBtn = this.toolbarEl.createEl("button", {
       cls: "yh-epub-toolbar-btn",
       attr: { type: "button", title: "\u641C\u7D22\u5168\u6587", "aria-label": "\u641C\u7D22\u5168\u6587" }
     });
-    (0, import_obsidian12.setIcon)(searchBtn, "search");
+    (0, import_obsidian13.setIcon)(searchBtn, "search");
     searchBtn.addEventListener("click", () => this.openSidebarTab("search"));
     const flowBtn = this.toolbarEl.createEl("button", {
       cls: "yh-epub-toolbar-btn",
       attr: { type: "button", title: this.currentFlowMode === "paginated" ? "\u5207\u6362\u4E3A\u6EDA\u52A8" : "\u5207\u6362\u4E3A\u5206\u9875" }
     });
-    (0, import_obsidian12.setIcon)(flowBtn, this.currentFlowMode === "paginated" ? "lines-of-text" : "sheets");
+    (0, import_obsidian13.setIcon)(flowBtn, this.currentFlowMode === "paginated" ? "lines-of-text" : "sheets");
     flowBtn.addEventListener("click", () => this.toggleFlowMode());
     const prevBtn = this.toolbarEl.createEl("button", {
       cls: "yh-epub-toolbar-btn",
       attr: { type: "button", title: "\u4E0A\u4E00\u9875", "aria-label": "\u4E0A\u4E00\u9875" }
     });
-    (0, import_obsidian12.setIcon)(prevBtn, "chevron-left");
+    (0, import_obsidian13.setIcon)(prevBtn, "chevron-left");
     prevBtn.addEventListener("click", () => this.prevPage());
     const nextBtn = this.toolbarEl.createEl("button", {
       cls: "yh-epub-toolbar-btn",
       attr: { type: "button", title: "\u4E0B\u4E00\u9875", "aria-label": "\u4E0B\u4E00\u9875" }
     });
-    (0, import_obsidian12.setIcon)(nextBtn, "chevron-right");
+    (0, import_obsidian13.setIcon)(nextBtn, "chevron-right");
     nextBtn.addEventListener("click", () => this.nextPage());
-  }
-  /**
-   * 在工具栏中渲染主题色块选择器，点击切换阅读主题。
-   */
-  renderThemeSwatches() {
-    const container = this.toolbarEl.createDiv({ cls: "yh-epub-theme-swatches" });
-    for (const theme of EPUB_READING_THEMES) {
-      const swatch = container.createEl("button", {
-        cls: "yh-epub-theme-swatch",
-        attr: {
-          type: "button",
-          title: theme.label,
-          "aria-label": `\u4E3B\u9898: ${theme.label}`,
-          "data-theme": theme.id
-        }
-      });
-      swatch.style.background = theme.swatch;
-      swatch.toggleClass("is-active", theme.id === this.currentTheme);
-      swatch.addEventListener("click", () => this.switchTheme(theme.id));
-    }
   }
   // ================================================================
   // 侧边栏
@@ -13069,7 +13279,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
    * 配置 foliate-view 的布局属性。
    */
   configureFoliateView(view) {
-    this.layoutController = new EpubLayoutController(view, this.currentFlowMode);
+    this.layoutController = new EpubLayoutController(view, this.currentFlowMode, this.currentContentWidth);
     this.layoutController.initialize();
   }
   /**
@@ -13214,7 +13424,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       this.offerAnnotationUndo(this.file, annotation.id, "\u9AD8\u4EAE");
     } catch (error) {
       console.error("yh-inklight: EPUB highlight creation failed", error);
-      new import_obsidian12.Notice("\u753B\u7EBF\u521B\u5EFA\u5931\u8D25");
+      new import_obsidian13.Notice("\u753B\u7EBF\u521B\u5EFA\u5931\u8D25");
     }
   }
   /**
@@ -13267,7 +13477,7 @@ var EpubReaderView = class extends import_obsidian12.FileView {
           this.offerAnnotationUndo(this.file, annotation.id, "\u6279\u6CE8");
         } catch (error) {
           console.error("yh-inklight: EPUB comment creation failed", error);
-          new import_obsidian12.Notice("\u6807\u6CE8\u521B\u5EFA\u5931\u8D25");
+          new import_obsidian13.Notice("\u6807\u6CE8\u521B\u5EFA\u5931\u8D25");
         }
       }
     ).open();
@@ -13329,10 +13539,10 @@ var EpubReaderView = class extends import_obsidian12.FileView {
       this.refreshRenditionAnnotations();
       this.renderSidebar();
       this.refreshAnnotations();
-      new import_obsidian12.Notice("\u6807\u6CE8\u5DF2\u5220\u9664");
+      new import_obsidian13.Notice("\u6807\u6CE8\u5DF2\u5220\u9664");
     } catch (error) {
       console.error("yh-inklight: EPUB annotation deletion failed", error);
-      new import_obsidian12.Notice("\u6807\u6CE8\u5220\u9664\u5931\u8D25");
+      new import_obsidian13.Notice("\u6807\u6CE8\u5220\u9664\u5931\u8D25");
     }
   }
   /**
@@ -13627,52 +13837,11 @@ var EpubReaderView = class extends import_obsidian12.FileView {
   // 字号 & 主题
   // ================================================================
   /**
-   * 调整阅读字号。
-   *
-   * @param delta - 字号变化量（正数增大，负数缩小）
-   */
-  changeFontSize(delta) {
-    const nextSize = Math.max(12, Math.min(28, this.currentFontSize + delta));
-    if (nextSize === this.currentFontSize) {
-      return;
-    }
-    this.currentFontSize = nextSize;
-    this.applyFontSize(nextSize);
-    this.renderToolbar();
-  }
-  /**
-   * 将字号应用到 foliate 主题样式。
-   *
-   * @param size - 字号像素值
-   */
-  applyFontSize(size) {
-    this.applyFoliateAppearance(size);
-  }
-  /**
-   * 切换阅读主题。
-   *
-   * @param themeId - 目标主题 ID
-   */
-  switchTheme(themeId) {
-    if (themeId === this.currentTheme) {
-      return;
-    }
-    this.currentTheme = themeId;
-    this.applyFoliateAppearance();
-    this.renderToolbar();
-  }
-  /**
-   * 切换翻页模式（分页/滚动）。
+   * 快速切换翻页模式；完整排版设置在阅读设置面板中维护。
    */
   toggleFlowMode() {
     const nextMode = this.currentFlowMode === "paginated" ? "scrolled" : "paginated";
-    this.currentFlowMode = nextMode;
-    if (!this.foliateView) {
-      return;
-    }
-    this.layoutController?.setFlow(nextMode);
-    this.applyFoliateAppearance();
-    this.renderToolbar();
+    this.updateReadingProfile({ ...this.readingProfile, flow: nextMode });
   }
   // ================================================================
   // 阅读时间追踪
@@ -13781,6 +13950,14 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     this.refreshRenditionAnnotations();
     this.renderSidebar();
   }
+  /** 设置页保存 EPUB 排版后，同步已打开的阅读视图。 */
+  refreshExternalSettings() {
+    const next = this.pluginSettings.epubReadingProfile ? normalizeEpubReadingProfile(this.pluginSettings.epubReadingProfile) : createEpubReadingProfileFromLegacy(this.pluginSettings);
+    if (JSON.stringify(next) === JSON.stringify(this.readingProfile)) {
+      return;
+    }
+    this.updateReadingProfile(next, false);
+  }
   // ================================================================
   // 脚注预览 & 段落模式（Phase 4-B P3，均未实现）
   // ================================================================
@@ -13798,6 +13975,10 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     if (this.wheelDebounceTimer !== null) {
       window.clearTimeout(this.wheelDebounceTimer);
       this.wheelDebounceTimer = null;
+    }
+    if (this.profileSaveTimer !== null) {
+      window.clearTimeout(this.profileSaveTimer);
+      this.profileSaveTimer = null;
     }
     this.searchController?.dispose();
     this.searchController = null;
@@ -13901,12 +14082,19 @@ var EpubReaderView = class extends import_obsidian12.FileView {
     }
     this.renderedAnnotationMeta.delete(annotation.id);
   }
-  applyFoliateAppearance(size = this.currentFontSize) {
+  applyFoliateAppearance() {
     if (!this.foliateView || !this.layoutController) {
       return;
     }
     const colors = this.themeManager.resolveThemeColors(this.currentTheme);
-    this.layoutController.applyAppearance(colors, size, this.readerContainerEl);
+    this.layoutController.applyAppearance(
+      colors,
+      this.currentFontSize,
+      this.currentLineHeight,
+      this.currentFontFamily,
+      this.currentTextAlign,
+      this.readerContainerEl
+    );
   }
   applyFoliateLayout() {
     this.layoutController?.apply();
@@ -13981,9 +14169,9 @@ var EpubReaderView = class extends import_obsidian12.FileView {
 };
 
 // src/epub/EpubBookshelfView.ts
-var import_obsidian13 = require("obsidian");
+var import_obsidian14 = require("obsidian");
 var EPUB_BOOKSHELF_VIEW_TYPE = "inklight-epub-bookshelf";
-var EpubBookshelfView = class extends import_obsidian13.ItemView {
+var EpubBookshelfView = class extends import_obsidian14.ItemView {
   constructor(leaf, store, onOpen) {
     super(leaf);
     this.store = store;
@@ -14084,7 +14272,7 @@ var EpubBookshelfView = class extends import_obsidian13.ItemView {
 };
 
 // src/epub/EpubGotoHandler.ts
-var import_obsidian14 = require("obsidian");
+var import_obsidian15 = require("obsidian");
 var CALLOUT_TYPE = "inklight-epub";
 var CFI_COMMENT_RE = /<!--\s*yh-epub-cfi:\s*(epubcfi\([\s\S]*?\))\s*-->/;
 var SOURCE_EXTENSIONS = ["epub", "mobi", "azw3", "fb2", "fbz", "cbz", "txt"];
@@ -14158,7 +14346,7 @@ function wireGotoAnchor(anchor, sourcePath, goto, resolveAnn, app) {
       void goto(target.file, target.cfi);
       return;
     }
-    new import_obsidian14.Notice("Unable to resolve source annotation");
+    new import_obsidian15.Notice("Unable to resolve source annotation");
   });
 }
 function findTargetNear(container, exportPath, app) {
@@ -14219,7 +14407,7 @@ var YH_INKLIGHT_ICON = `
     </g>
   </svg>
 `;
-var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
+var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
   constructor() {
     super(...arguments);
     this.settings = DEFAULT_SETTINGS;
@@ -14228,7 +14416,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
     this.annotationUndo = null;
   }
   async onload() {
-    (0, import_obsidian15.addIcon)("yh-inklight-icon", YH_INKLIGHT_ICON);
+    (0, import_obsidian16.addIcon)("yh-inklight-icon", YH_INKLIGHT_ICON);
     await this.loadSettings();
     console.info(`yh-inklight loaded v${this.manifest.version}`);
     this.store = new AnnotationStore(this.app, () => this.settings.annotationTags);
@@ -14241,7 +14429,8 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
         this.store,
         this.settings,
         () => this.refreshAnnotations(),
-        (file, annotationId, label) => this.offerAnnotationUndo(file, annotationId, label)
+        (file, annotationId, label) => this.offerAnnotationUndo(file, annotationId, label),
+        () => this.saveSettings()
       )
     );
     try {
@@ -14344,11 +14533,21 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
   }
   async loadSettings() {
     const stored = await this.loadData() ?? {};
+    const storedSettings = stored;
+    const readingProfile = storedSettings.epubReadingProfile ? normalizeEpubReadingProfile(storedSettings.epubReadingProfile) : createEpubReadingProfileFromLegacy(storedSettings);
     this.settings = {
       ...DEFAULT_SETTINGS,
       ...stored,
-      annotationTags: normalizeAnnotationTags(stored.annotationTags)
+      annotationTags: normalizeAnnotationTags(stored.annotationTags),
+      epubReadingProfile: readingProfile
     };
+    if (!storedSettings.epubReadingProfile) {
+      try {
+        await this.saveData(this.settings);
+      } catch (error) {
+        console.warn("yh-inklight: EPUB \u9605\u8BFB\u6392\u7248\u8FC1\u79FB\u4FDD\u5B58\u5931\u8D25\uFF0C\u5C06\u5728\u4E0B\u6B21\u542F\u52A8\u91CD\u8BD5", error);
+      }
+    }
   }
   async saveSettings() {
     await this.saveData(this.settings);
@@ -14372,6 +14571,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
       const view = leaf.view;
       if (view instanceof EpubReaderView) {
         view.refreshExternalAnnotations();
+        view.refreshExternalSettings();
       }
     }
     const activeFile = this.app.workspace.getActiveFile();
@@ -14383,7 +14583,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
   async gotoPdfPage(pageNumber) {
     const ok = await this.pdfViewerAdapter.goToPage(pageNumber, { flash: true, block: "center" });
     if (!ok) {
-      new import_obsidian15.Notice(`\u672A\u627E\u5230\u7B2C ${pageNumber} \u9875`);
+      new import_obsidian16.Notice(`\u672A\u627E\u5230\u7B2C ${pageNumber} \u9875`);
     }
   }
   registerRibbonIcon() {
@@ -14420,12 +14620,12 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
       name: "\u663E\u793A PDF \u76EE\u5F55",
       callback: async () => {
         if (!this.pdfLayer.isPdfActive()) {
-          new import_obsidian15.Notice("\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A PDF \u6587\u4EF6");
+          new import_obsidian16.Notice("\u8BF7\u5148\u6253\u5F00\u4E00\u4E2A PDF \u6587\u4EF6");
           return;
         }
         const outline = await this.pdfLayer.getOutline();
         if (outline.length === 0) {
-          new import_obsidian15.Notice("\u8BE5 PDF \u6CA1\u6709\u76EE\u5F55");
+          new import_obsidian16.Notice("\u8BE5 PDF \u6CA1\u6709\u76EE\u5F55");
           return;
         }
         const lines = outline.map((item) => {
@@ -14433,7 +14633,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian15.Plugin {
           const children = item.children.filter((c2) => c2.pageNumber > 0).map((c2) => `  \u2514 ${c2.title} \u2192 p.${c2.pageNumber}`).join("\n");
           return `${item.title}${pageInfo}${children ? "\n" + children : ""}`;
         });
-        new import_obsidian15.Notice(`PDF \u76EE\u5F55\uFF08${outline.length} \u9879\uFF09\uFF1A
+        new import_obsidian16.Notice(`PDF \u76EE\u5F55\uFF08${outline.length} \u9879\uFF09\uFF1A
 ${lines.slice(0, 8).join("\n")}`);
       }
     });
@@ -14443,9 +14643,9 @@ ${lines.slice(0, 8).join("\n")}`);
       callback: async () => {
         try {
           const path = await this.store.testWriteAccess();
-          new import_obsidian15.Notice(`\u58A8\u5149\u6279\u6CE8\u5B58\u50A8\u53EF\u5199\uFF1A${path}`);
+          new import_obsidian16.Notice(`\u58A8\u5149\u6279\u6CE8\u5B58\u50A8\u53EF\u5199\uFF1A${path}`);
         } catch {
-          new import_obsidian15.Notice("\u58A8\u5149\u6279\u6CE8\u5B58\u50A8\u4E0D\u53EF\u5199\uFF0C\u8BF7\u68C0\u67E5 .obsidian-annotations \u76EE\u5F55\u6743\u9650\u6216\u540C\u6B65\u72B6\u6001\u3002");
+          new import_obsidian16.Notice("\u58A8\u5149\u6279\u6CE8\u5B58\u50A8\u4E0D\u53EF\u5199\uFF0C\u8BF7\u68C0\u67E5 .obsidian-annotations \u76EE\u5F55\u6743\u9650\u6216\u540C\u6B65\u72B6\u6001\u3002");
         }
       }
     });
@@ -14462,7 +14662,7 @@ ${lines.slice(0, 8).join("\n")}`);
     });
     this.registerEvent(
       this.app.vault.on("modify", async (file) => {
-        if (!(file instanceof import_obsidian15.TFile) || file.extension !== "md") {
+        if (!(file instanceof import_obsidian16.TFile) || file.extension !== "md") {
           return;
         }
         const document2 = await this.store.getDocument(file);
@@ -14478,7 +14678,7 @@ ${lines.slice(0, 8).join("\n")}`);
     );
     this.registerEvent(
       this.app.vault.on("rename", async (file, oldPath) => {
-        if (!this.settings.migrateOnRename || !(file instanceof import_obsidian15.TFile)) {
+        if (!this.settings.migrateOnRename || !(file instanceof import_obsidian16.TFile)) {
           return;
         }
         const ext = file.extension.toLowerCase();
@@ -14499,7 +14699,7 @@ ${lines.slice(0, 8).join("\n")}`);
     );
     this.registerEvent(
       this.app.workspace.on("file-open", async (file) => {
-        if (file instanceof import_obsidian15.TFile && ["md", "pdf"].includes(file.extension.toLowerCase())) {
+        if (file instanceof import_obsidian16.TFile && ["md", "pdf"].includes(file.extension.toLowerCase())) {
           this.popover.hide();
           await this.store.getDocument(file);
           await this.refreshAnnotations();
@@ -14515,11 +14715,11 @@ ${lines.slice(0, 8).join("\n")}`);
     }
     const snapshot = await this.resolveSelection();
     if (!snapshot) {
-      new import_obsidian15.Notice("\u8BF7\u5148\u9009\u4E2D\u6587\u672C\u3002");
+      new import_obsidian16.Notice("\u8BF7\u5148\u9009\u4E2D\u6587\u672C\u3002");
       return;
     }
     const file = this.app.vault.getAbstractFileByPath(snapshot.filePath);
-    if (!(file instanceof import_obsidian15.TFile)) {
+    if (!(file instanceof import_obsidian16.TFile)) {
       return;
     }
     const highlight = {
@@ -14552,11 +14752,11 @@ ${lines.slice(0, 8).join("\n")}`);
     }
     const snapshot = await this.resolveSelection();
     if (!snapshot) {
-      new import_obsidian15.Notice("\u8BF7\u5148\u9009\u4E2D\u6587\u672C\u3002");
+      new import_obsidian16.Notice("\u8BF7\u5148\u9009\u4E2D\u6587\u672C\u3002");
       return;
     }
     const file = this.app.vault.getAbstractFileByPath(snapshot.filePath);
-    if (!(file instanceof import_obsidian15.TFile)) {
+    if (!(file instanceof import_obsidian16.TFile)) {
       return;
     }
     const note = await new CommentModal(this.app, this.settings.annotationTags, "", "").openAndRead();
@@ -14587,14 +14787,14 @@ ${lines.slice(0, 8).join("\n")}`);
   }
   async refreshActiveReadingViewHighlights(filePath) {
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (!(file instanceof import_obsidian15.TFile)) {
+    if (!(file instanceof import_obsidian16.TFile)) {
       return;
     }
     const document2 = this.store.getCachedDocument(filePath) ?? await this.store.getDocument(file);
     const marks = [...document2.highlights, ...document2.comments].filter((item) => !item.orphaned);
     for (const leaf of this.app.workspace.getLeavesOfType("markdown")) {
       const view = leaf.view;
-      if (!(view instanceof import_obsidian15.MarkdownView) || view.file?.path !== filePath) {
+      if (!(view instanceof import_obsidian16.MarkdownView) || view.file?.path !== filePath) {
         continue;
       }
       const previewRoot = findPreviewRoot(view);
@@ -14614,7 +14814,7 @@ ${lines.slice(0, 8).join("\n")}`);
   }
   offerAnnotationUndo(file, annotationId, label) {
     this.clearAnnotationUndo();
-    const notice = new import_obsidian15.Notice("", 7e3);
+    const notice = new import_obsidian16.Notice("", 7e3);
     const message = notice.messageEl ?? notice.noticeEl;
     message.empty();
     message.createSpan({ text: `\u5DF2\u6DFB\u52A0${label} ` });
@@ -14640,13 +14840,13 @@ ${lines.slice(0, 8).join("\n")}`);
     }
     this.clearAnnotationUndo();
     const file = this.app.vault.getAbstractFileByPath(pending.filePath);
-    if (!(file instanceof import_obsidian15.TFile)) {
+    if (!(file instanceof import_obsidian16.TFile)) {
       return;
     }
     await this.store.removeAnnotation(file, pending.annotationId);
     await this.refreshAnnotationPresentation(file);
     await this.refreshAnnotations();
-    new import_obsidian15.Notice(`\u5DF2\u64A4\u9500${pending.label}`);
+    new import_obsidian16.Notice(`\u5DF2\u64A4\u9500${pending.label}`);
   }
   clearAnnotationUndo() {
     if (!this.annotationUndo) {
@@ -14713,7 +14913,7 @@ ${lines.slice(0, 8).join("\n")}`);
     return null;
   }
   activeEditor() {
-    const view = this.app.workspace.getActiveViewOfType(import_obsidian15.MarkdownView);
+    const view = this.app.workspace.getActiveViewOfType(import_obsidian16.MarkdownView);
     return view ? { editor: view.editor, file: view.file } : null;
   }
   async activateSidebar() {
@@ -14755,13 +14955,13 @@ ${lines.slice(0, 8).join("\n")}`);
   }
   async copyAnnotationLink(filePath, annotationId) {
     await navigator.clipboard.writeText(this.annotationLinks.createUri(filePath, annotationId));
-    new import_obsidian15.Notice("\u5DF2\u590D\u5236\u6279\u6CE8\u94FE\u63A5");
+    new import_obsidian16.Notice("\u5DF2\u590D\u5236\u6279\u6CE8\u94FE\u63A5");
   }
   async openMarkdownAtAnchor(file, anchor, annotationId) {
     const leaf = this.app.workspace.getLeaf("tab");
     await leaf.openFile(file);
     this.app.workspace.revealLeaf(leaf);
-    const view = leaf.view instanceof import_obsidian15.MarkdownView ? leaf.view : this.app.workspace.getActiveViewOfType(import_obsidian15.MarkdownView);
+    const view = leaf.view instanceof import_obsidian16.MarkdownView ? leaf.view : this.app.workspace.getActiveViewOfType(import_obsidian16.MarkdownView);
     if (!view) {
       return false;
     }
@@ -14786,7 +14986,7 @@ ${lines.slice(0, 8).join("\n")}`);
       }
       await new Promise((resolve) => window.setTimeout(resolve, 100));
     }
-    new import_obsidian15.Notice("PDF \u9605\u8BFB\u89C6\u56FE\u672A\u80FD\u53CA\u65F6\u5C31\u7EEA");
+    new import_obsidian16.Notice("PDF \u9605\u8BFB\u89C6\u56FE\u672A\u80FD\u53CA\u65F6\u5C31\u7EEA");
     return false;
   }
   async openEpubAtAnchor(file, cfi, annotationId) {
@@ -14809,8 +15009,8 @@ ${lines.slice(0, 8).join("\n")}`);
    */
   async openEpubAtCfi(filePath, cfi) {
     const file = this.app.vault.getAbstractFileByPath(filePath);
-    if (!(file instanceof import_obsidian15.TFile) || !SUPPORTED_BOOK_EXTENSIONS.includes(file.extension.toLowerCase())) {
-      new import_obsidian15.Notice("\u65E0\u6CD5\u627E\u5230\u5BF9\u5E94\u7684\u7535\u5B50\u4E66\u6587\u4EF6");
+    if (!(file instanceof import_obsidian16.TFile) || !SUPPORTED_BOOK_EXTENSIONS.includes(file.extension.toLowerCase())) {
+      new import_obsidian16.Notice("\u65E0\u6CD5\u627E\u5230\u5BF9\u5E94\u7684\u7535\u5B50\u4E66\u6587\u4EF6");
       return;
     }
     await this.openEpubAtAnchor(file, cfi, "");
@@ -14833,14 +15033,14 @@ ${lines.slice(0, 8).join("\n")}`);
       }
       await new Promise((resolve) => window.setTimeout(resolve, 100));
     }
-    new import_obsidian15.Notice("\u7535\u5B50\u4E66\u9605\u8BFB\u89C6\u56FE\u672A\u80FD\u53CA\u65F6\u5C31\u7EEA");
+    new import_obsidian16.Notice("\u7535\u5B50\u4E66\u9605\u8BFB\u89C6\u56FE\u672A\u80FD\u53CA\u65F6\u5C31\u7EEA");
     return false;
   }
   copySelection() {
     const text = window.getSelection()?.toString() || this.activeEditor()?.editor.getSelection() || "";
     if (text) {
       navigator.clipboard.writeText(text);
-      new import_obsidian15.Notice("Copied selection");
+      new import_obsidian16.Notice("Copied selection");
     }
   }
   async handleAnnotationClick(event) {
@@ -14858,7 +15058,7 @@ ${lines.slice(0, 8).join("\n")}`);
     }
     const annotationId = mark.dataset.yhId;
     const file = this.app.workspace.getActiveFile();
-    if (!annotationId || !(file instanceof import_obsidian15.TFile)) {
+    if (!annotationId || !(file instanceof import_obsidian16.TFile)) {
       return;
     }
     const document2 = this.store.getCachedDocument(file.path) ?? await this.store.getDocument(file);
@@ -14885,7 +15085,7 @@ ${lines.slice(0, 8).join("\n")}`);
     }
     await sleep(100);
     const file = this.app.vault.getAbstractFileByPath(context.sourcePath);
-    if (!(file instanceof import_obsidian15.TFile)) {
+    if (!(file instanceof import_obsidian16.TFile)) {
       return;
     }
     const document2 = await this.store.getDocument(file);
@@ -15038,7 +15238,7 @@ function nthIndexOf(source, target, occurrenceIndex) {
   }
   return -1;
 }
-var CommentModal = class extends import_obsidian15.Modal {
+var CommentModal = class extends import_obsidian16.Modal {
   constructor(app, tags, initialTitle, initialContent, initialTagId) {
     super(app);
     this.tags = tags;
