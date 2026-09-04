@@ -7,6 +7,7 @@ import process from "node:process";
 const root = process.cwd();
 const testDir = path.join(root, "tests");
 const outputDir = path.join(root, ".test-build");
+const obsidianStub = path.join(testDir, "support", "obsidian-stub.mjs");
 
 await rm(outputDir, { recursive: true, force: true });
 await mkdir(outputDir, { recursive: true });
@@ -27,6 +28,12 @@ try {
     platform: "node",
     format: "esm",
     target: "node20",
+    plugins: [{
+      name: "test-obsidian-stub",
+      setup(buildContext) {
+        buildContext.onResolve({ filter: /^obsidian$/ }, () => ({ path: obsidianStub }));
+      },
+    }],
     outExtension: { ".js": ".mjs" },
     logLevel: "silent",
   });

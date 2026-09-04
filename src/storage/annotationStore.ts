@@ -9,6 +9,7 @@ import { App, normalizePath, Notice, TFile } from "obsidian";
 
 import { createAnnotationUri } from "../links/annotationLink";
 import { AnnotationTagDefinition, resolveAnnotationTag } from "../tags/tagDomain";
+import { mergeAnnotationDocuments } from "./documentMerge";
 import {
   AnnotationIndex,
   AnnotationIndexEntry,
@@ -31,6 +32,7 @@ import {
 
 const STORE_DIR = ".obsidian-annotations";
 const INDEX_PATH = normalizePath(`${STORE_DIR}/index.json`);
+const INDEX_BACKUP_PATH = normalizePath(`${INDEX_PATH}.bak`);
 const MAX_LEGACY_SIDECAR_NAME_LENGTH = 180;
 const MAX_COMPACT_SIDECAR_PREFIX_LENGTH = 96;
 
@@ -95,7 +97,29 @@ export class AnnotationStore {
 
   async initialize(): Promise<void> {
     await this.ensureStoreDir();
-    this.index = await this.readJson<AnnotationIndex>(INDEX_PATH, EMPTY_INDEX, { allowCorruptFallback: true });
+    if (!(await this.app.vault.adapter.exists(INDEX_PATH))) {
+      this.index = EMPTY_INDEX;
+      return;
+    }
+
+    try {
+      const candidate = await this.readJson<unknown>(INDEX_PATH, EMPTY_INDEX);
+      if (!isAnnotationIndex(candidate)) {
+        throw new Error("Invalid annotation index shape");
+      }
+      this.index = candidate;
+    } catch (error) {
+      try {
+        await this.backupRawFile(INDEX_PATH, INDEX_BACKUP_PATH);
+        this.index = await this.rebuildIndex();
+        await this.writeIndex(this.index);
+        new Notice("墨光批注索引已损坏，已备份并从 sidecar 重建。\n请检查 .obsidian-annotations/index.json.bak。", 8000);
+      } catch (rebuildError) {
+        this.index = EMPTY_INDEX;
+        new Notice("墨光批注索引损坏，备份或重建失败；已停止索引写入以保护 sidecar。", 10000);
+        console.error("yh-inklight: failed to rebuild annotation index", error, rebuildError);
+      }
+    }
   }
 
   getCachedDocument(filePath: string): FileAnnotationDocument | null {
@@ -126,15 +150,25 @@ export class AnnotationStore {
       return cached;
     }
 
-    const sidecarPath = this.toSidecarPath(filePath);
-    const fallback = await this.createEmptyDocument(file);
-    const document = await this.readJson<FileAnnotationDocument>(sidecarPath, fallback);
-    this.documents.set(cacheKey, this.normalizeDocument(document, filePath));
+    const document = await this.readDocumentFromDisk(file);
+    this.documents.set(cacheKey, document);
     return this.documents.get(cacheKey)!;
   }
 
   async saveDocument(document: FileAnnotationDocument): Promise<void> {
-    await this.enqueueDocument(document.filePath, () => this.persistDocument(document));
+    await this.enqueueDocument(document.filePath, async () => {
+      const file = this.app.vault.getAbstractFileByPath(this.normalizeVaultPath(document.filePath));
+      if (!(file instanceof TFile)) {
+        await this.persistDocument(document);
+        return;
+      }
+
+      const cached = this.documents.get(this.toCacheKey(file.path));
+      const base = cached ? cloneDocument(cached) : await this.readDocumentFromDisk(file);
+      const intended = this.normalizeDocument(cloneDocument(document), file.path);
+      const disk = await this.readDocumentFromDisk(file);
+      await this.persistDocument(mergeAnnotationDocuments(base, intended, disk));
+    });
   }
 
   async mutateDocument(
@@ -142,8 +176,11 @@ export class AnnotationStore {
     updater: (document: FileAnnotationDocument) => FileAnnotationDocument,
   ): Promise<FileAnnotationDocument> {
     return this.enqueueDocument(file.path, async () => {
-      const document = await this.getDocument(file);
-      const nextDocument = updater(document);
+      const cached = this.documents.get(this.toCacheKey(file.path));
+      const base = cached ? cloneDocument(cached) : await this.readDocumentFromDisk(file);
+      const intended = this.normalizeDocument(updater(cloneDocument(base)), file.path);
+      const disk = await this.readDocumentFromDisk(file);
+      const nextDocument = mergeAnnotationDocuments(base, intended, disk);
       await this.persistDocument(nextDocument);
       return this.getCachedDocument(file.path) ?? nextDocument;
     });
@@ -179,6 +216,9 @@ export class AnnotationStore {
 
     try {
       await this.ensureStoreDir();
+      if (await this.app.vault.adapter.exists(sidecarPath)) {
+        await this.backupExistingJson(sidecarPath, this.toBackupPath(sidecarPath));
+      }
       await this.app.vault.adapter.write(sidecarPath, JSON.stringify(normalized, null, 2));
       const persisted = await this.readExistingJson<FileAnnotationDocument>(sidecarPath);
       this.verifyPersistedDocument(normalized, persisted, sidecarPath);
@@ -601,20 +641,7 @@ export class AnnotationStore {
 
   private verifyPersistedDocument(expected: FileAnnotationDocument, persisted: FileAnnotationDocument, sidecarPath: string): void {
     const normalizedPersisted = this.normalizeDocument(persisted, expected.filePath);
-    const countsMatch =
-      normalizedPersisted.highlights.length === expected.highlights.length &&
-      normalizedPersisted.comments.length === expected.comments.length &&
-      normalizedPersisted.pdfHighlights.length === expected.pdfHighlights.length &&
-      normalizedPersisted.pdfComments.length === expected.pdfComments.length &&
-      normalizedPersisted.epubHighlights.length === expected.epubHighlights.length &&
-      normalizedPersisted.epubComments.length === expected.epubComments.length &&
-      normalizedPersisted.bookmarks.length === expected.bookmarks.length;
-
-    if (
-      normalizedPersisted.filePath !== expected.filePath ||
-      normalizedPersisted.lastModified !== expected.lastModified ||
-      !countsMatch
-    ) {
+    if (JSON.stringify(normalizedPersisted) !== JSON.stringify(expected)) {
       throw new Error(`Persisted sidecar verification failed: ${sidecarPath}`);
     }
   }
@@ -622,7 +649,6 @@ export class AnnotationStore {
   private async readJson<T>(
     path: string,
     fallback: T,
-    options: { allowCorruptFallback?: boolean } = {},
   ): Promise<T> {
     const normalizedPath = normalizePath(path);
     if (!(await this.app.vault.adapter.exists(normalizedPath))) {
@@ -632,12 +658,66 @@ export class AnnotationStore {
     try {
       return JSON.parse(await this.app.vault.adapter.read(normalizedPath)) as T;
     } catch (error) {
-      if (options.allowCorruptFallback) {
-        return fallback;
-      }
       new Notice(`墨光批注无法读取 ${normalizedPath}，已停止写入以保护批注数据。`);
       throw new AnnotationStoreReadError(normalizedPath, error);
     }
+  }
+
+  private async readDocumentFromDisk(file: TFile): Promise<FileAnnotationDocument> {
+    const sidecarPath = this.toSidecarPath(file.path);
+    if (!(await this.app.vault.adapter.exists(sidecarPath))) {
+      return this.createEmptyDocument(file);
+    }
+
+    const document = await this.readJson<FileAnnotationDocument | null>(sidecarPath, null);
+    if (!document || typeof document !== "object") {
+      throw new AnnotationStoreReadError(sidecarPath, new Error("Invalid sidecar document"));
+    }
+    return this.normalizeDocument(document, file.path);
+  }
+
+  private toBackupPath(path: string): string {
+    return normalizePath(`${path}.bak`);
+  }
+
+  private async backupExistingJson(path: string, backupPath: string): Promise<void> {
+    const normalizedPath = normalizePath(path);
+    const raw = await this.app.vault.adapter.read(normalizedPath);
+    JSON.parse(raw);
+    await this.app.vault.adapter.write(normalizePath(backupPath), raw);
+  }
+
+  private async backupRawFile(path: string, backupPath: string): Promise<void> {
+    const raw = await this.app.vault.adapter.read(normalizePath(path));
+    await this.app.vault.adapter.write(normalizePath(backupPath), raw);
+  }
+
+  private async rebuildIndex(): Promise<AnnotationIndex> {
+    const listing = await this.app.vault.adapter.list(STORE_DIR);
+    const files: Record<string, AnnotationIndexEntry> = {};
+
+    const sidecarPaths = listing.files
+      .map((path) => normalizePath(path))
+      .filter((path) => path.endsWith(".json") && path !== INDEX_PATH && path !== INDEX_BACKUP_PATH && !path.endsWith(".bak"));
+
+    for (const sidecarPath of sidecarPaths) {
+      try {
+        const document = await this.readJson<FileAnnotationDocument | null>(sidecarPath, null);
+        if (!document || typeof document !== "object" || !document.filePath) {
+          continue;
+        }
+        const normalized = this.normalizeDocument(document, document.filePath);
+        const sourceFile = this.app.vault.getAbstractFileByPath(normalized.filePath);
+        if (sourceFile instanceof TFile) {
+          files[normalized.filePath] = this.toIndexEntry(normalized, sidecarPath);
+        }
+      } catch (error) {
+        new Notice(`墨光批注跳过损坏 sidecar：${sidecarPath}`);
+        console.warn("yh-inklight: skipped invalid sidecar while rebuilding index", sidecarPath, error);
+      }
+    }
+
+    return { version: EMPTY_INDEX.version, files };
   }
 
   private async readExistingJson<T>(path: string): Promise<T> {
@@ -720,6 +800,18 @@ function hashPath(value: string): string {
     hash = Math.imul(hash, 0x01000193);
   }
   return (hash >>> 0).toString(16).padStart(8, "0");
+}
+
+function isAnnotationIndex(value: unknown): value is AnnotationIndex {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const candidate = value as Partial<AnnotationIndex>;
+  return candidate.version === EMPTY_INDEX.version && !!candidate.files && typeof candidate.files === "object" && !Array.isArray(candidate.files);
+}
+
+function cloneDocument(document: FileAnnotationDocument): FileAnnotationDocument {
+  return JSON.parse(JSON.stringify(document)) as FileAnnotationDocument;
 }
 
 function buildExportLines(

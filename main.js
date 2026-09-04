@@ -9745,8 +9745,111 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
 
 // src/storage/annotationStore.ts
 var import_obsidian7 = require("obsidian");
+
+// src/storage/documentMerge.ts
+var ARRAY_FIELDS = [
+  "highlights",
+  "comments",
+  "pdfHighlights",
+  "pdfComments",
+  "epubHighlights",
+  "epubComments",
+  "bookmarks",
+  "canvasNodes"
+];
+function mergeAnnotationDocuments(base, intended, disk) {
+  const merged = cloneDocument(disk);
+  for (const field of ARRAY_FIELDS) {
+    merged[field] = mergeIdArray(
+      base[field],
+      intended[field],
+      disk[field]
+    );
+  }
+  merged.filePath = intended.filePath || disk.filePath || base.filePath;
+  merged.fileHash = intended.fileHash !== base.fileHash ? intended.fileHash : disk.fileHash || intended.fileHash;
+  merged.lastModified = latestTimestamp(intended.lastModified, disk.lastModified, base.lastModified);
+  if (!documentsEqual(intended.epubProgress, base.epubProgress)) {
+    merged.epubProgress = latestProgress(intended.epubProgress, disk.epubProgress);
+  } else {
+    merged.epubProgress = disk.epubProgress;
+  }
+  if (!documentsEqual(intended.pdfProgress, base.pdfProgress)) {
+    merged.pdfProgress = latestProgress(intended.pdfProgress, disk.pdfProgress);
+  } else {
+    merged.pdfProgress = disk.pdfProgress;
+  }
+  if (!documentsEqual(intended.canvasBinding, base.canvasBinding)) {
+    merged.canvasBinding = intended.canvasBinding;
+  } else {
+    merged.canvasBinding = disk.canvasBinding;
+  }
+  return merged;
+}
+function mergeIdArray(base, intended, disk) {
+  const baseById = new Map(base.map((item) => [item.id, item]));
+  const intendedById = new Map(intended.map((item) => [item.id, item]));
+  const diskById = new Map(disk.map((item) => [item.id, item]));
+  const localRemoved = /* @__PURE__ */ new Set();
+  const localChanged = /* @__PURE__ */ new Map();
+  for (const [id] of baseById) {
+    if (!intendedById.has(id)) {
+      localRemoved.add(id);
+    }
+  }
+  for (const [id, item] of intendedById) {
+    const baseItem = baseById.get(id);
+    if (!baseItem || !documentsEqual(item, baseItem)) {
+      localChanged.set(id, item);
+    }
+  }
+  const result = new Map(diskById);
+  for (const id of localRemoved) {
+    result.delete(id);
+  }
+  for (const [id, item] of localChanged) {
+    result.set(id, item);
+  }
+  const orderedIds = [];
+  for (const item of intended) {
+    if (!orderedIds.includes(item.id) && result.has(item.id)) {
+      orderedIds.push(item.id);
+    }
+  }
+  for (const item of disk) {
+    if (!orderedIds.includes(item.id) && result.has(item.id)) {
+      orderedIds.push(item.id);
+    }
+  }
+  return orderedIds.map((id) => result.get(id));
+}
+function latestProgress(intended, disk) {
+  if (!intended) return disk;
+  if (!disk) return intended;
+  return timestampValue(intended.lastRead) >= timestampValue(disk.lastRead) ? intended : disk;
+}
+function latestTimestamp(...values) {
+  return values.reduce((latest, value) => {
+    if (!value) return latest;
+    return timestampValue(value) >= timestampValue(latest) ? value : latest;
+  }, "");
+}
+function timestampValue(value) {
+  if (!value) return 0;
+  const parsed = Date.parse(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+function documentsEqual(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+function cloneDocument(document2) {
+  return JSON.parse(JSON.stringify(document2));
+}
+
+// src/storage/annotationStore.ts
 var STORE_DIR = ".obsidian-annotations";
 var INDEX_PATH = (0, import_obsidian7.normalizePath)(`${STORE_DIR}/index.json`);
+var INDEX_BACKUP_PATH = (0, import_obsidian7.normalizePath)(`${INDEX_PATH}.bak`);
 var MAX_LEGACY_SIDECAR_NAME_LENGTH = 180;
 var MAX_COMPACT_SIDECAR_PREFIX_LENGTH = 96;
 var AnnotationStoreReadError = class extends Error {
@@ -9780,7 +9883,28 @@ var AnnotationStore = class {
   }
   async initialize() {
     await this.ensureStoreDir();
-    this.index = await this.readJson(INDEX_PATH, EMPTY_INDEX, { allowCorruptFallback: true });
+    if (!await this.app.vault.adapter.exists(INDEX_PATH)) {
+      this.index = EMPTY_INDEX;
+      return;
+    }
+    try {
+      const candidate = await this.readJson(INDEX_PATH, EMPTY_INDEX);
+      if (!isAnnotationIndex(candidate)) {
+        throw new Error("Invalid annotation index shape");
+      }
+      this.index = candidate;
+    } catch (error) {
+      try {
+        await this.backupRawFile(INDEX_PATH, INDEX_BACKUP_PATH);
+        this.index = await this.rebuildIndex();
+        await this.writeIndex(this.index);
+        new import_obsidian7.Notice("\u58A8\u5149\u6279\u6CE8\u7D22\u5F15\u5DF2\u635F\u574F\uFF0C\u5DF2\u5907\u4EFD\u5E76\u4ECE sidecar \u91CD\u5EFA\u3002\n\u8BF7\u68C0\u67E5 .obsidian-annotations/index.json.bak\u3002", 8e3);
+      } catch (rebuildError) {
+        this.index = EMPTY_INDEX;
+        new import_obsidian7.Notice("\u58A8\u5149\u6279\u6CE8\u7D22\u5F15\u635F\u574F\uFF0C\u5907\u4EFD\u6216\u91CD\u5EFA\u5931\u8D25\uFF1B\u5DF2\u505C\u6B62\u7D22\u5F15\u5199\u5165\u4EE5\u4FDD\u62A4 sidecar\u3002", 1e4);
+        console.error("yh-inklight: failed to rebuild annotation index", error, rebuildError);
+      }
+    }
   }
   getCachedDocument(filePath) {
     return this.documents.get(this.toCacheKey(filePath)) ?? null;
@@ -9804,19 +9928,31 @@ var AnnotationStore = class {
     if (cached) {
       return cached;
     }
-    const sidecarPath = this.toSidecarPath(filePath);
-    const fallback = await this.createEmptyDocument(file);
-    const document2 = await this.readJson(sidecarPath, fallback);
-    this.documents.set(cacheKey, this.normalizeDocument(document2, filePath));
+    const document2 = await this.readDocumentFromDisk(file);
+    this.documents.set(cacheKey, document2);
     return this.documents.get(cacheKey);
   }
   async saveDocument(document2) {
-    await this.enqueueDocument(document2.filePath, () => this.persistDocument(document2));
+    await this.enqueueDocument(document2.filePath, async () => {
+      const file = this.app.vault.getAbstractFileByPath(this.normalizeVaultPath(document2.filePath));
+      if (!(file instanceof import_obsidian7.TFile)) {
+        await this.persistDocument(document2);
+        return;
+      }
+      const cached = this.documents.get(this.toCacheKey(file.path));
+      const base = cached ? cloneDocument2(cached) : await this.readDocumentFromDisk(file);
+      const intended = this.normalizeDocument(cloneDocument2(document2), file.path);
+      const disk = await this.readDocumentFromDisk(file);
+      await this.persistDocument(mergeAnnotationDocuments(base, intended, disk));
+    });
   }
   async mutateDocument(file, updater) {
     return this.enqueueDocument(file.path, async () => {
-      const document2 = await this.getDocument(file);
-      const nextDocument = updater(document2);
+      const cached = this.documents.get(this.toCacheKey(file.path));
+      const base = cached ? cloneDocument2(cached) : await this.readDocumentFromDisk(file);
+      const intended = this.normalizeDocument(updater(cloneDocument2(base)), file.path);
+      const disk = await this.readDocumentFromDisk(file);
+      const nextDocument = mergeAnnotationDocuments(base, intended, disk);
       await this.persistDocument(nextDocument);
       return this.getCachedDocument(file.path) ?? nextDocument;
     });
@@ -9848,6 +9984,9 @@ var AnnotationStore = class {
     const normalized = this.normalizeDocument(document2, filePath);
     try {
       await this.ensureStoreDir();
+      if (await this.app.vault.adapter.exists(sidecarPath)) {
+        await this.backupExistingJson(sidecarPath, this.toBackupPath(sidecarPath));
+      }
       await this.app.vault.adapter.write(sidecarPath, JSON.stringify(normalized, null, 2));
       const persisted = await this.readExistingJson(sidecarPath);
       this.verifyPersistedDocument(normalized, persisted, sidecarPath);
@@ -10202,12 +10341,11 @@ var AnnotationStore = class {
   }
   verifyPersistedDocument(expected, persisted, sidecarPath) {
     const normalizedPersisted = this.normalizeDocument(persisted, expected.filePath);
-    const countsMatch = normalizedPersisted.highlights.length === expected.highlights.length && normalizedPersisted.comments.length === expected.comments.length && normalizedPersisted.pdfHighlights.length === expected.pdfHighlights.length && normalizedPersisted.pdfComments.length === expected.pdfComments.length && normalizedPersisted.epubHighlights.length === expected.epubHighlights.length && normalizedPersisted.epubComments.length === expected.epubComments.length && normalizedPersisted.bookmarks.length === expected.bookmarks.length;
-    if (normalizedPersisted.filePath !== expected.filePath || normalizedPersisted.lastModified !== expected.lastModified || !countsMatch) {
+    if (JSON.stringify(normalizedPersisted) !== JSON.stringify(expected)) {
       throw new Error(`Persisted sidecar verification failed: ${sidecarPath}`);
     }
   }
-  async readJson(path, fallback, options = {}) {
+  async readJson(path, fallback) {
     const normalizedPath = (0, import_obsidian7.normalizePath)(path);
     if (!await this.app.vault.adapter.exists(normalizedPath)) {
       return fallback;
@@ -10215,12 +10353,55 @@ var AnnotationStore = class {
     try {
       return JSON.parse(await this.app.vault.adapter.read(normalizedPath));
     } catch (error) {
-      if (options.allowCorruptFallback) {
-        return fallback;
-      }
       new import_obsidian7.Notice(`\u58A8\u5149\u6279\u6CE8\u65E0\u6CD5\u8BFB\u53D6 ${normalizedPath}\uFF0C\u5DF2\u505C\u6B62\u5199\u5165\u4EE5\u4FDD\u62A4\u6279\u6CE8\u6570\u636E\u3002`);
       throw new AnnotationStoreReadError(normalizedPath, error);
     }
+  }
+  async readDocumentFromDisk(file) {
+    const sidecarPath = this.toSidecarPath(file.path);
+    if (!await this.app.vault.adapter.exists(sidecarPath)) {
+      return this.createEmptyDocument(file);
+    }
+    const document2 = await this.readJson(sidecarPath, null);
+    if (!document2 || typeof document2 !== "object") {
+      throw new AnnotationStoreReadError(sidecarPath, new Error("Invalid sidecar document"));
+    }
+    return this.normalizeDocument(document2, file.path);
+  }
+  toBackupPath(path) {
+    return (0, import_obsidian7.normalizePath)(`${path}.bak`);
+  }
+  async backupExistingJson(path, backupPath) {
+    const normalizedPath = (0, import_obsidian7.normalizePath)(path);
+    const raw = await this.app.vault.adapter.read(normalizedPath);
+    JSON.parse(raw);
+    await this.app.vault.adapter.write((0, import_obsidian7.normalizePath)(backupPath), raw);
+  }
+  async backupRawFile(path, backupPath) {
+    const raw = await this.app.vault.adapter.read((0, import_obsidian7.normalizePath)(path));
+    await this.app.vault.adapter.write((0, import_obsidian7.normalizePath)(backupPath), raw);
+  }
+  async rebuildIndex() {
+    const listing = await this.app.vault.adapter.list(STORE_DIR);
+    const files = {};
+    const sidecarPaths = listing.files.map((path) => (0, import_obsidian7.normalizePath)(path)).filter((path) => path.endsWith(".json") && path !== INDEX_PATH && path !== INDEX_BACKUP_PATH && !path.endsWith(".bak"));
+    for (const sidecarPath of sidecarPaths) {
+      try {
+        const document2 = await this.readJson(sidecarPath, null);
+        if (!document2 || typeof document2 !== "object" || !document2.filePath) {
+          continue;
+        }
+        const normalized = this.normalizeDocument(document2, document2.filePath);
+        const sourceFile = this.app.vault.getAbstractFileByPath(normalized.filePath);
+        if (sourceFile instanceof import_obsidian7.TFile) {
+          files[normalized.filePath] = this.toIndexEntry(normalized, sidecarPath);
+        }
+      } catch (error) {
+        new import_obsidian7.Notice(`\u58A8\u5149\u6279\u6CE8\u8DF3\u8FC7\u635F\u574F sidecar\uFF1A${sidecarPath}`);
+        console.warn("yh-inklight: skipped invalid sidecar while rebuilding index", sidecarPath, error);
+      }
+    }
+    return { version: EMPTY_INDEX.version, files };
   }
   async readExistingJson(path) {
     const normalizedPath = (0, import_obsidian7.normalizePath)(path);
@@ -10286,6 +10467,16 @@ function hashPath(value) {
     hash = Math.imul(hash, 16777619);
   }
   return (hash >>> 0).toString(16).padStart(8, "0");
+}
+function isAnnotationIndex(value) {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+  const candidate = value;
+  return candidate.version === EMPTY_INDEX.version && !!candidate.files && typeof candidate.files === "object" && !Array.isArray(candidate.files);
+}
+function cloneDocument2(document2) {
+  return JSON.parse(JSON.stringify(document2));
 }
 function buildExportLines(title, sources, format, tags) {
   const entries = sources.flatMap((source) => collectExportEntries(source, tags));

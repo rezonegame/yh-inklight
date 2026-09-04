@@ -117,6 +117,12 @@
 
 ## 📋 版本历史
 
+### v0.20.4
+- 修复：每次批注写入前读取磁盘最新 sidecar，按稳定 ID 合并本地操作，避免缓存覆盖其他设备的新批注。
+- 增强：已有 sidecar 覆盖前保存一份 `.bak`，写入后执行完整文档校验；备份或校验失败时保留原数据。
+- 增强：损坏的 `index.json` 会先原样备份，再从有效 sidecar 重建；损坏的批注 sidecar 不会被空数据覆盖。
+- 工程：新增存储三方合并、并发写入、损坏保护、索引重建和备份失败测试，原有 8 项测试继续通过。
+
 ### v0.20.3
 - Fixed: Render the immediate Undo action directly inside Obsidian's notice message container so the action is visible and clickable after annotation creation.
 
