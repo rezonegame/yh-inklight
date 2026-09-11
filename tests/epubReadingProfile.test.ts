@@ -34,6 +34,7 @@ test("normalizes malformed EPUB profile values into the supported ranges", () =>
 		fontFamily: "publisher",
 		customFontEnabled: false,
 		customFontFamily: "",
+		einkMode: false,
 		fontSize: 28,
 		lineHeight: 1.5,
 		contentWidth: 560,
@@ -62,4 +63,10 @@ test("keeps the custom font opt-in and migrates old profiles", () => {
 		customFontEnabled: true,
 		customFontFamily: "bad; font-family: serif",
 	}).customFontEnabled, false);
+});
+
+test("keeps e-ink mode opt-in while preserving an explicit device setting", () => {
+	assert.equal(normalizeEpubReadingProfile({}).einkMode, false);
+	assert.equal(normalizeEpubReadingProfile({ einkMode: true }).einkMode, true);
+	assert.equal(normalizeEpubReadingProfile({ einkMode: "yes" }).einkMode, false);
 });

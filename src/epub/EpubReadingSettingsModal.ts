@@ -133,6 +133,15 @@ export class EpubReadingSettingsModal extends Modal {
 			});
 
 		new Setting(contentEl)
+			.setName("电子墨水模式")
+			.setDesc("使用纯黑白、高对比、无动画和无阴影的 EPUB 阅读界面；不改变 Obsidian 全局主题。")
+			.addToggle((toggle) => {
+				toggle.setValue(this.draft.einkMode === true).onChange((value) => {
+					this.update({ einkMode: value });
+				});
+			});
+
+		new Setting(contentEl)
 			.setName("恢复默认排版")
 			.setDesc("恢复为墨光的默认阅读排版")
 			.addButton((button) => {

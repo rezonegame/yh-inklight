@@ -133,7 +133,12 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
     this.registerView(
       EPUB_BOOKSHELF_VIEW_TYPE,
-      (leaf) => new EpubBookshelfView(leaf, this.store, (file) => this.openEpubBook(file)),
+      (leaf) => new EpubBookshelfView(
+        leaf,
+        this.store,
+        (file) => this.openEpubBook(file),
+        () => this.getEpubReadingProfile(),
+      ),
     );
     this.registerEditorExtension([
       createHighlightExtension({

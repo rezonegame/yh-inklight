@@ -45,6 +45,19 @@ export function getEpubFontFamilyCss(
 	return `${custom}, ${preset || "serif"}`;
 }
 
+export function getEpubAppearanceColors(colors: ThemeColors, einkMode: boolean): ThemeColors {
+	if (!einkMode) {
+		return colors;
+	}
+	return {
+		background: "#ffffff",
+		textColor: "#000000",
+		linkColor: "#000000",
+		selectionBg: "#000000",
+		accent: "#000000",
+	};
+}
+
 export class EpubLayoutController {
 	constructor(
 		private readonly view: FoliateViewHandle,
@@ -90,33 +103,38 @@ export class EpubLayoutController {
 		customFontEnabled: boolean,
 		customFontFamily: string,
 		textAlign: EpubTextAlign,
+		einkMode: boolean,
 		readerContainer: HTMLElement,
 	): void {
 		const fontFamilyCss = getEpubFontFamilyCss(fontFamily, customFontEnabled, customFontFamily);
+		const appearanceColors = getEpubAppearanceColors(colors, einkMode);
 		const customFontSelectors = "body, body p, body div, body span, body li, body h1, body h2, body h3, body h4, body h5, body h6, body blockquote, body td, body th, body dt, body dd";
 		const css = [
-			":root { color-scheme: light dark; }",
+			`:root { color-scheme: ${einkMode ? "light" : "light dark"}; }`,
 			"body {",
-			`  background-color: ${colors.background} !important;`,
-			`  color: ${colors.textColor} !important;`,
+			`  background-color: ${appearanceColors.background} !important;`,
+			`  color: ${appearanceColors.textColor} !important;`,
 			`  font-size: ${size}px !important;`,
 			`  line-height: ${lineHeight} !important;`,
 			fontFamilyCss ? `  font-family: ${fontFamilyCss} !important;` : "",
 			`  text-align: ${textAlign};`,
 			"}",
 			"p, div, span, li, h1, h2, h3, h4, h5, h6, blockquote, td, th, dt, dd {",
-			`  color: ${colors.textColor} !important;`,
+			`  color: ${appearanceColors.textColor} !important;`,
 			"}",
-			`a, a:link, a:visited { color: ${colors.linkColor} !important; }`,
-			`::selection { background: ${colors.selectionBg} !important; }`,
+			`a, a:link, a:visited { color: ${appearanceColors.linkColor} !important;${einkMode ? " text-decoration: underline !important;" : ""} }`,
+			`::selection { background: ${appearanceColors.selectionBg} !important;${einkMode ? " color: #ffffff !important;" : ""} }`,
 			"img { max-width: 100% !important; height: auto !important; }",
 			customFontEnabled && customFontFamily
 				? `${customFontSelectors} { font-family: ${fontFamilyCss} !important; }\nbody pre, body pre *, body code, body code *, body kbd, body kbd *, body samp, body samp *, body math, body math *, body svg, body svg * { font-family: revert !important; }`
 				: "",
+			einkMode
+				? "*, *::before, *::after { animation: none !important; transition: none !important; box-shadow: none !important; backdrop-filter: none !important; scroll-behavior: auto !important; }"
+				: "",
 		].join("\n");
 		this.view.renderer?.setStyles?.(css);
 		this.view.renderer?.render?.();
-		(this.view as unknown as HTMLElement).style.backgroundColor = colors.background;
-		readerContainer.style.backgroundColor = colors.background;
+		(this.view as unknown as HTMLElement).style.backgroundColor = appearanceColors.background;
+		readerContainer.style.backgroundColor = appearanceColors.background;
 	}
 }

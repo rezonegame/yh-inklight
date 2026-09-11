@@ -159,6 +159,7 @@ export class EpubReaderView extends FileView {
 	private currentFontFamily: EpubReadingProfile["fontFamily"] = "publisher";
 	private currentCustomFontEnabled = false;
 	private currentCustomFontFamily = "";
+	private currentEinkMode = false;
 	private currentTextAlign: EpubReadingProfile["textAlign"] = "start";
 	private currentTheme: EpubReadingTheme = "obsidian";
 	private readingProfile: EpubReadingProfile;
@@ -234,8 +235,11 @@ export class EpubReaderView extends FileView {
 		this.currentFontFamily = profile.fontFamily;
 		this.currentCustomFontEnabled = profile.customFontEnabled === true;
 		this.currentCustomFontFamily = profile.customFontFamily ?? "";
+		this.currentEinkMode = profile.einkMode === true;
 		this.currentTextAlign = profile.textAlign;
 		this.currentTheme = profile.theme;
+		this.containerEl?.toggleClass("yh-epub-eink", this.currentEinkMode);
+		this.contextMenuEl?.toggleClass("yh-epub-eink-context", this.currentEinkMode);
 	}
 
 	private updateReadingProfile(profile: EpubReadingProfile, persist = true): void {
@@ -298,6 +302,7 @@ export class EpubReaderView extends FileView {
 	/** 视图打开时构建 DOM 骨架 */
 	override async onOpen(): Promise<void> {
 		this.containerEl.addClass("yh-epub-reader");
+		this.containerEl.toggleClass("yh-epub-eink", this.currentEinkMode);
 		this.buildLayout();
 		this.startReadingTimeTracker();
 	}
@@ -653,6 +658,7 @@ export class EpubReaderView extends FileView {
 		this.dismissContextMenu();
 
 		const menu = document.body.createDiv({ cls: "yh-epub-context-menu" });
+		menu.toggleClass("yh-epub-eink-context", this.currentEinkMode);
 
 		const colorRow = menu.createDiv({ cls: "yh-epub-context-colors" });
 		for (const color of ANNOTATION_COLORS) {
@@ -1577,6 +1583,7 @@ export class EpubReaderView extends FileView {
 			this.currentCustomFontEnabled,
 			this.currentCustomFontFamily,
 			this.currentTextAlign,
+			this.currentEinkMode,
 			this.readerContainerEl,
 		);
 	}

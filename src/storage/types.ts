@@ -183,6 +183,8 @@ export interface EpubReadingProfile {
   /** Optional local font override; never written to Vault settings or sidecars. */
   customFontEnabled?: boolean;
   customFontFamily?: string;
+  /** Optional scoped high-contrast mode for EPUB UI and book content. */
+  einkMode?: boolean;
   fontSize: number;
   lineHeight: number;
   contentWidth: number;
@@ -195,6 +197,7 @@ export const DEFAULT_EPUB_READING_PROFILE: EpubReadingProfile = {
   fontFamily: "publisher",
   customFontEnabled: false,
   customFontFamily: "",
+  einkMode: false,
   fontSize: 16,
   lineHeight: 1.7,
   contentWidth: 760,
@@ -241,6 +244,7 @@ export function normalizeEpubReadingProfile(raw: unknown, fallback = DEFAULT_EPU
     fontFamily: isEpubFontFamily(value.fontFamily) ? value.fontFamily : fallback.fontFamily,
     customFontEnabled: customFontEnabled && customFontFamily.length > 0,
     customFontFamily,
+    einkMode: value.einkMode === undefined ? fallback.einkMode === true : value.einkMode === true,
     fontSize: clampNumber(value.fontSize, fallback.fontSize, 12, 28, 1),
     lineHeight: clampNumber(value.lineHeight, fallback.lineHeight, 1.4, 2.2, 0.1),
     contentWidth: clampNumber(value.contentWidth, fallback.contentWidth, 520, 1000, 10),

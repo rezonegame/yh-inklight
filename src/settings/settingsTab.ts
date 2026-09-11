@@ -308,6 +308,15 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
+      .setName("电子墨水模式")
+      .setDesc("EPUB 使用纯黑白、高对比、无动画和无阴影界面；不改变 Obsidian 全局主题。")
+      .addToggle((toggle) => {
+        toggle.setValue(profile.einkMode === true).onChange(async (value) => {
+          await this.updateEpubProfile({ einkMode: value });
+        });
+      });
+
+    new Setting(containerEl)
       .setName("翻页模式")
       .setDesc("翻页为分页布局；滚动为连续滚动阅读。")
       .addDropdown((dropdown) => {

@@ -6,22 +6,25 @@
 
 import { ItemView, TFile, WorkspaceLeaf } from "obsidian";
 import { AnnotationStore } from "../storage/annotationStore";
-import { SUPPORTED_BOOK_EXTENSIONS } from "../storage/types";
+import { EpubReadingProfile, SUPPORTED_BOOK_EXTENSIONS } from "../storage/types";
 
 export const EPUB_BOOKSHELF_VIEW_TYPE = "inklight-epub-bookshelf";
 
 export class EpubBookshelfView extends ItemView {
   private store: AnnotationStore;
   private openCallback: (file: TFile) => void;
+  private getReadingProfile: () => EpubReadingProfile;
 
   constructor(
     leaf: WorkspaceLeaf,
     store: AnnotationStore,
     onOpen: (file: TFile) => void,
+    getReadingProfile: () => EpubReadingProfile,
   ) {
     super(leaf);
     this.store = store;
     this.openCallback = onOpen;
+    this.getReadingProfile = getReadingProfile;
   }
 
   getViewType(): string {
@@ -52,6 +55,7 @@ export class EpubBookshelfView extends ItemView {
     const container = this.contentEl;
     container.empty();
     container.addClass("yh-epub-bookshelf-view");
+    container.toggleClass("yh-epub-eink", this.getReadingProfile().einkMode === true);
 
     container.createEl("h4", {
       cls: "bookshelf-heading",

@@ -15,12 +15,13 @@ tags/tagDomain.ts: 统一语义标签的默认值、名称校验、旧字段映�
 views/annotationPopover.ts: 窄屏与阅读模式弹层，点击高亮后展示 sidecar 中的高亮和便签内容。
 views/sidebarView.ts: 右侧总览面板，使用彩色卡片合并 highlight 与关联 note，并承载搜索、可折叠过滤、排序、导出、跳转与内联编辑。
 settings/settingsTab.ts: 插件设置页，管理默认颜色、统一标签、EPUB 阅读排版 profile、作者和迁移策略。
-epub/EpubReaderView.ts: EPUB FileView 生命周期、目录/搜索覆盖面板、进度、批注业务、尺寸变化恢复与控制器装配。
+epub/EpubReaderView.ts: EPUB FileView 生命周期、目录/搜索覆盖面板、进度、批注业务、尺寸变化恢复、电子墨水作用域与控制器装配。
 epub/EpubSearch.ts: EPUB 侧栏唯一搜索入口、结果标准化、过期查询保护与搜索监听清理。
 epub/EpubSelectionController.ts: foliate iframe 选区监听、CFI/坐标转换和事件释放。
-epub/EpubLayoutController.ts: foliate flow、间距、正文宽度、预设/本机字体和阅读外观 CSS 应用。
-epub/EpubReadingSettingsModal.ts: EPUB 书内预设字体、本机字体、字号、行距、宽度、对齐、流模式和主题设置。
+epub/EpubLayoutController.ts: foliate flow、间距、正文宽度、预设/本机字体、电子墨水黑白规则和阅读外观 CSS 应用。
+epub/EpubReadingSettingsModal.ts: EPUB 书内预设字体、本机字体、字号、行距、宽度、对齐、流模式、主题和电子墨水设置。
 epub/EpubDeviceProfileStore.ts: 按桌面/平板/手机隔离 EPUB 排版覆盖值，只写本机 localStorage。
+epub/EpubBookshelfView.ts: 展示电子书阅读进度，并按当前设备 profile 应用电子墨水作用域样式。
 
 法则: 类型单一真相·标签集中解析·业务不懂存储·渲染只做投影·UI 只做交互·总览优先于常驻叠层
 

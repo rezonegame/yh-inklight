@@ -2176,3 +2176,146 @@ a.yh-epub-goto-link:hover {
     font-size: var(--yh-font-sm);
   }
 }
+
+/* ============================================================
+   EPUB 电子墨水模式（作用域限定在墨光 EPUB 视图/书架）
+   ============================================================ */
+
+.yh-epub-reader.yh-epub-eink,
+.yh-epub-bookshelf-view.yh-epub-eink {
+  --background-primary: #ffffff;
+  --background-secondary: #ffffff;
+  --background-modifier-border: #000000;
+  --background-modifier-hover: #eeeeee;
+  --text-normal: #000000;
+  --text-muted: #000000;
+  --text-faint: #000000;
+  --text-accent: #000000;
+  --interactive-accent: #000000;
+  --yh-yellow: #000000;
+  --yh-yellow-hover: #000000;
+  --yh-yellow-bg: #ffffff;
+  --yh-border: #000000;
+  --yh-shadow-sm: none;
+  --yh-shadow: none;
+  --yh-shadow-lg: none;
+  background: #ffffff !important;
+  color: #000000 !important;
+}
+
+.yh-epub-reader.yh-epub-eink,
+.yh-epub-reader.yh-epub-eink *,
+.yh-epub-bookshelf-view.yh-epub-eink,
+.yh-epub-bookshelf-view.yh-epub-eink * {
+  animation: none !important;
+  transition: none !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  scroll-behavior: auto !important;
+}
+
+.yh-epub-reader.yh-epub-eink .yh-epub-toolbar,
+.yh-epub-reader.yh-epub-eink .yh-epub-sidebar,
+.yh-epub-reader.yh-epub-eink .yh-epub-progress,
+.yh-epub-reader.yh-epub-eink .yh-epub-sidebar-backdrop,
+.yh-epub-bookshelf-view.yh-epub-eink .bookshelf-item {
+  background: #ffffff !important;
+  border-color: #000000 !important;
+  color: #000000 !important;
+}
+
+.yh-epub-reader.yh-epub-eink .yh-epub-sidebar-backdrop {
+  background: #ffffff !important;
+  opacity: 1;
+}
+
+.yh-epub-reader.yh-epub-eink .yh-epub-toolbar-btn,
+.yh-epub-reader.yh-epub-eink .yh-epub-sidebar-tab,
+.yh-epub-reader.yh-epub-eink .yh-epub-toc-item,
+.yh-epub-reader.yh-epub-eink .yh-epub-search-result,
+.yh-epub-reader.yh-epub-eink .yh-epub-annotation-card,
+.yh-epub-reader.yh-epub-eink .yh-epub-style-chip,
+.yh-epub-reader.yh-epub-eink .yh-epub-note-cancel,
+.yh-epub-reader.yh-epub-eink .yh-epub-note-save,
+.yh-epub-bookshelf-view.yh-epub-eink .bookshelf-item {
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+.yh-epub-reader.yh-epub-eink .yh-epub-toolbar-btn:hover,
+.yh-epub-reader.yh-epub-eink .yh-epub-sidebar-tab:hover,
+.yh-epub-reader.yh-epub-eink .yh-epub-toc-item:hover,
+.yh-epub-reader.yh-epub-eink .yh-epub-search-result:hover {
+  background: #eeeeee !important;
+  color: #000000 !important;
+}
+
+.yh-epub-reader.yh-epub-eink .yh-epub-sidebar-tab.is-active,
+.yh-epub-reader.yh-epub-eink .yh-epub-toc-item.is-current,
+.yh-epub-reader.yh-epub-eink .yh-epub-toolbar-btn.is-active {
+  background: #000000 !important;
+  color: #ffffff !important;
+  border-color: #000000 !important;
+}
+
+.yh-epub-reader.yh-epub-eink .yh-epub-progress-bar {
+  height: 8px;
+  border: 1px solid #000000;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.yh-epub-reader.yh-epub-eink .yh-epub-progress-fill {
+  background: #000000;
+}
+
+.yh-epub-reader.yh-epub-eink .yh-epub-toolbar-btn,
+.yh-epub-reader.yh-epub-eink .yh-epub-context-dot,
+.yh-epub-reader.yh-epub-eink .yh-epub-context-note-btn,
+.yh-epub-reader.yh-epub-eink .yh-epub-context-ai-btn,
+.yh-epub-eink-context .yh-epub-context-dot,
+.yh-epub-eink-context .yh-epub-context-note-btn,
+.yh-epub-eink-context .yh-epub-context-ai-btn {
+  min-width: 48px;
+  min-height: 48px;
+}
+
+.yh-epub-reader.yh-epub-eink .yh-epub-context-dot,
+.yh-epub-reader.yh-epub-eink .yh-epub-color-dot,
+.yh-epub-eink-context .yh-epub-context-dot {
+  background: #ffffff !important;
+  border: 2px solid #000000 !important;
+  filter: none;
+}
+
+.yh-epub-eink-context {
+  background: #ffffff !important;
+  border: 2px solid #000000 !important;
+  color: #000000 !important;
+  box-shadow: none !important;
+  animation: none !important;
+  transition: none !important;
+  backdrop-filter: none !important;
+}
+
+.yh-epub-eink-context .yh-epub-context-note-btn,
+.yh-epub-eink-context .yh-epub-context-ai-btn {
+  background: #ffffff !important;
+  color: #000000 !important;
+  border-color: #000000 !important;
+}
+
+.yh-epub-bookshelf-view.yh-epub-eink .bookshelf-progress-bar {
+  height: 8px;
+  border: 1px solid #000000;
+  border-radius: 0;
+  background: #ffffff;
+}
+
+.yh-epub-bookshelf-view.yh-epub-eink .bookshelf-percent,
+.yh-epub-bookshelf-view.yh-epub-eink .bookshelf-title,
+.yh-epub-bookshelf-view.yh-epub-eink .bookshelf-path,
+.yh-epub-bookshelf-view.yh-epub-eink .bookshelf-meta,
+.yh-epub-bookshelf-view.yh-epub-eink .bookshelf-heading {
+  color: #000000 !important;
+}
