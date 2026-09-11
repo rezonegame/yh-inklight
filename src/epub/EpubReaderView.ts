@@ -157,6 +157,8 @@ export class EpubReaderView extends FileView {
 	private currentLineHeight = 1.7;
 	private currentContentWidth = 760;
 	private currentFontFamily: EpubReadingProfile["fontFamily"] = "publisher";
+	private currentCustomFontEnabled = false;
+	private currentCustomFontFamily = "";
 	private currentTextAlign: EpubReadingProfile["textAlign"] = "start";
 	private currentTheme: EpubReadingTheme = "obsidian";
 	private readingProfile: EpubReadingProfile;
@@ -227,6 +229,8 @@ export class EpubReaderView extends FileView {
 		this.currentLineHeight = profile.lineHeight;
 		this.currentContentWidth = profile.contentWidth;
 		this.currentFontFamily = profile.fontFamily;
+		this.currentCustomFontEnabled = profile.customFontEnabled === true;
+		this.currentCustomFontFamily = profile.customFontFamily ?? "";
 		this.currentTextAlign = profile.textAlign;
 		this.currentTheme = profile.theme;
 	}
@@ -1524,6 +1528,8 @@ export class EpubReaderView extends FileView {
 			this.currentFontSize,
 			this.currentLineHeight,
 			this.currentFontFamily,
+			this.currentCustomFontEnabled,
+			this.currentCustomFontFamily,
 			this.currentTextAlign,
 			this.readerContainerEl,
 		);

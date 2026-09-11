@@ -4,6 +4,7 @@ import test from "node:test";
 import {
 	DEFAULT_EPUB_READING_PROFILE,
 	createEpubReadingProfileFromLegacy,
+	normalizeCustomEpubFontFamily,
 	normalizeEpubReadingProfile,
 } from "../src/storage/types";
 
@@ -31,6 +32,8 @@ test("normalizes malformed EPUB profile values into the supported ranges", () =>
 		theme: "dark",
 	}), {
 		fontFamily: "publisher",
+		customFontEnabled: false,
+		customFontFamily: "",
 		fontSize: 28,
 		lineHeight: 1.5,
 		contentWidth: 560,
@@ -38,4 +41,25 @@ test("normalizes malformed EPUB profile values into the supported ranges", () =>
 		flow: "paginated",
 		theme: "dark",
 	});
+});
+
+test("normalizes a local font name without accepting CSS or path input", () => {
+	assert.equal(normalizeCustomEpubFontFamily("  Microsoft YaHei  "), "Microsoft YaHei");
+	assert.equal(normalizeCustomEpubFontFamily("LXGW WenKai"), "LXGW WenKai");
+	assert.equal(normalizeCustomEpubFontFamily("font-family: serif"), "");
+	assert.equal(normalizeCustomEpubFontFamily("C:\\Fonts\\custom.ttf"), "");
+	assert.equal(normalizeCustomEpubFontFamily("A, sans-serif"), "");
+	assert.equal(normalizeCustomEpubFontFamily("a\nb"), "");
+});
+
+test("keeps the custom font opt-in and migrates old profiles", () => {
+	assert.equal(normalizeEpubReadingProfile({}).customFontEnabled, false);
+	assert.equal(normalizeEpubReadingProfile({
+		customFontEnabled: true,
+		customFontFamily: " Microsoft YaHei ",
+	}).customFontFamily, "Microsoft YaHei");
+	assert.equal(normalizeEpubReadingProfile({
+		customFontEnabled: true,
+		customFontFamily: "bad; font-family: serif",
+	}).customFontEnabled, false);
 });

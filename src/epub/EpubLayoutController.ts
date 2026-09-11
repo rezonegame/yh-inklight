@@ -18,13 +18,31 @@ export function getEpubLayoutAttributes(flow: EpubFlowMode, contentWidth = 760):
 	};
 }
 
-export function getEpubFontFamilyCss(fontFamily: EpubFontFamily): string {
+export function escapeEpubFontFamilyCss(value: string): string {
+	return value
+		.replace(/\\/g, "\\\\")
+		.replace(/"/g, '\\"')
+		.replace(/\r/g, "\\A ")
+		.replace(/\n/g, "\\A ");
+}
+
+export function getEpubFontFamilyCss(
+	fontFamily: EpubFontFamily,
+	customFontEnabled = false,
+	customFontFamily = "",
+): string {
+	let preset = "";
 	switch (fontFamily) {
-		case "serif": return "Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif";
-		case "sans": return "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif";
-		case "kaiti": return "'KaiTi', 'STKaiti', 'Noto Serif CJK SC', serif";
-		default: return "";
+		case "serif": preset = "Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif"; break;
+		case "sans": preset = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif"; break;
+		case "kaiti": preset = "'KaiTi', 'STKaiti', 'Noto Serif CJK SC', serif"; break;
+		default: break;
 	}
+	if (!customFontEnabled || !customFontFamily) {
+		return preset;
+	}
+	const custom = `"${escapeEpubFontFamilyCss(customFontFamily)}"`;
+	return `${custom}, ${preset || "serif"}`;
 }
 
 export class EpubLayoutController {
@@ -69,10 +87,13 @@ export class EpubLayoutController {
 		size: number,
 		lineHeight: number,
 		fontFamily: EpubFontFamily,
+		customFontEnabled: boolean,
+		customFontFamily: string,
 		textAlign: EpubTextAlign,
 		readerContainer: HTMLElement,
 	): void {
-		const fontFamilyCss = getEpubFontFamilyCss(fontFamily);
+		const fontFamilyCss = getEpubFontFamilyCss(fontFamily, customFontEnabled, customFontFamily);
+		const customFontSelectors = "body, body p, body div, body span, body li, body h1, body h2, body h3, body h4, body h5, body h6, body blockquote, body td, body th, body dt, body dd";
 		const css = [
 			":root { color-scheme: light dark; }",
 			"body {",
@@ -89,6 +110,9 @@ export class EpubLayoutController {
 			`a, a:link, a:visited { color: ${colors.linkColor} !important; }`,
 			`::selection { background: ${colors.selectionBg} !important; }`,
 			"img { max-width: 100% !important; height: auto !important; }",
+			customFontEnabled && customFontFamily
+				? `${customFontSelectors} { font-family: ${fontFamilyCss} !important; }\nbody pre, body pre *, body code, body code *, body kbd, body kbd *, body samp, body samp *, body math, body math *, body svg, body svg * { font-family: revert !important; }`
+				: "",
 		].join("\n");
 		this.view.renderer?.setStyles?.(css);
 		this.view.renderer?.render?.();

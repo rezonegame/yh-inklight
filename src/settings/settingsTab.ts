@@ -20,6 +20,7 @@ import {
   EpubReadingProfile,
   EpubReadingTheme,
   EpubTextAlign,
+  normalizeEpubReadingProfile,
 } from "../storage/types";
 import {
   cloneDefaultAnnotationTags,
@@ -31,6 +32,8 @@ import {
 } from "../tags/tagDomain";
 
 export class AnnotationSettingsTab extends PluginSettingTab {
+  private customFontSaveTimer: number | null = null;
+
   constructor(private readonly plugin: OverlayAnnotationsPlugin) {
     super(plugin.app, plugin);
   }
@@ -214,6 +217,36 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
+      .setName("启用本机字体")
+      .setDesc("使用当前设备已安装的字体，不下载字体文件；字体不存在时自动回退。")
+      .addToggle((toggle) => {
+        toggle.setValue(profile.customFontEnabled === true).onChange(async (value) => {
+          await this.updateEpubProfile({ customFontEnabled: value });
+        });
+      });
+
+    new Setting(containerEl)
+      .setName("本机字体名称")
+      .setDesc("例如 Microsoft YaHei、LXGW WenKai；只填写一个名称，最多 128 个字符。")
+      .addText((text) => {
+        let latestValue = profile.customFontFamily ?? "";
+        text
+          .setPlaceholder("Microsoft YaHei")
+          .setValue(latestValue)
+          .onChange((value) => {
+            latestValue = value;
+            this.scheduleCustomFontSave(latestValue);
+          });
+        text.inputEl.addEventListener("blur", () => {
+          this.clearCustomFontSaveTimer();
+          void this.updateEpubProfile(normalizeEpubReadingProfile({
+            ...this.getEpubProfile(),
+            customFontFamily: latestValue,
+          }));
+        });
+      });
+
+    new Setting(containerEl)
       .setName("阅读字号")
       .setDesc("EPUB 正文基础字号（px）。")
       .addSlider((slider) => {
@@ -330,5 +363,20 @@ export class AnnotationSettingsTab extends PluginSettingTab {
 
   private async updateEpubProfile(patch: Partial<EpubReadingProfile>): Promise<void> {
     await this.plugin.updateEpubReadingProfile({ ...this.getEpubProfile(), ...patch });
+  }
+
+  private scheduleCustomFontSave(value: string): void {
+    this.clearCustomFontSaveTimer();
+    this.customFontSaveTimer = window.setTimeout(() => {
+      this.customFontSaveTimer = null;
+      void this.updateEpubProfile({ customFontFamily: value });
+    }, 300);
+  }
+
+  private clearCustomFontSaveTimer(): void {
+    if (this.customFontSaveTimer !== null) {
+      window.clearTimeout(this.customFontSaveTimer);
+      this.customFontSaveTimer = null;
+    }
   }
 }

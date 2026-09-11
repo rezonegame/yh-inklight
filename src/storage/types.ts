@@ -180,6 +180,9 @@ export type EpubTextAlign = "start" | "justify";
 
 export interface EpubReadingProfile {
   fontFamily: EpubFontFamily;
+  /** Optional local font override; never written to Vault settings or sidecars. */
+  customFontEnabled?: boolean;
+  customFontFamily?: string;
   fontSize: number;
   lineHeight: number;
   contentWidth: number;
@@ -190,6 +193,8 @@ export interface EpubReadingProfile {
 
 export const DEFAULT_EPUB_READING_PROFILE: EpubReadingProfile = {
   fontFamily: "publisher",
+  customFontEnabled: false,
+  customFontFamily: "",
   fontSize: 16,
   lineHeight: 1.7,
   contentWidth: 760,
@@ -226,8 +231,16 @@ export function createEpubReadingProfileFromLegacy(settings: Partial<Pick<Annota
 
 export function normalizeEpubReadingProfile(raw: unknown, fallback = DEFAULT_EPUB_READING_PROFILE): EpubReadingProfile {
   const value = raw && typeof raw === "object" ? raw as Partial<EpubReadingProfile> : {};
+  const customFontFamily = normalizeCustomEpubFontFamily(
+    value.customFontFamily === undefined ? fallback.customFontFamily : value.customFontFamily,
+  );
+  const customFontEnabled = value.customFontEnabled === undefined
+    ? fallback.customFontEnabled === true
+    : value.customFontEnabled === true;
   return {
     fontFamily: isEpubFontFamily(value.fontFamily) ? value.fontFamily : fallback.fontFamily,
+    customFontEnabled: customFontEnabled && customFontFamily.length > 0,
+    customFontFamily,
     fontSize: clampNumber(value.fontSize, fallback.fontSize, 12, 28, 1),
     lineHeight: clampNumber(value.lineHeight, fallback.lineHeight, 1.4, 2.2, 0.1),
     contentWidth: clampNumber(value.contentWidth, fallback.contentWidth, 520, 1000, 10),
@@ -235,6 +248,24 @@ export function normalizeEpubReadingProfile(raw: unknown, fallback = DEFAULT_EPU
     flow: value.flow === "paginated" || value.flow === "scrolled" ? value.flow : fallback.flow,
     theme: isEpubReadingTheme(value.theme) ? value.theme : fallback.theme,
   };
+}
+
+/**
+ * Accept one installed font family name, not a CSS declaration or a font list.
+ * The renderer still escapes the value before placing it in CSS.
+ */
+export function normalizeCustomEpubFontFamily(value: unknown): string {
+  if (typeof value !== "string") {
+    return "";
+  }
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 128 || /[\u0000-\u001f\u007f]/.test(trimmed)) {
+    return "";
+  }
+  if (/[{},;,:/\\]/.test(trimmed) || trimmed.includes(",")) {
+    return "";
+  }
+  return trimmed;
 }
 
 function isEpubFontFamily(value: unknown): value is EpubFontFamily {

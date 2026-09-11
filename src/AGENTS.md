@@ -18,8 +18,8 @@ settings/settingsTab.ts: 插件设置页，管理默认颜色、统一标签、E
 epub/EpubReaderView.ts: EPUB FileView 生命周期、目录、进度、批注业务与控制器装配。
 epub/EpubSearch.ts: EPUB 侧栏唯一搜索入口、结果标准化、过期查询保护与搜索监听清理。
 epub/EpubSelectionController.ts: foliate iframe 选区监听、CFI/坐标转换和事件释放。
-epub/EpubLayoutController.ts: foliate flow、间距、正文宽度和阅读外观 CSS 应用。
-epub/EpubReadingSettingsModal.ts: EPUB 书内字体、字号、行距、宽度、对齐、流模式和主题设置。
+epub/EpubLayoutController.ts: foliate flow、间距、正文宽度、预设/本机字体和阅读外观 CSS 应用。
+epub/EpubReadingSettingsModal.ts: EPUB 书内预设字体、本机字体、字号、行距、宽度、对齐、流模式和主题设置。
 epub/EpubDeviceProfileStore.ts: 按桌面/平板/手机隔离 EPUB 排版覆盖值，只写本机 localStorage。
 
 法则: 类型单一真相·标签集中解析·业务不懂存储·渲染只做投影·UI 只做交互·总览优先于常驻叠层

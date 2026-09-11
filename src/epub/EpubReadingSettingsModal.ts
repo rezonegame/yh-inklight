@@ -11,6 +11,7 @@ import {
 	EpubReadingProfile,
 	EpubReadingTheme,
 	EpubTextAlign,
+	normalizeEpubReadingProfile,
 } from "../storage/types";
 
 const FONT_FAMILIES: Array<{ id: EpubFontFamily; label: string }> = [
@@ -53,6 +54,26 @@ export class EpubReadingSettingsModal extends Modal {
 				dropdown.setValue(this.draft.fontFamily).onChange((value) => {
 					this.update({ fontFamily: value as EpubFontFamily });
 				});
+			});
+
+		new Setting(contentEl)
+			.setName("启用本机字体")
+			.setDesc("输入电脑中已安装的字体名称；找不到时会自动回退。关闭后仍保留名称。")
+			.addToggle((toggle) => {
+				toggle.setValue(this.draft.customFontEnabled === true).onChange((value) => {
+					this.update({ customFontEnabled: value });
+				});
+			});
+
+		new Setting(contentEl)
+			.setName("本机字体名称")
+			.setDesc("例如 Microsoft YaHei、LXGW WenKai；只填写一个字体名称，最多 128 个字符。")
+			.addText((text) => {
+				text
+					.setPlaceholder("Microsoft YaHei")
+					.setValue(this.draft.customFontFamily ?? "")
+					.onChange((value) => this.update({ customFontFamily: value }));
+				text.inputEl.addEventListener("blur", () => this.commitCustomFontFamily());
 			});
 
 		new Setting(contentEl)
@@ -126,6 +147,11 @@ export class EpubReadingSettingsModal extends Modal {
 
 	private update(patch: Partial<EpubReadingProfile>): void {
 		this.draft = { ...this.draft, ...patch };
+		void this.onChange(this.draft);
+	}
+
+	private commitCustomFontFamily(): void {
+		this.draft = normalizeEpubReadingProfile(this.draft);
 		void this.onChange(this.draft);
 	}
 }

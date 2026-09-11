@@ -8578,6 +8578,8 @@ var COLOR_LABELS = {
 };
 var DEFAULT_EPUB_READING_PROFILE = {
   fontFamily: "publisher",
+  customFontEnabled: false,
+  customFontFamily: "",
   fontSize: 16,
   lineHeight: 1.7,
   contentWidth: 760,
@@ -8607,8 +8609,14 @@ function createEpubReadingProfileFromLegacy(settings) {
 }
 function normalizeEpubReadingProfile(raw, fallback = DEFAULT_EPUB_READING_PROFILE) {
   const value = raw && typeof raw === "object" ? raw : {};
+  const customFontFamily = normalizeCustomEpubFontFamily(
+    value.customFontFamily === void 0 ? fallback.customFontFamily : value.customFontFamily
+  );
+  const customFontEnabled = value.customFontEnabled === void 0 ? fallback.customFontEnabled === true : value.customFontEnabled === true;
   return {
     fontFamily: isEpubFontFamily(value.fontFamily) ? value.fontFamily : fallback.fontFamily,
+    customFontEnabled: customFontEnabled && customFontFamily.length > 0,
+    customFontFamily,
     fontSize: clampNumber(value.fontSize, fallback.fontSize, 12, 28, 1),
     lineHeight: clampNumber(value.lineHeight, fallback.lineHeight, 1.4, 2.2, 0.1),
     contentWidth: clampNumber(value.contentWidth, fallback.contentWidth, 520, 1e3, 10),
@@ -8616,6 +8624,19 @@ function normalizeEpubReadingProfile(raw, fallback = DEFAULT_EPUB_READING_PROFIL
     flow: value.flow === "paginated" || value.flow === "scrolled" ? value.flow : fallback.flow,
     theme: isEpubReadingTheme(value.theme) ? value.theme : fallback.theme
   };
+}
+function normalizeCustomEpubFontFamily(value) {
+  if (typeof value !== "string") {
+    return "";
+  }
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > 128 || /[\u0000-\u001f\u007f]/.test(trimmed)) {
+    return "";
+  }
+  if (/[{},;,:/\\]/.test(trimmed) || trimmed.includes(",")) {
+    return "";
+  }
+  return trimmed;
 }
 function isEpubFontFamily(value) {
   return value === "publisher" || value === "serif" || value === "sans" || value === "kaiti";
@@ -9606,6 +9627,7 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
   constructor(plugin) {
     super(plugin.app, plugin);
     this.plugin = plugin;
+    this.customFontSaveTimer = null;
   }
   display() {
     const { containerEl } = this;
@@ -9756,6 +9778,25 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
         await this.updateEpubProfile({ fontFamily: value });
       });
     });
+    new import_obsidian6.Setting(containerEl).setName("\u542F\u7528\u672C\u673A\u5B57\u4F53").setDesc("\u4F7F\u7528\u5F53\u524D\u8BBE\u5907\u5DF2\u5B89\u88C5\u7684\u5B57\u4F53\uFF0C\u4E0D\u4E0B\u8F7D\u5B57\u4F53\u6587\u4EF6\uFF1B\u5B57\u4F53\u4E0D\u5B58\u5728\u65F6\u81EA\u52A8\u56DE\u9000\u3002").addToggle((toggle) => {
+      toggle.setValue(profile.customFontEnabled === true).onChange(async (value) => {
+        await this.updateEpubProfile({ customFontEnabled: value });
+      });
+    });
+    new import_obsidian6.Setting(containerEl).setName("\u672C\u673A\u5B57\u4F53\u540D\u79F0").setDesc("\u4F8B\u5982 Microsoft YaHei\u3001LXGW WenKai\uFF1B\u53EA\u586B\u5199\u4E00\u4E2A\u540D\u79F0\uFF0C\u6700\u591A 128 \u4E2A\u5B57\u7B26\u3002").addText((text) => {
+      let latestValue = profile.customFontFamily ?? "";
+      text.setPlaceholder("Microsoft YaHei").setValue(latestValue).onChange((value) => {
+        latestValue = value;
+        this.scheduleCustomFontSave(latestValue);
+      });
+      text.inputEl.addEventListener("blur", () => {
+        this.clearCustomFontSaveTimer();
+        void this.updateEpubProfile(normalizeEpubReadingProfile({
+          ...this.getEpubProfile(),
+          customFontFamily: latestValue
+        }));
+      });
+    });
     new import_obsidian6.Setting(containerEl).setName("\u9605\u8BFB\u5B57\u53F7").setDesc("EPUB \u6B63\u6587\u57FA\u7840\u5B57\u53F7\uFF08px\uFF09\u3002").addSlider((slider) => {
       slider.setLimits(12, 28, 1).setValue(profile.fontSize).setDynamicTooltip().onChange(async (value) => {
         await this.updateEpubProfile({ fontSize: value });
@@ -9825,6 +9866,19 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
   }
   async updateEpubProfile(patch) {
     await this.plugin.updateEpubReadingProfile({ ...this.getEpubProfile(), ...patch });
+  }
+  scheduleCustomFontSave(value) {
+    this.clearCustomFontSaveTimer();
+    this.customFontSaveTimer = window.setTimeout(() => {
+      this.customFontSaveTimer = null;
+      void this.updateEpubProfile({ customFontFamily: value });
+    }, 300);
+  }
+  clearCustomFontSaveTimer() {
+    if (this.customFontSaveTimer !== null) {
+      window.clearTimeout(this.customFontSaveTimer);
+      this.customFontSaveTimer = null;
+    }
   }
 };
 
@@ -12449,17 +12503,29 @@ function getEpubLayoutAttributes(flow, contentWidth = 760) {
     "max-inline-size": `${contentWidth}px`
   };
 }
-function getEpubFontFamilyCss(fontFamily) {
+function escapeEpubFontFamilyCss(value) {
+  return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\r/g, "\\A ").replace(/\n/g, "\\A ");
+}
+function getEpubFontFamilyCss(fontFamily, customFontEnabled = false, customFontFamily = "") {
+  let preset = "";
   switch (fontFamily) {
     case "serif":
-      return "Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif";
+      preset = "Georgia, 'Noto Serif SC', 'Source Han Serif SC', serif";
+      break;
     case "sans":
-      return "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif";
+      preset = "-apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif";
+      break;
     case "kaiti":
-      return "'KaiTi', 'STKaiti', 'Noto Serif CJK SC', serif";
+      preset = "'KaiTi', 'STKaiti', 'Noto Serif CJK SC', serif";
+      break;
     default:
-      return "";
+      break;
   }
+  if (!customFontEnabled || !customFontFamily) {
+    return preset;
+  }
+  const custom = `"${escapeEpubFontFamilyCss(customFontFamily)}"`;
+  return `${custom}, ${preset || "serif"}`;
 }
 var EpubLayoutController = class {
   constructor(view, flow, contentWidth = 760) {
@@ -12492,8 +12558,9 @@ var EpubLayoutController = class {
     }
     this.view.renderer?.render?.();
   }
-  applyAppearance(colors, size, lineHeight, fontFamily, textAlign, readerContainer) {
-    const fontFamilyCss = getEpubFontFamilyCss(fontFamily);
+  applyAppearance(colors, size, lineHeight, fontFamily, customFontEnabled, customFontFamily, textAlign, readerContainer) {
+    const fontFamilyCss = getEpubFontFamilyCss(fontFamily, customFontEnabled, customFontFamily);
+    const customFontSelectors = "body, body p, body div, body span, body li, body h1, body h2, body h3, body h4, body h5, body h6, body blockquote, body td, body th, body dt, body dd";
     const css = [
       ":root { color-scheme: light dark; }",
       "body {",
@@ -12509,7 +12576,9 @@ var EpubLayoutController = class {
       "}",
       `a, a:link, a:visited { color: ${colors.linkColor} !important; }`,
       `::selection { background: ${colors.selectionBg} !important; }`,
-      "img { max-width: 100% !important; height: auto !important; }"
+      "img { max-width: 100% !important; height: auto !important; }",
+      customFontEnabled && customFontFamily ? `${customFontSelectors} { font-family: ${fontFamilyCss} !important; }
+body pre, body pre *, body code, body code *, body kbd, body kbd *, body samp, body samp *, body math, body math *, body svg, body svg * { font-family: revert !important; }` : ""
     ].join("\n");
     this.view.renderer?.setStyles?.(css);
     this.view.renderer?.render?.();
@@ -12864,6 +12933,15 @@ var EpubReadingSettingsModal = class extends import_obsidian12.Modal {
         this.update({ fontFamily: value });
       });
     });
+    new import_obsidian12.Setting(contentEl).setName("\u542F\u7528\u672C\u673A\u5B57\u4F53").setDesc("\u8F93\u5165\u7535\u8111\u4E2D\u5DF2\u5B89\u88C5\u7684\u5B57\u4F53\u540D\u79F0\uFF1B\u627E\u4E0D\u5230\u65F6\u4F1A\u81EA\u52A8\u56DE\u9000\u3002\u5173\u95ED\u540E\u4ECD\u4FDD\u7559\u540D\u79F0\u3002").addToggle((toggle) => {
+      toggle.setValue(this.draft.customFontEnabled === true).onChange((value) => {
+        this.update({ customFontEnabled: value });
+      });
+    });
+    new import_obsidian12.Setting(contentEl).setName("\u672C\u673A\u5B57\u4F53\u540D\u79F0").setDesc("\u4F8B\u5982 Microsoft YaHei\u3001LXGW WenKai\uFF1B\u53EA\u586B\u5199\u4E00\u4E2A\u5B57\u4F53\u540D\u79F0\uFF0C\u6700\u591A 128 \u4E2A\u5B57\u7B26\u3002").addText((text) => {
+      text.setPlaceholder("Microsoft YaHei").setValue(this.draft.customFontFamily ?? "").onChange((value) => this.update({ customFontFamily: value }));
+      text.inputEl.addEventListener("blur", () => this.commitCustomFontFamily());
+    });
     new import_obsidian12.Setting(contentEl).setName("\u5B57\u53F7").setDesc(`${this.draft.fontSize}px`).addSlider((slider) => {
       slider.setLimits(12, 28, 1).setValue(this.draft.fontSize).setDynamicTooltip().onChange((value) => {
         this.update({ fontSize: value });
@@ -12912,6 +12990,10 @@ var EpubReadingSettingsModal = class extends import_obsidian12.Modal {
     this.draft = { ...this.draft, ...patch };
     void this.onChange(this.draft);
   }
+  commitCustomFontFamily() {
+    this.draft = normalizeEpubReadingProfile(this.draft);
+    void this.onChange(this.draft);
+  }
 };
 
 // src/epub/EpubReaderView.ts
@@ -12944,6 +13026,8 @@ var EpubReaderView = class extends import_obsidian13.FileView {
     this.currentLineHeight = 1.7;
     this.currentContentWidth = 760;
     this.currentFontFamily = "publisher";
+    this.currentCustomFontEnabled = false;
+    this.currentCustomFontFamily = "";
     this.currentTextAlign = "start";
     this.currentTheme = "obsidian";
     this.sidebarOpen = false;
@@ -13015,6 +13099,8 @@ var EpubReaderView = class extends import_obsidian13.FileView {
     this.currentLineHeight = profile.lineHeight;
     this.currentContentWidth = profile.contentWidth;
     this.currentFontFamily = profile.fontFamily;
+    this.currentCustomFontEnabled = profile.customFontEnabled === true;
+    this.currentCustomFontFamily = profile.customFontFamily ?? "";
     this.currentTextAlign = profile.textAlign;
     this.currentTheme = profile.theme;
   }
@@ -14102,6 +14188,8 @@ var EpubReaderView = class extends import_obsidian13.FileView {
       this.currentFontSize,
       this.currentLineHeight,
       this.currentFontFamily,
+      this.currentCustomFontEnabled,
+      this.currentCustomFontFamily,
       this.currentTextAlign,
       this.readerContainerEl
     );

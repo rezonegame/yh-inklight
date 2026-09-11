@@ -44,7 +44,12 @@ test("isolates profiles by device while sharing one local record", () => {
 	const key = "profile-key";
 	const desktop = new EpubDeviceProfileStore("desktop", storage, key);
 	const phone = new EpubDeviceProfileStore("phone", storage, key);
-	const desktopProfile = { ...DEFAULT_EPUB_READING_PROFILE, fontSize: 21 };
+	const desktopProfile = {
+		...DEFAULT_EPUB_READING_PROFILE,
+		fontSize: 21,
+		customFontEnabled: true,
+		customFontFamily: "Microsoft YaHei",
+	};
 	const phoneProfile = { ...DEFAULT_EPUB_READING_PROFILE, fontSize: 17 };
 
 	assert.equal(desktop.getProfile(DEFAULT_EPUB_READING_PROFILE).fontSize, 16);
@@ -52,6 +57,7 @@ test("isolates profiles by device while sharing one local record", () => {
 	assert.equal(phone.getProfile(DEFAULT_EPUB_READING_PROFILE).fontSize, 16);
 	assert.equal(phone.setProfile(phoneProfile), true);
 	assert.equal(desktop.getProfile(DEFAULT_EPUB_READING_PROFILE).fontSize, 21);
+	assert.equal(desktop.getProfile(DEFAULT_EPUB_READING_PROFILE).customFontFamily, "Microsoft YaHei");
 	assert.equal(phone.getProfile(DEFAULT_EPUB_READING_PROFILE).fontSize, 17);
 
 	assert.equal(phone.resetCurrentProfile(), true);
