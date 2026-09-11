@@ -5,7 +5,7 @@
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
-import { ItemView, MarkdownRenderer, MarkdownView, Menu, Notice, setIcon, TFile, WorkspaceLeaf } from "obsidian";
+import { ItemView, MarkdownRenderer, MarkdownView, Menu, Notice, Platform, setIcon, TFile, WorkspaceLeaf } from "obsidian";
 
 import type OverlayAnnotationsPlugin from "../../main";
 import { formatTime } from "../utils/format";
@@ -80,6 +80,7 @@ type SidebarCard =
     };
 
 export class AnnotationSidebarView extends ItemView {
+	private filtersOpen = !Platform.isMobile;
   private annotationScope: AnnotationScope = "current";
   private query = "";
   private color: AnnotationColor | "all" = "all";
@@ -438,10 +439,20 @@ export class AnnotationSidebarView extends ItemView {
       await this.render();
     });
 
-    const filterButton = searchRow.createEl("button", { cls: "yh-icon-btn", attr: { type: "button", title: "筛选" } });
+    const filterButton = searchRow.createEl("button", {
+      cls: "yh-icon-btn",
+      attr: { type: "button", title: "筛选", "aria-label": "展开或收起筛选" },
+    });
     setIcon(filterButton, "filter");
+    filterButton.toggleClass("is-active", this.filtersOpen);
 
     const filterRow = container.createDiv({ cls: "yh-ov-filter-row" });
+    filterRow.toggleClass("is-open", this.filtersOpen);
+    filterButton.addEventListener("click", () => {
+      this.filtersOpen = !this.filtersOpen;
+      filterRow.toggleClass("is-open", this.filtersOpen);
+      filterButton.toggleClass("is-active", this.filtersOpen);
+    });
     const color = filterRow.createEl("select", { cls: "yh-filter-select" });
     color.createEl("option", { text: "全部颜色", value: "all" });
     for (const item of ANNOTATION_COLORS) {

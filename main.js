@@ -10909,6 +10909,7 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
   constructor(leaf, plugin) {
     super(leaf);
     this.plugin = plugin;
+    this.filtersOpen = !import_obsidian9.Platform.isMobile;
     this.annotationScope = "current";
     this.query = "";
     this.color = "all";
@@ -11196,9 +11197,19 @@ var AnnotationSidebarView = class extends import_obsidian9.ItemView {
       this.annotationScope = scope.value;
       await this.render();
     });
-    const filterButton = searchRow.createEl("button", { cls: "yh-icon-btn", attr: { type: "button", title: "\u7B5B\u9009" } });
+    const filterButton = searchRow.createEl("button", {
+      cls: "yh-icon-btn",
+      attr: { type: "button", title: "\u7B5B\u9009", "aria-label": "\u5C55\u5F00\u6216\u6536\u8D77\u7B5B\u9009" }
+    });
     (0, import_obsidian9.setIcon)(filterButton, "filter");
+    filterButton.toggleClass("is-active", this.filtersOpen);
     const filterRow = container.createDiv({ cls: "yh-ov-filter-row" });
+    filterRow.toggleClass("is-open", this.filtersOpen);
+    filterButton.addEventListener("click", () => {
+      this.filtersOpen = !this.filtersOpen;
+      filterRow.toggleClass("is-open", this.filtersOpen);
+      filterButton.toggleClass("is-active", this.filtersOpen);
+    });
     const color = filterRow.createEl("select", { cls: "yh-filter-select" });
     color.createEl("option", { text: "\u5168\u90E8\u989C\u8272", value: "all" });
     for (const item of ANNOTATION_COLORS) {
@@ -13044,6 +13055,8 @@ var EpubReaderView = class extends import_obsidian13.FileView {
     this.wheelDebounceTimer = null;
     this.profileSaveTimer = null;
     this.contextMenuDismissTimer = null;
+    this.resizeRestoreTimer = null;
+    this.resizeObserver = null;
     this.visibilityHandler = null;
     this.blurHandler = null;
     this.focusHandler = null;
@@ -13233,6 +13246,12 @@ var EpubReaderView = class extends import_obsidian13.FileView {
     searchTab.addEventListener("click", () => this.setSidebarTab("search"));
     this.sidebarContentEl = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-content" });
     this.readerContainerEl = body.createDiv({ cls: "yh-epub-reader-area" });
+    this.sidebarBackdropEl = body.createDiv({ cls: "yh-epub-sidebar-backdrop" });
+    this.sidebarBackdropEl.addEventListener("click", () => this.setSidebarOpen(false));
+    if (typeof ResizeObserver !== "undefined") {
+      this.resizeObserver = new ResizeObserver(() => this.scheduleResizeRestore());
+      this.resizeObserver.observe(this.readerContainerEl);
+    }
     this.progressEl = this.containerEl.createDiv({ cls: "yh-epub-progress" });
     this.containerEl.addEventListener("keydown", (event) => this.handleKeydown(event));
     this.readerContainerEl.addEventListener("wheel", (event) => this.handleWheel(event), { passive: false });
@@ -13293,9 +13312,13 @@ var EpubReaderView = class extends import_obsidian13.FileView {
    * 切换侧边栏显示/隐藏。
    */
   toggleSidebar() {
-    this.sidebarOpen = !this.sidebarOpen;
-    this.sidebarContainerEl.toggleClass("is-open", this.sidebarOpen);
-    if (this.sidebarOpen) {
+    this.setSidebarOpen(!this.sidebarOpen);
+  }
+  setSidebarOpen(open) {
+    this.sidebarOpen = open;
+    this.sidebarContainerEl.toggleClass("is-open", open);
+    this.sidebarBackdropEl.toggleClass("is-open", open);
+    if (open) {
       this.renderSidebar();
     }
   }
@@ -13309,8 +13332,7 @@ var EpubReaderView = class extends import_obsidian13.FileView {
   openSidebarTab(tab) {
     this.activeSidebarTab = tab;
     if (!this.sidebarOpen) {
-      this.sidebarOpen = true;
-      this.sidebarContainerEl.toggleClass("is-open", true);
+      this.setSidebarOpen(true);
     }
     this.sidebarContainerEl.querySelectorAll(".yh-epub-sidebar-tab").forEach((button) => {
       button.toggleClass("is-active", button.dataset.tab === tab);
@@ -13333,6 +13355,7 @@ var EpubReaderView = class extends import_obsidian13.FileView {
         getSearchContents: () => this.collectFoliateDocs().map((doc) => ({ doc })),
         onNavigate: (cfi) => {
           if (this.foliateView) void this.foliateView.goTo(cfi);
+          this.closeSidebarOnCoarsePointer();
         }
       });
       this.searchController.render();
@@ -13359,8 +13382,32 @@ var EpubReaderView = class extends import_obsidian13.FileView {
         text: entry.label,
         attr: { type: "button" }
       });
-      item.addEventListener("click", () => this.navigateToSpineIndex(entry.spineIndex));
+      item.addEventListener("click", () => {
+        this.navigateToSpineIndex(entry.spineIndex);
+        this.closeSidebarOnCoarsePointer();
+      });
     }
+  }
+  closeSidebarOnCoarsePointer() {
+    if (window.matchMedia?.("(pointer: coarse)").matches) {
+      this.setSidebarOpen(false);
+    }
+  }
+  scheduleResizeRestore() {
+    if (!this.foliateView || !this.currentCfi) {
+      return;
+    }
+    if (this.resizeRestoreTimer !== null) {
+      window.clearTimeout(this.resizeRestoreTimer);
+    }
+    this.resizeRestoreTimer = window.setTimeout(() => {
+      this.resizeRestoreTimer = null;
+      const cfi = this.currentCfi;
+      this.layoutController?.apply();
+      if (this.foliateView && cfi) {
+        void this.foliateView.goTo(cfi);
+      }
+    }, 120);
   }
   // ================================================================
   // 兼容旧版书签数据（运行时入口已下线）
@@ -14064,6 +14111,12 @@ var EpubReaderView = class extends import_obsidian13.FileView {
    * 销毁 foliate-view 实例，释放资源。
    */
   destroyRendition() {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
+    if (this.resizeRestoreTimer !== null) {
+      window.clearTimeout(this.resizeRestoreTimer);
+      this.resizeRestoreTimer = null;
+    }
     if (this.progressSaveTimer !== null) {
       window.clearTimeout(this.progressSaveTimer);
       this.progressSaveTimer = null;

@@ -6,16 +6,16 @@ anchor/textAnchor.ts: 文本锚点生成与恢复，维护 offset、selectedText
 anchor/fuzzyMatch.ts: 模糊匹配恢复器，处理文件轻微改动后的锚点迁移。
 editor/highlightExtension.ts: CodeMirror 6 高亮装饰层，使用 Decoration.mark 非侵入式绘制。
 editor/readingViewHighlight.ts: Reading View DOM 高亮层，使用延迟渲染、MutationObserver 与 fuzzy matching 兼容移动端。
-editor/selectionToolbar.ts: 选中文本后的浮动工具栏，提供颜色、便签、复制和总览入口。
+editor/selectionToolbar.ts: 选中文本后的工具栏，桌面显示在选区附近，移动端固定在底部安全区，提供颜色、便签、复制和总览入口。
 pdf/pdfAnnotationLayer.ts: PDF 注释控制器，使用页码与矩形百分比坐标绘制非侵入式高亮和右侧便签栏。
 storage/types.ts: sidecar JSON、设置、锚点、高亮、笔记、标签字段、代码选区标记、索引的类型真相源。
 storage/annotationStore.ts: .obsidian-annotations 持久化后端，读写文件 JSON 与全局 index。
 storage/documentMerge.ts: storage 纯逻辑三方合并器，保护跨设备新增、删除、修改和阅读进度。
 tags/tagDomain.ts: 统一语义标签的默认值、名称校验、旧字段映射与显示解析。
 views/annotationPopover.ts: 窄屏与阅读模式弹层，点击高亮后展示 sidecar 中的高亮和便签内容。
-views/sidebarView.ts: 右侧总览面板，使用彩色卡片合并 highlight 与关联 note，并承载搜索、过滤、排序、导出、跳转与内联编辑。
+views/sidebarView.ts: 右侧总览面板，使用彩色卡片合并 highlight 与关联 note，并承载搜索、可折叠过滤、排序、导出、跳转与内联编辑。
 settings/settingsTab.ts: 插件设置页，管理默认颜色、统一标签、EPUB 阅读排版 profile、作者和迁移策略。
-epub/EpubReaderView.ts: EPUB FileView 生命周期、目录、进度、批注业务与控制器装配。
+epub/EpubReaderView.ts: EPUB FileView 生命周期、目录/搜索覆盖面板、进度、批注业务、尺寸变化恢复与控制器装配。
 epub/EpubSearch.ts: EPUB 侧栏唯一搜索入口、结果标准化、过期查询保护与搜索监听清理。
 epub/EpubSelectionController.ts: foliate iframe 选区监听、CFI/坐标转换和事件释放。
 epub/EpubLayoutController.ts: foliate flow、间距、正文宽度、预设/本机字体和阅读外观 CSS 应用。

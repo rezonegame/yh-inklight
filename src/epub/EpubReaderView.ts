@@ -178,6 +178,8 @@ export class EpubReaderView extends FileView {
 	private wheelDebounceTimer: number | null = null;
 	private profileSaveTimer: number | null = null;
 	private contextMenuDismissTimer: number | null = null;
+	private resizeRestoreTimer: number | null = null;
+	private resizeObserver: ResizeObserver | null = null;
 	private visibilityHandler: (() => void) | null = null;
 	private blurHandler: (() => void) | null = null;
 	private focusHandler: (() => void) | null = null;
@@ -188,6 +190,7 @@ export class EpubReaderView extends FileView {
 	private toolbarEl!: HTMLElement;
 	private sidebarContainerEl!: HTMLElement;
 	private sidebarContentEl!: HTMLElement;
+	private sidebarBackdropEl!: HTMLElement;
 	private readerContainerEl!: HTMLElement;
 	private progressEl!: HTMLElement;
 
@@ -386,6 +389,12 @@ export class EpubReaderView extends FileView {
 		this.sidebarContentEl = this.sidebarContainerEl.createDiv({ cls: "yh-epub-sidebar-content" });
 
 		this.readerContainerEl = body.createDiv({ cls: "yh-epub-reader-area" });
+		this.sidebarBackdropEl = body.createDiv({ cls: "yh-epub-sidebar-backdrop" });
+		this.sidebarBackdropEl.addEventListener("click", () => this.setSidebarOpen(false));
+		if (typeof ResizeObserver !== "undefined") {
+			this.resizeObserver = new ResizeObserver(() => this.scheduleResizeRestore());
+			this.resizeObserver.observe(this.readerContainerEl);
+		}
 		// 脚注预览 popover 元素（Phase 4-B P3）
 
 		this.progressEl = this.containerEl.createDiv({ cls: "yh-epub-progress" });
@@ -461,9 +470,14 @@ export class EpubReaderView extends FileView {
 	 * 切换侧边栏显示/隐藏。
 	 */
 	private toggleSidebar(): void {
-		this.sidebarOpen = !this.sidebarOpen;
-		this.sidebarContainerEl.toggleClass("is-open", this.sidebarOpen);
-		if (this.sidebarOpen) {
+		this.setSidebarOpen(!this.sidebarOpen);
+	}
+
+	private setSidebarOpen(open: boolean): void {
+		this.sidebarOpen = open;
+		this.sidebarContainerEl.toggleClass("is-open", open);
+		this.sidebarBackdropEl.toggleClass("is-open", open);
+		if (open) {
 			this.renderSidebar();
 		}
 	}
@@ -479,8 +493,7 @@ export class EpubReaderView extends FileView {
 	private openSidebarTab(tab: "toc" | "search"): void {
 		this.activeSidebarTab = tab;
 		if (!this.sidebarOpen) {
-			this.sidebarOpen = true;
-			this.sidebarContainerEl.toggleClass("is-open", true);
+			this.setSidebarOpen(true);
 		}
 		this.sidebarContainerEl.querySelectorAll<HTMLElement>(".yh-epub-sidebar-tab").forEach((button) => {
 			button.toggleClass("is-active", button.dataset.tab === tab);
@@ -504,6 +517,7 @@ export class EpubReaderView extends FileView {
 				getSearchContents: () => this.collectFoliateDocs().map((doc) => ({ doc })),
 				onNavigate: (cfi) => {
 					if (this.foliateView) void this.foliateView.goTo(cfi);
+					this.closeSidebarOnCoarsePointer();
 				},
 			});
 			this.searchController.render();
@@ -534,8 +548,34 @@ export class EpubReaderView extends FileView {
 				text: entry.label,
 				attr: { type: "button" },
 			});
-			item.addEventListener("click", () => this.navigateToSpineIndex(entry.spineIndex));
+			item.addEventListener("click", () => {
+				this.navigateToSpineIndex(entry.spineIndex);
+				this.closeSidebarOnCoarsePointer();
+			});
 		}
+	}
+
+	private closeSidebarOnCoarsePointer(): void {
+		if (window.matchMedia?.("(pointer: coarse)").matches) {
+			this.setSidebarOpen(false);
+		}
+	}
+
+	private scheduleResizeRestore(): void {
+		if (!this.foliateView || !this.currentCfi) {
+			return;
+		}
+		if (this.resizeRestoreTimer !== null) {
+			window.clearTimeout(this.resizeRestoreTimer);
+		}
+		this.resizeRestoreTimer = window.setTimeout(() => {
+			this.resizeRestoreTimer = null;
+			const cfi = this.currentCfi;
+			this.layoutController?.apply();
+			if (this.foliateView && cfi) {
+				void this.foliateView.goTo(cfi);
+			}
+		}, 120);
 	}
 
 	// ================================================================
@@ -1358,6 +1398,12 @@ export class EpubReaderView extends FileView {
 	 * 销毁 foliate-view 实例，释放资源。
 	 */
 	private destroyRendition(): void {
+		this.resizeObserver?.disconnect();
+		this.resizeObserver = null;
+		if (this.resizeRestoreTimer !== null) {
+			window.clearTimeout(this.resizeRestoreTimer);
+			this.resizeRestoreTimer = null;
+		}
 		if (this.progressSaveTimer !== null) {
 			window.clearTimeout(this.progressSaveTimer);
 			this.progressSaveTimer = null;

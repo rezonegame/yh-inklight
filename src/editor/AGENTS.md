@@ -4,7 +4,7 @@
 成员清单
 highlightExtension.ts: CodeMirror 6 Decoration 高亮层，只渲染视觉标记不修改文档。
 readingViewHighlight.ts: Reading View DOM 高亮层，兼容移动端延迟渲染与虚拟滚动补注入。
-selectionToolbar.ts: 浮动选择工具栏，提供颜色、便签、复制与总览入口。
+selectionToolbar.ts: 桌面浮动、移动端底部安全区选择工具栏，提供颜色、便签、复制与总览入口。
 
 法则: 编辑器只投影·原文不写入·交互从选区出发·便签管理归入总览面板
 
