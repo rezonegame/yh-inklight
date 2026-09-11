@@ -203,7 +203,12 @@ function clampNumber(value: unknown, fallback: number, min: number, max: number,
     return fallback;
   }
   const clamped = Math.min(max, Math.max(min, value));
-  return step ? Math.round(clamped / step) * step : clamped;
+  if (!step) {
+    return clamped;
+  }
+  const rounded = Math.round(clamped / step) * step;
+  const precision = Math.max(0, (String(step).split(".")[1] ?? "").length);
+  return Number(rounded.toFixed(precision));
 }
 
 export function createEpubReadingProfileFromLegacy(settings: Partial<Pick<AnnotationPluginSettings, "epubDefaultFlow" | "epubFontSize" | "epubReadingTheme">>): EpubReadingProfile {

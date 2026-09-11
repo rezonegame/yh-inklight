@@ -2,7 +2,7 @@
  * [INPUT]: 依赖 Obsidian FileView/WorkspaceLeaf/TFile、foliate-js view API、
  *          storage/types 的 EPUB 标注/进度/主题类型、AnnotationStore 的 sidecar 持久化、
  *          EpubFoliateLoader 的引擎加载与 EpubStylesheetInliner 的安全过滤、
- *          EpubThemeManager 的主题颜色解析
+ *          EpubThemeManager 的主题颜色解析、设备独立排版 profile 服务
  * [OUTPUT]: 对外提供 EpubReaderView，将 foliate-js 渲染引擎嵌入 Obsidian leaf，
  *          承载工具栏、侧边栏（目录/搜索）、阅读区（iframe）、进度条、
  *          选区上下文菜单、标注 CRUD、进度持久化与阅读时间追踪；搜索、选区和布局由专用控制器承载
@@ -26,7 +26,6 @@ import {
 	EpubHighlightStyle,
 	EpubReadingProgress,
 	EpubReadingTheme,
-	createEpubReadingProfileFromLegacy,
 	normalizeEpubReadingProfile,
 	SUPPORTED_BOOK_EXTENSIONS,
 } from "../storage/types";
@@ -131,7 +130,9 @@ export class EpubReaderView extends FileView {
 	private readonly themeManager: EpubThemeManager;
 	private readonly refreshAnnotations: () => void;
 	private readonly offerAnnotationUndo: (file: TFile, annotationId: string, label: string) => void;
-	private readonly saveSettings: () => Promise<void>;
+	private readonly getReadingProfile: () => EpubReadingProfile;
+	private readonly saveReadingProfile: (profile: EpubReadingProfile) => Promise<void>;
+	private readonly resetReadingProfile: () => Promise<EpubReadingProfile>;
 
 	// ---- foliate 实例 ----
 
@@ -198,23 +199,25 @@ export class EpubReaderView extends FileView {
 		settings: AnnotationPluginSettings,
 		refreshAnnotations: () => void,
 		offerAnnotationUndo: (file: TFile, annotationId: string, label: string) => void,
-		saveSettings: () => Promise<void>,
+		getReadingProfile: () => EpubReadingProfile,
+		saveReadingProfile: (profile: EpubReadingProfile) => Promise<void>,
+		resetReadingProfile: () => Promise<EpubReadingProfile>,
 	) {
 		super(leaf);
 		this.store = store;
 		this.pluginSettings = settings;
 		this.refreshAnnotations = refreshAnnotations;
 		this.offerAnnotationUndo = offerAnnotationUndo;
-		this.saveSettings = saveSettings;
+		this.getReadingProfile = getReadingProfile;
+		this.saveReadingProfile = saveReadingProfile;
+		this.resetReadingProfile = resetReadingProfile;
 		this.themeManager = new EpubThemeManager();
 		this.selectionController = new EpubSelectionController({
 			getFoliateView: () => this.foliateView,
 			getIframeForDocument: (doc) => this.findIframeForDocument(doc),
 			onSelection: (snapshot) => this.handleTextSelected(snapshot),
 		});
-		this.readingProfile = settings.epubReadingProfile
-			? normalizeEpubReadingProfile(settings.epubReadingProfile)
-			: createEpubReadingProfileFromLegacy(settings);
+		this.readingProfile = getReadingProfile();
 		this.applyProfileState(this.readingProfile);
 	}
 
@@ -235,11 +238,6 @@ export class EpubReaderView extends FileView {
 		const view = this.foliateView;
 		this.readingProfile = next;
 		this.applyProfileState(next);
-		this.pluginSettings.epubReadingProfile = next;
-		// 保留旧字段，确保降级到 0.20.x 时仍能读取字号、主题和流模式。
-		this.pluginSettings.epubFontSize = next.fontSize;
-		this.pluginSettings.epubDefaultFlow = next.flow;
-		this.pluginSettings.epubReadingTheme = next.theme;
 
 		this.layoutController?.setLayout(next.flow, next.contentWidth);
 		this.applyFoliateAppearance();
@@ -262,12 +260,17 @@ export class EpubReaderView extends FileView {
 		}
 		this.profileSaveTimer = window.setTimeout(() => {
 			this.profileSaveTimer = null;
-			void this.saveSettings();
+			void this.saveReadingProfile(this.readingProfile);
 		}, 350);
 	}
 
 	private openReadingSettings(): void {
-		new EpubReadingSettingsModal(this.app, this.readingProfile, (profile) => this.updateReadingProfile(profile)).open();
+		new EpubReadingSettingsModal(
+			this.app,
+			this.readingProfile,
+			(profile) => this.updateReadingProfile(profile),
+			async () => this.resetReadingProfile(),
+		).open();
 	}
 
 	/** 视图类型标识，供 Obsidian workspace 路由 */
@@ -1332,9 +1335,7 @@ export class EpubReaderView extends FileView {
 
 	/** 设置页保存 EPUB 排版后，同步已打开的阅读视图。 */
 	refreshExternalSettings(): void {
-		const next = this.pluginSettings.epubReadingProfile
-			? normalizeEpubReadingProfile(this.pluginSettings.epubReadingProfile)
-			: createEpubReadingProfileFromLegacy(this.pluginSettings);
+		const next = this.getReadingProfile();
 		if (JSON.stringify(next) === JSON.stringify(this.readingProfile)) {
 			return;
 		}

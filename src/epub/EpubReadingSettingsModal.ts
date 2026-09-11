@@ -1,12 +1,11 @@
 /**
  * EPUB 阅读排版设置面板。
- * [PROTOCOL]: 修改通过回调写入插件全局 profile，不直接触碰 sidecar 或原始书籍。
+ * [PROTOCOL]: 修改通过回调写入当前设备 profile，不直接触碰同步设置、sidecar 或原始书籍。
  */
 
 import { App, Modal, Setting, setIcon } from "obsidian";
 
 import {
-	DEFAULT_EPUB_READING_PROFILE,
 	EPUB_READING_THEMES,
 	EpubFontFamily,
 	EpubReadingProfile,
@@ -28,6 +27,7 @@ export class EpubReadingSettingsModal extends Modal {
 		app: App,
 		profile: EpubReadingProfile,
 		private readonly onChange: (profile: EpubReadingProfile) => void | Promise<void>,
+		private readonly onReset: () => EpubReadingProfile | Promise<EpubReadingProfile>,
 	) {
 		super(app);
 		this.draft = { ...profile };
@@ -43,7 +43,7 @@ export class EpubReadingSettingsModal extends Modal {
 		contentEl.empty();
 		contentEl.createDiv({
 			cls: "setting-item-description",
-			text: "修改会立即应用到当前 EPUB，并保存为墨光的默认阅读排版。",
+			text: "修改会立即应用到当前 EPUB，并保存为当前设备的阅读排版。",
 		});
 
 		new Setting(contentEl)
@@ -117,9 +117,8 @@ export class EpubReadingSettingsModal extends Modal {
 			.addButton((button) => {
 				button.setTooltip("恢复默认排版");
 				setIcon(button.buttonEl, "rotate-ccw");
-				button.onClick(() => {
-					this.draft = { ...DEFAULT_EPUB_READING_PROFILE };
-					this.onChange(this.draft);
+				button.onClick(async () => {
+					this.draft = { ...(await this.onReset()) };
 					this.render();
 				});
 			});

@@ -1,11 +1,11 @@
 /**
  * [INPUT]: 依赖 Obsidian Plugin API、CM6 扩展、sidecar AnnotationStore、锚点算法、视图与设置模块
- * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、EPUB 阅读排版设置和 vault 事件
+ * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、EPUB 阅读排版设置、设备 profile 和 vault 事件
  * [POS]: 插件装配根，协调模块但不修改用户 Markdown 原文
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
-import { addIcon, Editor, MarkdownPostProcessorContext, MarkdownView, Modal, Notice, Plugin, TFile } from "obsidian";
+import { addIcon, Editor, MarkdownPostProcessorContext, MarkdownView, Modal, Notice, Platform, Plugin, TFile } from "obsidian";
 
 import { createTextAnchor, relocateDocumentAnchors } from "./src/anchor/textAnchor";
 import { createHighlightExtension } from "./src/editor/highlightExtension";
@@ -29,6 +29,7 @@ import {
   CommentAnnotation,
   createEpubReadingProfileFromLegacy,
   DEFAULT_SETTINGS,
+  EpubReadingProfile,
   HighlightAnnotation,
   normalizeEpubReadingProfile,
   PdfAnchor,
@@ -41,6 +42,12 @@ import { ANNOTATION_SIDEBAR_VIEW, AnnotationSidebarView } from "./src/views/side
 import { EpubReaderView, EPUB_READER_VIEW_TYPE } from "./src/epub/EpubReaderView";
 import { EpubBookshelfView, EPUB_BOOKSHELF_VIEW_TYPE } from "./src/epub/EpubBookshelfView";
 import { registerEpubGotoHandler } from "./src/epub/EpubGotoHandler";
+import {
+  detectReaderDeviceClass,
+  EpubDeviceProfileStorage,
+  EpubDeviceProfileStore,
+  getEpubDeviceProfileStorageKey,
+} from "./src/epub/EpubDeviceProfileStore";
 
 interface CommentModalValue {
   tagId: string;
@@ -77,6 +84,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private pdfLayer!: PdfAnnotationLayer;
   private pdfViewerAdapter!: PdfViewerAdapter;
   private annotationLinks!: AnnotationLinkService;
+  private epubDeviceProfileStore!: EpubDeviceProfileStore;
   private lastSelection: SelectionSnapshot | null = null;
   private renameMigrationTimer: number | null = null;
   private annotationUndo: {
@@ -90,6 +98,12 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   async onload(): Promise<void> {
     addIcon("yh-inklight-icon", YH_INKLIGHT_ICON);
     await this.loadSettings();
+    this.epubDeviceProfileStore = new EpubDeviceProfileStore(
+      detectReaderDeviceClass(Platform, window.innerWidth),
+      this.getLocalStorage(),
+      getEpubDeviceProfileStorageKey(this.manifest.id, this.app.vault.getName()),
+      (message) => new Notice(message, 7000),
+    );
     console.info(`yh-inklight loaded v${this.manifest.version}`);
     this.store = new AnnotationStore(this.app, () => this.settings.annotationTags);
     await this.store.initialize();
@@ -103,7 +117,9 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         this.settings,
         () => this.refreshAnnotations(),
         (file, annotationId, label) => this.offerAnnotationUndo(file, annotationId, label),
-        () => this.saveSettings(),
+        () => this.getEpubReadingProfile(),
+        (profile) => this.updateEpubReadingProfile(profile),
+        () => this.resetEpubReadingProfile(),
       ),
     );
     // 把 foliate 支持的所有电子书格式绑定到阅读器视图：registerView 只注册视图工厂，
@@ -239,6 +255,45 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
     await this.refreshAnnotations();
+  }
+
+  getEpubReadingProfile(): EpubReadingProfile {
+    const globalProfile = this.settings.epubReadingProfile
+      ? normalizeEpubReadingProfile(this.settings.epubReadingProfile)
+      : createEpubReadingProfileFromLegacy(this.settings);
+    return this.epubDeviceProfileStore?.getProfile(globalProfile) ?? globalProfile;
+  }
+
+  getEpubReadingDeviceLabel(): string {
+    return this.epubDeviceProfileStore?.getDeviceLabel() ?? "桌面";
+  }
+
+  async updateEpubReadingProfile(profile: EpubReadingProfile): Promise<void> {
+    const normalized = normalizeEpubReadingProfile(profile);
+    if (!this.epubDeviceProfileStore) {
+      this.settings.epubReadingProfile = normalized;
+      await this.saveSettings();
+      return;
+    }
+    if (this.epubDeviceProfileStore.setProfile(normalized)) {
+      await this.refreshAnnotations();
+    }
+  }
+
+  async resetEpubReadingProfile(): Promise<EpubReadingProfile> {
+    if (this.epubDeviceProfileStore?.resetCurrentProfile()) {
+      await this.refreshAnnotations();
+    }
+    return this.getEpubReadingProfile();
+  }
+
+  private getLocalStorage(): EpubDeviceProfileStorage | null {
+    try {
+      return window.localStorage;
+    } catch (error) {
+      console.warn("yh-inklight: localStorage unavailable", error);
+      return null;
+    }
   }
 
   async refreshAnnotations(): Promise<void> {

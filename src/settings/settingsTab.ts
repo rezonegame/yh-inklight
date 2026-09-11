@@ -12,7 +12,6 @@ import {
   ANNOTATION_COLORS,
   AnnotationColor,
   COLOR_LABELS,
-  DEFAULT_EPUB_READING_PROFILE,
   EPUB_HIGHLIGHT_STYLES,
   EPUB_READING_THEMES,
   EpubFontFamily,
@@ -21,7 +20,6 @@ import {
   EpubReadingProfile,
   EpubReadingTheme,
   EpubTextAlign,
-  normalizeEpubReadingProfile,
 } from "../storage/types";
 import {
   cloneDefaultAnnotationTags,
@@ -198,7 +196,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
   /** EPUB 阅读相关设置：统一排版 profile 与批注高亮样式。 */
   private renderEpubSettings(): void {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: "EPUB 阅读" });
+    containerEl.createEl("h3", { text: `EPUB 阅读（当前设备：${this.plugin.getEpubReadingDeviceLabel()}）` });
 
     const profile = this.getEpubProfile();
 
@@ -288,6 +286,17 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       });
 
     new Setting(containerEl)
+      .setName("恢复当前设备排版")
+      .setDesc("删除当前设备的本机覆盖值，回到同步默认排版。")
+      .addButton((button) => {
+        button.setButtonText("恢复默认").onClick(async () => {
+          await this.plugin.resetEpubReadingProfile();
+          new Notice("已恢复当前设备的 EPUB 默认排版");
+          this.display();
+        });
+      });
+
+    new Setting(containerEl)
       .setName("高亮样式")
       .setDesc("EPUB 文本标注的默认呈现样式。")
       .addDropdown((dropdown) => {
@@ -316,18 +325,10 @@ export class AnnotationSettingsTab extends PluginSettingTab {
   }
 
   private getEpubProfile(): EpubReadingProfile {
-    return this.plugin.settings.epubReadingProfile
-      ? normalizeEpubReadingProfile(this.plugin.settings.epubReadingProfile)
-      : { ...DEFAULT_EPUB_READING_PROFILE };
+    return this.plugin.getEpubReadingProfile();
   }
 
   private async updateEpubProfile(patch: Partial<EpubReadingProfile>): Promise<void> {
-    const profile = normalizeEpubReadingProfile({ ...this.getEpubProfile(), ...patch });
-    this.plugin.settings.epubReadingProfile = profile;
-    // 保留旧字段，供旧版本降级读取。
-    this.plugin.settings.epubFontSize = profile.fontSize;
-    this.plugin.settings.epubDefaultFlow = profile.flow;
-    this.plugin.settings.epubReadingTheme = profile.theme;
-    await this.plugin.saveSettings();
+    await this.plugin.updateEpubReadingProfile({ ...this.getEpubProfile(), ...patch });
   }
 }

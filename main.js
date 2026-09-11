@@ -8590,7 +8590,12 @@ function clampNumber(value, fallback, min, max, step) {
     return fallback;
   }
   const clamped = Math.min(max, Math.max(min, value));
-  return step ? Math.round(clamped / step) * step : clamped;
+  if (!step) {
+    return clamped;
+  }
+  const rounded = Math.round(clamped / step) * step;
+  const precision = Math.max(0, (String(step).split(".")[1] ?? "").length);
+  return Number(rounded.toFixed(precision));
 }
 function createEpubReadingProfileFromLegacy(settings) {
   return {
@@ -9740,7 +9745,7 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
   /** EPUB 阅读相关设置：统一排版 profile 与批注高亮样式。 */
   renderEpubSettings() {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: "EPUB \u9605\u8BFB" });
+    containerEl.createEl("h3", { text: `EPUB \u9605\u8BFB\uFF08\u5F53\u524D\u8BBE\u5907\uFF1A${this.plugin.getEpubReadingDeviceLabel()}\uFF09` });
     const profile = this.getEpubProfile();
     new import_obsidian6.Setting(containerEl).setName("\u5B57\u4F53").setDesc("\u4EC5\u4F7F\u7528\u672C\u673A\u6216\u4E66\u7C4D\u5DF2\u6709\u5B57\u4F53\uFF0C\u4E0D\u4E0B\u8F7D\u5B57\u4F53\u6587\u4EF6\u3002").addDropdown((dropdown) => {
       dropdown.addOption("publisher", "\u8DDF\u968F\u4E66\u7C4D");
@@ -9788,6 +9793,13 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
         await this.updateEpubProfile({ flow: value });
       });
     });
+    new import_obsidian6.Setting(containerEl).setName("\u6062\u590D\u5F53\u524D\u8BBE\u5907\u6392\u7248").setDesc("\u5220\u9664\u5F53\u524D\u8BBE\u5907\u7684\u672C\u673A\u8986\u76D6\u503C\uFF0C\u56DE\u5230\u540C\u6B65\u9ED8\u8BA4\u6392\u7248\u3002").addButton((button) => {
+      button.setButtonText("\u6062\u590D\u9ED8\u8BA4").onClick(async () => {
+        await this.plugin.resetEpubReadingProfile();
+        new import_obsidian6.Notice("\u5DF2\u6062\u590D\u5F53\u524D\u8BBE\u5907\u7684 EPUB \u9ED8\u8BA4\u6392\u7248");
+        this.display();
+      });
+    });
     new import_obsidian6.Setting(containerEl).setName("\u9AD8\u4EAE\u6837\u5F0F").setDesc("EPUB \u6587\u672C\u6807\u6CE8\u7684\u9ED8\u8BA4\u5448\u73B0\u6837\u5F0F\u3002").addDropdown((dropdown) => {
       for (const style2 of EPUB_HIGHLIGHT_STYLES) {
         dropdown.addOption(style2.id, style2.label);
@@ -9809,15 +9821,10 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
     });
   }
   getEpubProfile() {
-    return this.plugin.settings.epubReadingProfile ? normalizeEpubReadingProfile(this.plugin.settings.epubReadingProfile) : { ...DEFAULT_EPUB_READING_PROFILE };
+    return this.plugin.getEpubReadingProfile();
   }
   async updateEpubProfile(patch) {
-    const profile = normalizeEpubReadingProfile({ ...this.getEpubProfile(), ...patch });
-    this.plugin.settings.epubReadingProfile = profile;
-    this.plugin.settings.epubFontSize = profile.fontSize;
-    this.plugin.settings.epubDefaultFlow = profile.flow;
-    this.plugin.settings.epubReadingTheme = profile.theme;
-    await this.plugin.saveSettings();
+    await this.plugin.updateEpubReadingProfile({ ...this.getEpubProfile(), ...patch });
   }
 };
 
@@ -12834,9 +12841,10 @@ var FONT_FAMILIES = [
   { id: "kaiti", label: "\u6977\u4F53" }
 ];
 var EpubReadingSettingsModal = class extends import_obsidian12.Modal {
-  constructor(app, profile, onChange) {
+  constructor(app, profile, onChange, onReset) {
     super(app);
     this.onChange = onChange;
+    this.onReset = onReset;
     this.draft = { ...profile };
   }
   onOpen() {
@@ -12848,7 +12856,7 @@ var EpubReadingSettingsModal = class extends import_obsidian12.Modal {
     contentEl.empty();
     contentEl.createDiv({
       cls: "setting-item-description",
-      text: "\u4FEE\u6539\u4F1A\u7ACB\u5373\u5E94\u7528\u5230\u5F53\u524D EPUB\uFF0C\u5E76\u4FDD\u5B58\u4E3A\u58A8\u5149\u7684\u9ED8\u8BA4\u9605\u8BFB\u6392\u7248\u3002"
+      text: "\u4FEE\u6539\u4F1A\u7ACB\u5373\u5E94\u7528\u5230\u5F53\u524D EPUB\uFF0C\u5E76\u4FDD\u5B58\u4E3A\u5F53\u524D\u8BBE\u5907\u7684\u9605\u8BFB\u6392\u7248\u3002"
     });
     new import_obsidian12.Setting(contentEl).setName("\u5B57\u4F53").addDropdown((dropdown) => {
       for (const family of FONT_FAMILIES) dropdown.addOption(family.id, family.label);
@@ -12894,9 +12902,8 @@ var EpubReadingSettingsModal = class extends import_obsidian12.Modal {
     new import_obsidian12.Setting(contentEl).setName("\u6062\u590D\u9ED8\u8BA4\u6392\u7248").setDesc("\u6062\u590D\u4E3A\u58A8\u5149\u7684\u9ED8\u8BA4\u9605\u8BFB\u6392\u7248").addButton((button) => {
       button.setTooltip("\u6062\u590D\u9ED8\u8BA4\u6392\u7248");
       (0, import_obsidian12.setIcon)(button.buttonEl, "rotate-ccw");
-      button.onClick(() => {
-        this.draft = { ...DEFAULT_EPUB_READING_PROFILE };
-        this.onChange(this.draft);
+      button.onClick(async () => {
+        this.draft = { ...await this.onReset() };
         this.render();
       });
     });
@@ -12916,7 +12923,7 @@ var EpubReaderView = class extends import_obsidian13.FileView {
   // ================================================================
   // 构造 & 生命周期
   // ================================================================
-  constructor(leaf, store, settings, refreshAnnotations, offerAnnotationUndo, saveSettings) {
+  constructor(leaf, store, settings, refreshAnnotations, offerAnnotationUndo, getReadingProfile, saveReadingProfile, resetReadingProfile) {
     super(leaf);
     // ---- foliate 实例 ----
     this.foliateView = null;
@@ -12990,14 +12997,16 @@ var EpubReaderView = class extends import_obsidian13.FileView {
     this.pluginSettings = settings;
     this.refreshAnnotations = refreshAnnotations;
     this.offerAnnotationUndo = offerAnnotationUndo;
-    this.saveSettings = saveSettings;
+    this.getReadingProfile = getReadingProfile;
+    this.saveReadingProfile = saveReadingProfile;
+    this.resetReadingProfile = resetReadingProfile;
     this.themeManager = new EpubThemeManager();
     this.selectionController = new EpubSelectionController({
       getFoliateView: () => this.foliateView,
       getIframeForDocument: (doc) => this.findIframeForDocument(doc),
       onSelection: (snapshot) => this.handleTextSelected(snapshot)
     });
-    this.readingProfile = settings.epubReadingProfile ? normalizeEpubReadingProfile(settings.epubReadingProfile) : createEpubReadingProfileFromLegacy(settings);
+    this.readingProfile = getReadingProfile();
     this.applyProfileState(this.readingProfile);
   }
   applyProfileState(profile) {
@@ -13016,10 +13025,6 @@ var EpubReaderView = class extends import_obsidian13.FileView {
     const view = this.foliateView;
     this.readingProfile = next;
     this.applyProfileState(next);
-    this.pluginSettings.epubReadingProfile = next;
-    this.pluginSettings.epubFontSize = next.fontSize;
-    this.pluginSettings.epubDefaultFlow = next.flow;
-    this.pluginSettings.epubReadingTheme = next.theme;
     this.layoutController?.setLayout(next.flow, next.contentWidth);
     this.applyFoliateAppearance();
     if (view && previousCfi) {
@@ -13040,11 +13045,16 @@ var EpubReaderView = class extends import_obsidian13.FileView {
     }
     this.profileSaveTimer = window.setTimeout(() => {
       this.profileSaveTimer = null;
-      void this.saveSettings();
+      void this.saveReadingProfile(this.readingProfile);
     }, 350);
   }
   openReadingSettings() {
-    new EpubReadingSettingsModal(this.app, this.readingProfile, (profile) => this.updateReadingProfile(profile)).open();
+    new EpubReadingSettingsModal(
+      this.app,
+      this.readingProfile,
+      (profile) => this.updateReadingProfile(profile),
+      async () => this.resetReadingProfile()
+    ).open();
   }
   /** 视图类型标识，供 Obsidian workspace 路由 */
   getViewType() {
@@ -13952,7 +13962,7 @@ var EpubReaderView = class extends import_obsidian13.FileView {
   }
   /** 设置页保存 EPUB 排版后，同步已打开的阅读视图。 */
   refreshExternalSettings() {
-    const next = this.pluginSettings.epubReadingProfile ? normalizeEpubReadingProfile(this.pluginSettings.epubReadingProfile) : createEpubReadingProfileFromLegacy(this.pluginSettings);
+    const next = this.getReadingProfile();
     if (JSON.stringify(next) === JSON.stringify(this.readingProfile)) {
       return;
     }
@@ -14394,6 +14404,169 @@ function findEpubFileFromExportPath(exportPath, app) {
   return null;
 }
 
+// src/epub/EpubDeviceProfileStore.ts
+var STORAGE_SCHEMA_VERSION = 1;
+var DEVICE_CLASSES = ["desktop", "tablet", "phone"];
+var READER_DEVICE_LABELS = {
+  desktop: "\u684C\u9762",
+  tablet: "\u5E73\u677F",
+  phone: "\u624B\u673A"
+};
+function detectReaderDeviceClass(flags, viewportWidth = 0) {
+  if (flags.isPhone) {
+    return "phone";
+  }
+  if (flags.isTablet) {
+    return "tablet";
+  }
+  if (flags.isDesktop || !flags.isMobile) {
+    return "desktop";
+  }
+  return viewportWidth >= 720 ? "tablet" : "phone";
+}
+function getEpubDeviceProfileStorageKey(pluginId, vaultName) {
+  const encodedVaultName = encodeURIComponent(vaultName.trim() || "vault");
+  return pluginId + ":epub-reading-profiles:v" + STORAGE_SCHEMA_VERSION + ":" + encodedVaultName;
+}
+var EpubDeviceProfileStore = class {
+  constructor(deviceClass, storage, storageKey, onStorageProblem) {
+    this.deviceClass = deviceClass;
+    this.storage = storage;
+    this.storageKey = storageKey;
+    this.onStorageProblem = onStorageProblem;
+    this.loaded = false;
+    this.record = this.emptyRecord();
+    this.storageBroken = false;
+    this.hasNotified = false;
+  }
+  getDeviceClass() {
+    return this.deviceClass;
+  }
+  getDeviceLabel() {
+    return READER_DEVICE_LABELS[this.deviceClass];
+  }
+  getProfile(globalProfile) {
+    this.load();
+    const fallback = normalizeEpubReadingProfile(globalProfile);
+    const stored = this.record.profiles[this.deviceClass];
+    return stored ? normalizeEpubReadingProfile({ ...fallback, ...stored }, fallback) : fallback;
+  }
+  setProfile(profile) {
+    this.load();
+    if (this.storageBroken) {
+      return false;
+    }
+    const previous = this.record;
+    this.record = {
+      ...this.record,
+      profiles: { ...this.record.profiles, [this.deviceClass]: normalizeEpubReadingProfile(profile) }
+    };
+    if (this.persist()) {
+      return true;
+    }
+    this.record = previous;
+    return false;
+  }
+  resetCurrentProfile() {
+    this.load();
+    if (this.storageBroken) {
+      return false;
+    }
+    if (!this.record.profiles[this.deviceClass]) {
+      return true;
+    }
+    const previous = this.record;
+    const profiles = { ...this.record.profiles };
+    delete profiles[this.deviceClass];
+    this.record = { ...this.record, profiles };
+    if (Object.keys(profiles).length === 0) {
+      try {
+        this.storage?.removeItem(this.storageKey);
+        return true;
+      } catch (error) {
+        this.record = previous;
+        this.markStorageProblem("\u5F53\u524D\u8BBE\u5907\u6392\u7248\u8BBE\u7F6E\u65E0\u6CD5\u6E05\u9664\uFF0C\u5DF2\u7EE7\u7EED\u4F7F\u7528\u73B0\u6709\u8BBE\u7F6E\u3002", error);
+        return false;
+      }
+    }
+    if (this.persist()) {
+      return true;
+    }
+    this.record = previous;
+    return false;
+  }
+  load() {
+    if (this.loaded) {
+      return;
+    }
+    this.loaded = true;
+    if (!this.storage) {
+      this.markStorageProblem("\u65E0\u6CD5\u4F7F\u7528\u672C\u673A\u6392\u7248\u8BBE\u7F6E\uFF0C\u5F53\u524D EPUB \u5C06\u4F7F\u7528\u540C\u6B65\u9ED8\u8BA4\u503C\u3002", new Error("localStorage unavailable"));
+      return;
+    }
+    try {
+      const raw = this.storage.getItem(this.storageKey);
+      if (!raw) {
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      if (!this.isStoredDeviceProfiles(parsed)) {
+        throw new Error("invalid device profile record");
+      }
+      this.record = {
+        schemaVersion: STORAGE_SCHEMA_VERSION,
+        profiles: this.pickKnownProfiles(parsed.profiles)
+      };
+    } catch (error) {
+      this.record = this.emptyRecord();
+      this.markStorageProblem("\u672C\u673A\u6392\u7248\u8BBE\u7F6E\u5DF2\u635F\u574F\uFF0C\u5F53\u524D EPUB \u5C06\u4F7F\u7528\u540C\u6B65\u9ED8\u8BA4\u503C\u3002", error, false);
+    }
+  }
+  persist() {
+    if (!this.storage) {
+      this.markStorageProblem("\u65E0\u6CD5\u4FDD\u5B58\u672C\u673A\u6392\u7248\u8BBE\u7F6E\uFF0C\u5F53\u524D\u4FEE\u6539\u4EC5\u5728\u672C\u6B21\u9605\u8BFB\u4E2D\u751F\u6548\u3002", new Error("localStorage unavailable"));
+      return false;
+    }
+    try {
+      this.storage.setItem(this.storageKey, JSON.stringify(this.record));
+      return true;
+    } catch (error) {
+      this.markStorageProblem("\u672C\u673A\u6392\u7248\u8BBE\u7F6E\u4FDD\u5B58\u5931\u8D25\uFF0C\u5F53\u524D\u4FEE\u6539\u4EC5\u5728\u672C\u6B21\u9605\u8BFB\u4E2D\u751F\u6548\u3002", error);
+      return false;
+    }
+  }
+  markStorageProblem(message, error, disableWrites = true) {
+    if (disableWrites) {
+      this.storageBroken = true;
+    }
+    if (!this.hasNotified) {
+      this.hasNotified = true;
+      this.onStorageProblem?.(message);
+    }
+    console.warn("yh-inklight: device profile storage problem", error);
+  }
+  emptyRecord() {
+    return { schemaVersion: STORAGE_SCHEMA_VERSION, profiles: {} };
+  }
+  pickKnownProfiles(profiles) {
+    const known = {};
+    for (const deviceClass of DEVICE_CLASSES) {
+      const profile = profiles[deviceClass];
+      if (profile && typeof profile === "object") {
+        known[deviceClass] = profile;
+      }
+    }
+    return known;
+  }
+  isStoredDeviceProfiles(value) {
+    if (!value || typeof value !== "object") {
+      return false;
+    }
+    const candidate = value;
+    return candidate.schemaVersion === STORAGE_SCHEMA_VERSION && Boolean(candidate.profiles) && typeof candidate.profiles === "object" && !Array.isArray(candidate.profiles);
+  }
+};
+
 // main.ts
 var YH_INKLIGHT_ICON = `
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
@@ -14424,6 +14597,12 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
   async onload() {
     (0, import_obsidian16.addIcon)("yh-inklight-icon", YH_INKLIGHT_ICON);
     await this.loadSettings();
+    this.epubDeviceProfileStore = new EpubDeviceProfileStore(
+      detectReaderDeviceClass(import_obsidian16.Platform, window.innerWidth),
+      this.getLocalStorage(),
+      getEpubDeviceProfileStorageKey(this.manifest.id, this.app.vault.getName()),
+      (message) => new import_obsidian16.Notice(message, 7e3)
+    );
     console.info(`yh-inklight loaded v${this.manifest.version}`);
     this.store = new AnnotationStore(this.app, () => this.settings.annotationTags);
     await this.store.initialize();
@@ -14436,7 +14615,9 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
         this.settings,
         () => this.refreshAnnotations(),
         (file, annotationId, label) => this.offerAnnotationUndo(file, annotationId, label),
-        () => this.saveSettings()
+        () => this.getEpubReadingProfile(),
+        (profile) => this.updateEpubReadingProfile(profile),
+        () => this.resetEpubReadingProfile()
       )
     );
     try {
@@ -14558,6 +14739,38 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
   async saveSettings() {
     await this.saveData(this.settings);
     await this.refreshAnnotations();
+  }
+  getEpubReadingProfile() {
+    const globalProfile = this.settings.epubReadingProfile ? normalizeEpubReadingProfile(this.settings.epubReadingProfile) : createEpubReadingProfileFromLegacy(this.settings);
+    return this.epubDeviceProfileStore?.getProfile(globalProfile) ?? globalProfile;
+  }
+  getEpubReadingDeviceLabel() {
+    return this.epubDeviceProfileStore?.getDeviceLabel() ?? "\u684C\u9762";
+  }
+  async updateEpubReadingProfile(profile) {
+    const normalized = normalizeEpubReadingProfile(profile);
+    if (!this.epubDeviceProfileStore) {
+      this.settings.epubReadingProfile = normalized;
+      await this.saveSettings();
+      return;
+    }
+    if (this.epubDeviceProfileStore.setProfile(normalized)) {
+      await this.refreshAnnotations();
+    }
+  }
+  async resetEpubReadingProfile() {
+    if (this.epubDeviceProfileStore?.resetCurrentProfile()) {
+      await this.refreshAnnotations();
+    }
+    return this.getEpubReadingProfile();
+  }
+  getLocalStorage() {
+    try {
+      return window.localStorage;
+    } catch (error) {
+      console.warn("yh-inklight: localStorage unavailable", error);
+      return null;
+    }
   }
   async refreshAnnotations() {
     this.app.workspace.updateOptions();
