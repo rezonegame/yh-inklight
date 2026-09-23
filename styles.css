@@ -1736,6 +1736,38 @@ span.yh-ov-expand-btn:hover {
   transition: border-color 0.12s, box-shadow 0.12s;
 }
 
+.bookshelf-controls {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.bookshelf-search {
+  width: 100%;
+  min-width: 0;
+  height: 34px;
+}
+
+.bookshelf-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.bookshelf-select {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding-inline: 6px 20px;
+  font-size: var(--yh-font-xs);
+}
+
+.bookshelf-count {
+  margin-bottom: 8px;
+  color: var(--text-muted);
+  font-size: var(--yh-font-xs);
+}
+
 .bookshelf-item:focus-visible {
   outline: 2px solid var(--interactive-accent);
   outline-offset: 2px;

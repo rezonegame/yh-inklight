@@ -14363,6 +14363,37 @@ var EpubReaderView = class extends import_obsidian13.FileView {
 var import_obsidian14 = require("obsidian");
 
 // src/epub/readingLibrary.ts
+var DEFAULT_READING_LIBRARY_QUERY = {
+  search: "",
+  status: "all",
+  format: "all",
+  parentPath: null,
+  sort: "recent"
+};
+function queryReadingLibrary(items, query) {
+  const search2 = query.search.trim().toLocaleLowerCase();
+  const filtered = items.filter((item) => (!search2 || item.basename.toLocaleLowerCase().includes(search2) || item.path.toLocaleLowerCase().includes(search2)) && (query.status === "all" || query.status === "recent" || item.status === query.status) && (query.format === "all" || item.extension.toLowerCase() === query.format) && (query.parentPath === null || item.parentPath === query.parentPath) && (query.status !== "recent" || !!item.lastRead));
+  if (query.status === "recent") {
+    return filtered.sort((a3, b3) => compareLastRead(b3, a3) || a3.path.localeCompare(b3.path)).slice(0, 20);
+  }
+  return filtered.sort((a3, b3) => {
+    if (query.sort === "title") {
+      return a3.basename.localeCompare(b3.basename) || a3.path.localeCompare(b3.path);
+    }
+    if (query.sort === "progress") {
+      return compareNullableDescending(a3.progress, b3.progress) || a3.path.localeCompare(b3.path);
+    }
+    return compareLastRead(b3, a3) || a3.path.localeCompare(b3.path);
+  });
+}
+function compareLastRead(a3, b3) {
+  return (a3.lastRead ?? "").localeCompare(b3.lastRead ?? "");
+}
+function compareNullableDescending(a3, b3) {
+  if (a3 === null) return b3 === null ? 0 : 1;
+  if (b3 === null) return -1;
+  return b3 - a3;
+}
 function createReadingLibraryItem(file, epubProgress, pdfProgress, pdfProgressTracking) {
   const kind = file.extension.toLowerCase() === "pdf" ? "pdf" : "ebook";
   const tracked = kind === "ebook" || pdfProgressTracking;
@@ -14393,6 +14424,8 @@ var ReadingLibraryView = class extends import_obsidian14.ItemView {
     this.isPdfProgressTrackingEnabled = isPdfProgressTrackingEnabled;
     this.renderTimer = null;
     this.generation = 0;
+    this.entries = [];
+    this.query = { ...DEFAULT_READING_LIBRARY_QUERY };
     this.observedStoreVersion = store.version;
   }
   getViewType() {
@@ -14405,6 +14438,7 @@ var ReadingLibraryView = class extends import_obsidian14.ItemView {
     return "library";
   }
   async onOpen() {
+    this.buildShell();
     this.registerEvent(this.app.vault.on("create", () => this.refresh()));
     this.registerEvent(this.app.vault.on("delete", () => this.refresh()));
     this.registerEvent(this.app.vault.on("rename", () => this.refresh()));
@@ -14465,17 +14499,103 @@ var ReadingLibraryView = class extends import_obsidian14.ItemView {
       if (generation !== this.generation) return;
     }
     if (generation !== this.generation) return;
+    this.entries = items;
+    this.contentEl.toggleClass("yh-epub-eink", this.getReadingProfile().einkMode === true);
+    this.updateOptions();
+    this.renderResults();
+  }
+  buildShell() {
     const container = this.contentEl;
     container.empty();
     container.addClass("yh-epub-bookshelf-view");
-    container.toggleClass("yh-epub-eink", this.getReadingProfile().einkMode === true);
     container.createEl("h4", { cls: "bookshelf-heading", text: "\u9605\u8BFB\u8D44\u6599\u5E93" });
-    if (items.length === 0) {
-      container.createEl("p", { cls: "bookshelf-empty", text: "Vault \u4E2D\u6CA1\u6709\u627E\u5230\u7535\u5B50\u4E66\u6216 PDF \u6587\u4EF6\u3002" });
+    const controls = container.createDiv({ cls: "bookshelf-controls" });
+    const search2 = controls.createEl("input", {
+      cls: "bookshelf-search",
+      attr: { type: "search", placeholder: "\u641C\u7D22\u540D\u79F0\u6216\u8DEF\u5F84", "aria-label": "\u641C\u7D22\u8D44\u6599\u5E93" }
+    });
+    search2.addEventListener("input", () => {
+      this.query.search = search2.value;
+      this.renderResults();
+    });
+    const filters = controls.createDiv({ cls: "bookshelf-filters" });
+    this.createSelect(filters, "\u9605\u8BFB\u72B6\u6001", [
+      ["all", "\u5168\u90E8"],
+      ["recent", "\u6700\u8FD1"],
+      ["unstarted", "\u672A\u5F00\u59CB"],
+      ["reading", "\u5728\u8BFB"],
+      ["finished", "\u5DF2\u8BFB"],
+      ["untracked", "\u672A\u8BB0\u5F55"]
+    ], (value) => {
+      this.query.status = value;
+      this.renderResults();
+    });
+    this.formatSelect = this.createSelect(
+      filters,
+      "\u683C\u5F0F",
+      [["all", "\u5168\u90E8\u683C\u5F0F"]],
+      (value) => {
+        this.query.format = value;
+        this.renderResults();
+      }
+    );
+    this.parentSelect = this.createSelect(
+      filters,
+      "\u7236\u76EE\u5F55",
+      [["", "\u5168\u90E8\u76EE\u5F55"]],
+      (value) => {
+        this.query.parentPath = value === "" ? null : decodeURIComponent(value.slice(2));
+        this.renderResults();
+      }
+    );
+    this.createSelect(
+      filters,
+      "\u6392\u5E8F",
+      [["recent", "\u6700\u8FD1\u9605\u8BFB"], ["title", "\u6807\u9898"], ["progress", "\u8FDB\u5EA6"]],
+      (value) => {
+        this.query.sort = value;
+        this.renderResults();
+      }
+    );
+    this.countEl = container.createDiv({ cls: "bookshelf-count" });
+    this.resultsEl = container.createDiv({ cls: "bookshelf-results" });
+  }
+  createSelect(parent, label, options, onChange) {
+    const select = parent.createEl("select", { cls: "bookshelf-select", attr: { "aria-label": label, title: label } });
+    for (const [value, text] of options) select.createEl("option", { value, text });
+    select.addEventListener("change", () => onChange(select.value));
+    return select;
+  }
+  updateOptions() {
+    const formats = [...new Set(this.entries.map(({ item }) => item.extension.toLowerCase()))].sort();
+    const parents = [...new Set(this.entries.map(({ item }) => item.parentPath))].sort((a3, b3) => a3.localeCompare(b3));
+    this.formatSelect.replaceChildren();
+    this.formatSelect.createEl("option", { value: "all", text: "\u5168\u90E8\u683C\u5F0F" });
+    for (const format of formats) this.formatSelect.createEl("option", { value: format, text: format.toUpperCase() });
+    if (this.query.format !== "all" && !formats.includes(this.query.format)) this.query.format = "all";
+    this.formatSelect.value = this.query.format;
+    this.parentSelect.replaceChildren();
+    this.parentSelect.createEl("option", { value: "", text: "\u5168\u90E8\u76EE\u5F55" });
+    for (const path of parents) this.parentSelect.createEl("option", { value: `p:${encodeURIComponent(path)}`, text: path || "/" });
+    if (this.query.parentPath !== null && !parents.includes(this.query.parentPath)) this.query.parentPath = null;
+    this.parentSelect.value = this.query.parentPath === null ? "" : `p:${encodeURIComponent(this.query.parentPath)}`;
+  }
+  renderResults() {
+    const selected = queryReadingLibrary(this.entries.map(({ item }) => item), this.query);
+    const files = new Map(this.entries.map(({ file }) => [file.path, file]));
+    this.countEl.textContent = `${selected.length} / ${this.entries.length}`;
+    this.resultsEl.empty();
+    if (selected.length === 0) {
+      this.resultsEl.createEl("p", {
+        cls: "bookshelf-empty",
+        text: this.entries.length === 0 ? "Vault \u4E2D\u6CA1\u6709\u627E\u5230\u7535\u5B50\u4E66\u6216 PDF \u6587\u4EF6\u3002" : "\u6CA1\u6709\u7B26\u5408\u6761\u4EF6\u7684\u6587\u4EF6\u3002"
+      });
       return;
     }
-    const list = container.createDiv({ cls: "bookshelf-list" });
-    for (const { file, item } of items) {
+    const list = this.resultsEl.createDiv({ cls: "bookshelf-list" });
+    for (const item of selected) {
+      const file = files.get(item.path);
+      if (!file) continue;
       const row = list.createEl("button", { cls: "bookshelf-item", attr: { type: "button" } });
       const icon = row.createSpan({ cls: "bookshelf-file-icon" });
       (0, import_obsidian14.setIcon)(icon, item.kind === "pdf" ? "file-text" : "book-open");

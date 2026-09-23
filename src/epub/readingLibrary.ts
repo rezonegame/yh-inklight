@@ -15,6 +15,58 @@ export interface ReadingLibraryItem {
   estimatedRemainingMinutes: number | null;
 }
 
+export type LibraryStatusFilter = ReadingStatus | "all" | "recent";
+export type LibrarySort = "recent" | "title" | "progress";
+
+export interface ReadingLibraryQuery {
+  search: string;
+  status: LibraryStatusFilter;
+  format: string;
+  parentPath: string | null;
+  sort: LibrarySort;
+}
+
+export const DEFAULT_READING_LIBRARY_QUERY: ReadingLibraryQuery = {
+  search: "",
+  status: "all",
+  format: "all",
+  parentPath: null,
+  sort: "recent",
+};
+
+export function queryReadingLibrary(items: readonly ReadingLibraryItem[], query: ReadingLibraryQuery): ReadingLibraryItem[] {
+  const search = query.search.trim().toLocaleLowerCase();
+  const filtered = items.filter((item) =>
+    (!search || item.basename.toLocaleLowerCase().includes(search) || item.path.toLocaleLowerCase().includes(search))
+    && (query.status === "all" || query.status === "recent" || item.status === query.status)
+    && (query.format === "all" || item.extension.toLowerCase() === query.format)
+    && (query.parentPath === null || item.parentPath === query.parentPath)
+    && (query.status !== "recent" || !!item.lastRead));
+
+  if (query.status === "recent") {
+    return filtered.sort((a, b) => compareLastRead(b, a) || a.path.localeCompare(b.path)).slice(0, 20);
+  }
+  return filtered.sort((a, b) => {
+    if (query.sort === "title") {
+      return a.basename.localeCompare(b.basename) || a.path.localeCompare(b.path);
+    }
+    if (query.sort === "progress") {
+      return compareNullableDescending(a.progress, b.progress) || a.path.localeCompare(b.path);
+    }
+    return compareLastRead(b, a) || a.path.localeCompare(b.path);
+  });
+}
+
+function compareLastRead(a: ReadingLibraryItem, b: ReadingLibraryItem): number {
+  return (a.lastRead ?? "").localeCompare(b.lastRead ?? "");
+}
+
+function compareNullableDescending(a: number | null, b: number | null): number {
+  if (a === null) return b === null ? 0 : 1;
+  if (b === null) return -1;
+  return b - a;
+}
+
 export function createReadingLibraryItem(
   file: { path: string; basename: string; extension: string; parentPath: string },
   epubProgress: EpubReadingProgress | undefined,

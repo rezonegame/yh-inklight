@@ -2,7 +2,10 @@
 import { ItemView, TFile, WorkspaceLeaf, setIcon } from "obsidian";
 import { AnnotationStore } from "../storage/annotationStore";
 import { EpubReadingProfile, SUPPORTED_BOOK_EXTENSIONS } from "../storage/types";
-import { createReadingLibraryItem, ReadingLibraryItem } from "./readingLibrary";
+import {
+  createReadingLibraryItem, DEFAULT_READING_LIBRARY_QUERY, queryReadingLibrary,
+  ReadingLibraryItem, ReadingLibraryQuery,
+} from "./readingLibrary";
 
 export const EPUB_BOOKSHELF_VIEW_TYPE = "inklight-epub-bookshelf";
 
@@ -10,6 +13,12 @@ export class ReadingLibraryView extends ItemView {
   private renderTimer: number | null = null;
   private generation = 0;
   private observedStoreVersion: number;
+  private entries: Array<{ file: TFile; item: ReadingLibraryItem }> = [];
+  private query: ReadingLibraryQuery = { ...DEFAULT_READING_LIBRARY_QUERY };
+  private resultsEl!: HTMLElement;
+  private countEl!: HTMLElement;
+  private formatSelect!: HTMLSelectElement;
+  private parentSelect!: HTMLSelectElement;
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -28,6 +37,7 @@ export class ReadingLibraryView extends ItemView {
   getIcon(): string { return "library"; }
 
   async onOpen(): Promise<void> {
+    this.buildShell();
     this.registerEvent(this.app.vault.on("create", () => this.refresh()));
     this.registerEvent(this.app.vault.on("delete", () => this.refresh()));
     this.registerEvent(this.app.vault.on("rename", () => this.refresh()));
@@ -82,17 +92,79 @@ export class ReadingLibraryView extends ItemView {
       if (generation !== this.generation) return;
     }
     if (generation !== this.generation) return;
+    this.entries = items;
+    this.contentEl.toggleClass("yh-epub-eink", this.getReadingProfile().einkMode === true);
+    this.updateOptions();
+    this.renderResults();
+  }
+
+  private buildShell(): void {
     const container = this.contentEl;
     container.empty();
     container.addClass("yh-epub-bookshelf-view");
-    container.toggleClass("yh-epub-eink", this.getReadingProfile().einkMode === true);
     container.createEl("h4", { cls: "bookshelf-heading", text: "阅读资料库" });
-    if (items.length === 0) {
-      container.createEl("p", { cls: "bookshelf-empty", text: "Vault 中没有找到电子书或 PDF 文件。" });
+    const controls = container.createDiv({ cls: "bookshelf-controls" });
+    const search = controls.createEl("input", {
+      cls: "bookshelf-search",
+      attr: { type: "search", placeholder: "搜索名称或路径", "aria-label": "搜索资料库" },
+    });
+    search.addEventListener("input", () => {
+      this.query.search = search.value;
+      this.renderResults();
+    });
+    const filters = controls.createDiv({ cls: "bookshelf-filters" });
+    this.createSelect(filters, "阅读状态", [
+      ["all", "全部"], ["recent", "最近"], ["unstarted", "未开始"],
+      ["reading", "在读"], ["finished", "已读"], ["untracked", "未记录"],
+    ], (value) => { this.query.status = value as ReadingLibraryQuery["status"]; this.renderResults(); });
+    this.formatSelect = this.createSelect(filters, "格式", [["all", "全部格式"]],
+      (value) => { this.query.format = value; this.renderResults(); });
+    this.parentSelect = this.createSelect(filters, "父目录", [["", "全部目录"]],
+      (value) => { this.query.parentPath = value === "" ? null : decodeURIComponent(value.slice(2)); this.renderResults(); });
+    this.createSelect(filters, "排序", [["recent", "最近阅读"], ["title", "标题"], ["progress", "进度"]],
+      (value) => { this.query.sort = value as ReadingLibraryQuery["sort"]; this.renderResults(); });
+    this.countEl = container.createDiv({ cls: "bookshelf-count" });
+    this.resultsEl = container.createDiv({ cls: "bookshelf-results" });
+  }
+
+  private createSelect(
+    parent: HTMLElement, label: string, options: Array<[string, string]>, onChange: (value: string) => void,
+  ): HTMLSelectElement {
+    const select = parent.createEl("select", { cls: "bookshelf-select", attr: { "aria-label": label, title: label } });
+    for (const [value, text] of options) select.createEl("option", { value, text });
+    select.addEventListener("change", () => onChange(select.value));
+    return select;
+  }
+
+  private updateOptions(): void {
+    const formats = [...new Set(this.entries.map(({ item }) => item.extension.toLowerCase()))].sort();
+    const parents = [...new Set(this.entries.map(({ item }) => item.parentPath))].sort((a, b) => a.localeCompare(b));
+    this.formatSelect.replaceChildren();
+    this.formatSelect.createEl("option", { value: "all", text: "全部格式" });
+    for (const format of formats) this.formatSelect.createEl("option", { value: format, text: format.toUpperCase() });
+    if (this.query.format !== "all" && !formats.includes(this.query.format)) this.query.format = "all";
+    this.formatSelect.value = this.query.format;
+    this.parentSelect.replaceChildren();
+    this.parentSelect.createEl("option", { value: "", text: "全部目录" });
+    for (const path of parents) this.parentSelect.createEl("option", { value: `p:${encodeURIComponent(path)}`, text: path || "/" });
+    if (this.query.parentPath !== null && !parents.includes(this.query.parentPath)) this.query.parentPath = null;
+    this.parentSelect.value = this.query.parentPath === null ? "" : `p:${encodeURIComponent(this.query.parentPath)}`;
+  }
+
+  private renderResults(): void {
+    const selected = queryReadingLibrary(this.entries.map(({ item }) => item), this.query);
+    const files = new Map(this.entries.map(({ file }) => [file.path, file]));
+    this.countEl.textContent = `${selected.length} / ${this.entries.length}`;
+    this.resultsEl.empty();
+    if (selected.length === 0) {
+      this.resultsEl.createEl("p", { cls: "bookshelf-empty",
+        text: this.entries.length === 0 ? "Vault 中没有找到电子书或 PDF 文件。" : "没有符合条件的文件。" });
       return;
     }
-    const list = container.createDiv({ cls: "bookshelf-list" });
-    for (const { file, item } of items) {
+    const list = this.resultsEl.createDiv({ cls: "bookshelf-list" });
+    for (const item of selected) {
+      const file = files.get(item.path);
+      if (!file) continue;
       const row = list.createEl("button", { cls: "bookshelf-item", attr: { type: "button" } });
       const icon = row.createSpan({ cls: "bookshelf-file-icon" });
       setIcon(icon, item.kind === "pdf" ? "file-text" : "book-open");

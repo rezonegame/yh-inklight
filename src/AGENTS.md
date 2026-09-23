@@ -21,8 +21,8 @@ epub/EpubSelectionController.ts: foliate iframe 选区监听、CFI/坐标转换�
 epub/EpubLayoutController.ts: foliate flow、间距、正文宽度、预设/本机字体、电子墨水黑白规则和阅读外观 CSS 应用。
 epub/EpubReadingSettingsModal.ts: EPUB 书内预设字体、本机字体、字号、行距、宽度、对齐、流模式、主题和电子墨水设置。
 epub/EpubDeviceProfileStore.ts: 按桌面/平板/手机隔离 EPUB 排版覆盖值，只写本机 localStorage。
-epub/EpubBookshelfView.ts: 保留旧视图 ID 的阅读资料库侧栏，展示电子书和 PDF 进度并应用电子墨水作用域样式。
-epub/readingLibrary.ts: 统一资料库只读模型与进度状态计算。
+epub/EpubBookshelfView.ts: 保留旧视图 ID 的阅读资料库侧栏，展示电子书和 PDF 进度，并提供内存搜索、筛选与排序控件。
+epub/readingLibrary.ts: 统一资料库只读模型、进度状态计算和纯内存查询派生。
 
 法则: 类型单一真相·标签集中解析·业务不懂存储·渲染只做投影·UI 只做交互·总览优先于常驻叠层
 
