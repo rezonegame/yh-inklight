@@ -14845,7 +14845,7 @@ var ReadingLibraryView = class extends import_obsidian14.ItemView {
     for (const item of selected) {
       const file = files.get(item.path);
       if (!file) continue;
-      const row = list.createEl("button", { cls: "bookshelf-item", attr: { type: "button" } });
+      const row = list.createDiv({ cls: "bookshelf-item", attr: { role: "button", tabindex: "0" } });
       if (this.viewMode === "grid") {
         const cover = row.createDiv({ cls: "bookshelf-cover" });
         cover.createSpan({ cls: "bookshelf-cover-initial", text: Array.from(item.basename.trim())[0] ?? "\xB7" });
@@ -14871,7 +14871,13 @@ var ReadingLibraryView = class extends import_obsidian14.ItemView {
       if (item.readingTimeSeconds && item.readingTimeSeconds > 0) {
         meta.createDiv({ cls: "bookshelf-reading-time", text: `\u5DF2\u8BFB ${formatReadingTime(item.readingTimeSeconds)}` });
       }
-      row.addEventListener("click", () => item.kind === "pdf" ? this.openPdf(file) : this.openBook(file));
+      const open = () => item.kind === "pdf" ? this.openPdf(file) : this.openBook(file);
+      row.addEventListener("click", open);
+      row.addEventListener("keydown", (event) => {
+        if (event.key !== "Enter" && event.key !== " ") return;
+        event.preventDefault();
+        open();
+      });
     }
     if (coverSlots.length > 0) void this.loadCovers(coverSlots, coverGeneration);
   }
