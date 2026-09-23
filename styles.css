@@ -1722,16 +1722,22 @@ span.yh-ov-expand-btn:hover {
 
 .bookshelf-list.bookshelf-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
   align-items: stretch;
 }
 
 .bookshelf-grid .bookshelf-item {
   display: flex;
   flex-direction: column;
+  align-items: stretch;
   gap: 8px;
   min-width: 0;
   padding: 7px;
+}
+
+.bookshelf-grid .bookshelf-body {
+  width: 100%;
+  min-width: 0;
 }
 
 .bookshelf-cover {
@@ -1787,6 +1793,19 @@ span.yh-ov-expand-btn:hover {
 }
 
 .bookshelf-grid .bookshelf-path {
+  white-space: nowrap;
+}
+
+.bookshelf-grid .bookshelf-meta {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.bookshelf-grid .bookshelf-last-read,
+.bookshelf-grid .bookshelf-reading-time,
+.bookshelf-grid .bookshelf-remaining {
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -1938,6 +1957,7 @@ span.yh-ov-expand-btn:hover {
 
 .bookshelf-progress-bar {
   flex: 1;
+  min-width: 0;
   height: 4px;
   border-radius: 2px;
   background: var(--background-modifier-border);
