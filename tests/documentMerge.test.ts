@@ -86,3 +86,13 @@ test("keeps a disk progress update when the local operation changed annotations 
   assert.equal(merged.epubProgress?.percent, 0.3);
   assert.equal(merged.epubHighlights[0]?.id, "local");
 });
+
+test("reading note binding survives unrelated writes and concurrent binding wins", () => {
+  const binding = { notePath: "notes/book.md", schemaVersion: 1 as const, boundAt: "2026-09-24T00:00:00Z" };
+  const base = document();
+  const disk = document({ readingNoteBinding: binding });
+  const unrelated = mergeAnnotationDocuments(base, document({ epubHighlights: [epubHighlight("new", "text")] }), disk);
+  assert.deepEqual(unrelated.readingNoteBinding, binding);
+  const competing = mergeAnnotationDocuments(base, document({ readingNoteBinding: { ...binding, notePath: "other.md" } }), disk);
+  assert.deepEqual(competing.readingNoteBinding, binding);
+});

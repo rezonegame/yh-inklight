@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 Obsidian Plugin API、CM6 扩展、sidecar AnnotationStore、锚点算法、视图与设置模块
- * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、EPUB 阅读排版设置、设备 profile、封面缓存和 vault 事件
+ * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、EPUB 阅读排版设置、设备 profile、封面缓存、阅读笔记绑定和 vault 事件
  * [POS]: 插件装配根，协调模块但不修改用户 Markdown 原文
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -43,6 +43,7 @@ import { EpubReaderView, EPUB_READER_VIEW_TYPE } from "./src/epub/EpubReaderView
 import { ReadingLibraryView, EPUB_BOOKSHELF_VIEW_TYPE } from "./src/epub/EpubBookshelfView";
 import { BookCoverCache } from "./src/epub/BookCoverCache";
 import { registerEpubGotoHandler } from "./src/epub/EpubGotoHandler";
+import { ReadingNoteBindingService, normalizeReadingNoteFolder } from "./src/readingNotes/readingNoteBinding";
 import {
   detectReaderDeviceClass,
   EpubDeviceProfileStorage,
@@ -79,6 +80,8 @@ const YH_INKLIGHT_ICON = `
 export default class OverlayAnnotationsPlugin extends Plugin {
   settings: AnnotationPluginSettings = DEFAULT_SETTINGS;
   store!: AnnotationStore;
+  private readingNotes!: ReadingNoteBindingService;
+  private lastOpenedReadingNote: { sourcePath: string; notePath: string } | null = null;
 
   private toolbar!: SelectionToolbar;
   private popover!: AnnotationPopover;
@@ -111,6 +114,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     console.info(`yh-inklight loaded v${this.manifest.version}`);
     this.store = new AnnotationStore(this.app, () => this.settings.annotationTags);
     await this.store.initialize();
+    this.readingNotes = new ReadingNoteBindingService(this.app, this.store);
 
     this.registerView(ANNOTATION_SIDEBAR_VIEW, (leaf) => new AnnotationSidebarView(leaf, this));
     this.registerView(
@@ -258,6 +262,8 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       ...stored,
       annotationTags: normalizeAnnotationTags((stored as Partial<AnnotationPluginSettings>).annotationTags),
       epubReadingProfile: readingProfile,
+      readingNoteFolder: normalizeReadingNoteFolder(storedSettings.readingNoteFolder ?? DEFAULT_SETTINGS.readingNoteFolder)
+        ?? DEFAULT_SETTINGS.readingNoteFolder,
     };
     if (!storedSettings.epubReadingProfile) {
       try {
@@ -381,6 +387,11 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
   private registerCommands(): void {
     this.addCommand({
+      id: "open-current-reading-note",
+      name: "打开当前阅读笔记",
+      callback: () => { void this.openCurrentReadingNote(); },
+    });
+    this.addCommand({
       id: "highlight-selection",
       name: "高亮选中文本",
       hotkeys: [{ modifiers: ["Mod", "Shift"], key: "h" }],
@@ -444,6 +455,25 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         }
       },
     });
+  }
+
+  async openCurrentReadingNote(file = this.app.workspace.getActiveFile()): Promise<void> {
+    if (!file) {
+      new Notice("请先打开 PDF 或电子书文件");
+      return;
+    }
+    if (file.path === this.lastOpenedReadingNote?.notePath) {
+      const source = this.app.vault.getAbstractFileByPath(this.lastOpenedReadingNote.sourcePath);
+      if (source instanceof TFile) file = source;
+    }
+    try {
+      const note = await this.readingNotes.openOrCreate(file, this.settings.readingNoteFolder);
+      this.lastOpenedReadingNote = { sourcePath: file.path, notePath: note.path };
+      await this.app.workspace.getLeaf("tab").openFile(note);
+    } catch (error) {
+      new Notice(error instanceof Error ? error.message : "阅读笔记打开失败");
+      console.error("yh-inklight: reading note binding failed", error);
+    }
   }
 
   private registerEvents(): void {

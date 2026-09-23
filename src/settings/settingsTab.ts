@@ -1,13 +1,14 @@
 /**
  * [INPUT]: 依赖 Obsidian PluginSettingTab/Setting 与 storage/types 的设置模型
- * [OUTPUT]: 对外提供 AnnotationSettingsTab，负责默认颜色、统一标签、阅读与迁移设置
+ * [OUTPUT]: 对外提供 AnnotationSettingsTab，负责默认颜色、统一标签、阅读笔记目录、阅读与迁移设置
  * [POS]: settings 模块的用户配置界面，被 main.ts 注册
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
-import { Notice, PluginSettingTab, Setting, setIcon } from "obsidian";
+import { AbstractInputSuggest, App, Notice, PluginSettingTab, Setting, setIcon, TFolder } from "obsidian";
 
 import type OverlayAnnotationsPlugin from "../../main";
+import { normalizeReadingNoteFolder } from "../readingNotes/readingNoteBinding";
 import {
   ANNOTATION_COLORS,
   AnnotationColor,
@@ -76,6 +77,29 @@ export class AnnotationSettingsTab extends PluginSettingTab {
     this.renderTagSettings();
     this.renderEpubSettings();
     this.renderPdfSettings();
+    this.renderReadingNoteSettings();
+  }
+
+  private renderReadingNoteSettings(): void {
+    const { containerEl } = this;
+    containerEl.createEl("h3", { text: "阅读笔记" });
+    new Setting(containerEl)
+      .setName("阅读笔记文件夹")
+      .setDesc("PDF 和电子书的阅读笔记默认保存位置。")
+      .addText((text) => {
+        text.setValue(this.plugin.settings.readingNoteFolder);
+        new ReadingNoteFolderSuggest(this.app, text.inputEl);
+        text.onChange(async (value) => {
+          const folder = normalizeReadingNoteFolder(value);
+          if (!folder) {
+            text.inputEl.setCustomValidity("请输入 Vault 内的非空文件夹路径");
+            return;
+          }
+          text.inputEl.setCustomValidity("");
+          this.plugin.settings.readingNoteFolder = folder;
+          await this.plugin.saveSettings();
+        });
+      });
   }
 
   private renderTagSettings(): void {
@@ -388,5 +412,29 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       window.clearTimeout(this.customFontSaveTimer);
       this.customFontSaveTimer = null;
     }
+  }
+}
+
+class ReadingNoteFolderSuggest extends AbstractInputSuggest<TFolder> {
+  constructor(app: App, private readonly input: HTMLInputElement) {
+    super(app, input);
+  }
+
+  protected getSuggestions(query: string): TFolder[] {
+    const needle = query.trim().toLocaleLowerCase();
+    return this.app.vault.getAllLoadedFiles()
+      .filter((file): file is TFolder => file instanceof TFolder && Boolean(file.path)
+        && file.path.toLocaleLowerCase().includes(needle))
+      .slice(0, 30);
+  }
+
+  renderSuggestion(folder: TFolder, el: HTMLElement): void {
+    el.setText(folder.path);
+  }
+
+  selectSuggestion(folder: TFolder): void {
+    this.setValue(folder.path);
+    this.input.dispatchEvent(new Event("input", { bubbles: true }));
+    this.close();
   }
 }

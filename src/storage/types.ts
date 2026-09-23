@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 Obsidian 插件设置与 sidecar JSON 存储协议的领域约束
- * [OUTPUT]: 对外提供 Markdown/PDF 注释、高亮、标签、响应式阅读设置、索引与存储文档类型
+ * [OUTPUT]: 对外提供 Markdown/PDF 注释、高亮、标签、响应式阅读设置、阅读笔记绑定、索引与存储文档类型
  * [POS]: storage 模块的类型真相源，被 editor、views、anchor、settings 和 store 共享
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -146,12 +146,20 @@ export interface FileAnnotationDocument {
   epubComments: EpubCommentAnnotation[];
   epubProgress?: EpubReadingProgress;
   pdfProgress?: PdfReadingProgress;
+  readingNoteBinding?: ReadingNoteBinding;
   /** @deprecated Read-only legacy data kept for existing sidecars. */
   bookmarks: ReadingBookmark[];
   /** @deprecated Read-only legacy data kept for existing sidecars. */
   canvasBinding?: CanvasBinding;
   /** @deprecated Read-only legacy data kept for existing sidecars. */
   canvasNodes: CanvasExcerptNode[];
+}
+
+export interface ReadingNoteBinding {
+  notePath: string;
+  schemaVersion: 1;
+  boundAt: string;
+  lastSyncedAt?: string;
 }
 
 export interface AnnotationIndexEntry {
@@ -294,6 +302,7 @@ export interface AnnotationPluginSettings {
   epubReadingProfile?: EpubReadingProfile;
   // --- PDF 增强 ---
   pdfProgressTracking: boolean;
+  readingNoteFolder: string;
 }
 
 export interface SelectionSnapshot {
@@ -316,6 +325,7 @@ export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
   epubReadingProfile: DEFAULT_EPUB_READING_PROFILE,
   // PDF 增强
   pdfProgressTracking: true,
+  readingNoteFolder: "墨光阅读笔记",
 };
 
 export const EMPTY_INDEX: AnnotationIndex = {

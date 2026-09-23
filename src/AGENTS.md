@@ -11,6 +11,7 @@ pdf/pdfAnnotationLayer.ts: PDF 注释控制器，使用页码与矩形百分比�
 storage/types.ts: sidecar JSON、设置、锚点、高亮、笔记、标签字段、代码选区标记、索引的类型真相源。
 storage/annotationStore.ts: .obsidian-annotations 持久化后端，读写文件 JSON 与全局 index；资料库只读取已有 sidecar，避免新书哈希。
 storage/documentMerge.ts: storage 纯逻辑三方合并器，保护跨设备新增、删除、修改和阅读进度。
+readingNotes/readingNoteBinding.ts: PDF/电子书阅读笔记的路径、初始模板、同名冲突处理与显式 sidecar 绑定。
 tags/tagDomain.ts: 统一语义标签的默认值、名称校验、旧字段映射与显示解析。
 views/annotationPopover.ts: 窄屏与阅读模式弹层，点击高亮后展示 sidecar 中的高亮和便签内容。
 views/sidebarView.ts: 右侧总览面板，使用彩色卡片合并 highlight 与关联 note，并承载搜索、可折叠过滤、排序、导出、跳转与内联编辑。

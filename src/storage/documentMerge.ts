@@ -1,6 +1,6 @@
 /**
  * [INPUT]: sidecar 文档的旧快照、本地修改结果与磁盘最新快照
- * [OUTPUT]: 保留并发新增、按稳定 ID 合并修改的安全文档
+ * [OUTPUT]: 保留并发新增、按稳定 ID 合并修改并保护阅读笔记绑定的安全文档
  * [POS]: storage 纯逻辑层，不依赖 Obsidian runtime
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -60,6 +60,14 @@ export function mergeAnnotationDocuments(
     merged.canvasBinding = intended.canvasBinding;
   } else {
     merged.canvasBinding = disk.canvasBinding;
+  }
+
+  if (!documentsEqual(intended.readingNoteBinding, base.readingNoteBinding)) {
+    merged.readingNoteBinding = !documentsEqual(disk.readingNoteBinding, base.readingNoteBinding)
+      ? disk.readingNoteBinding
+      : intended.readingNoteBinding;
+  } else {
+    merged.readingNoteBinding = disk.readingNoteBinding;
   }
 
   return merged;

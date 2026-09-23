@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 obsidian App/Vault/Adapter 的文件读写能力，依赖 storage/types 的 sidecar JSON 合约
- * [OUTPUT]: 对外提供 AnnotationStore，负责 Markdown/PDF 的 .obsidian-annotations sidecar 文件、索引、缓存与导出
+ * [OUTPUT]: 对外提供 AnnotationStore，负责 Markdown/PDF 的 .obsidian-annotations sidecar 文件、索引、缓存、阅读笔记绑定持久化与导出
  * [POS]: storage 模块的唯一持久化入口，隔离原始 Markdown 与注释数据
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -160,6 +160,10 @@ export class AnnotationStore {
     const document = await this.readDocumentFromDisk(file);
     this.documents.set(cacheKey, document);
     return this.documents.get(cacheKey)!;
+  }
+
+  async getFreshDocument(file: TFile): Promise<FileAnnotationDocument> {
+    return this.readDocumentFromDisk(file);
   }
 
   async saveDocument(document: FileAnnotationDocument): Promise<void> {
@@ -610,6 +614,7 @@ export class AnnotationStore {
       epubComments: document.epubComments ?? [],
       epubProgress: document.epubProgress,
       pdfProgress: document.pdfProgress,
+      readingNoteBinding: document.readingNoteBinding,
       bookmarks: document.bookmarks ?? [],
       canvasBinding: document.canvasBinding,
       canvasNodes: document.canvasNodes ?? [],

@@ -1,4 +1,5 @@
 export class TFile {}
+export class TFolder {}
 
 export class Notice {
   constructor(message) {

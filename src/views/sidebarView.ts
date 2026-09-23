@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 Obsidian ItemView、AnnotationStore 数据与插件主类回调
- * [OUTPUT]: 对外提供 AnnotationSidebarView，将当前文件或全库 annotation 合并为可筛选、可跳转、可导出的总览卡片
+ * [OUTPUT]: 对外提供 AnnotationSidebarView，将当前文件或全库 annotation 合并为可筛选、可跳转、可导出的总览卡片，并提供当前阅读笔记菜单入口
  * [POS]: views 模块的右侧 Leaf 总览面板，承载搜索、筛选、排序、行内编辑、跳转、删除与导出模板
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -8,6 +8,7 @@
 import { ItemView, MarkdownRenderer, MarkdownView, Menu, Notice, Platform, setIcon, TFile, WorkspaceLeaf } from "obsidian";
 
 import type OverlayAnnotationsPlugin from "../../main";
+import { isReadingNoteSource } from "../readingNotes/readingNoteBinding";
 import { formatTime } from "../utils/format";
 import {
   ANNOTATION_COLORS,
@@ -129,7 +130,7 @@ export class AnnotationSidebarView extends ItemView {
     container.addClass("yh-overview");
 
     const file = this.app.workspace.getActiveFile();
-    this.renderHeader(container);
+    this.renderHeader(container, file);
 
     if (this.annotationScope === "current" && !file) {
       this.renderControls(container, []);
@@ -389,10 +390,26 @@ export class AnnotationSidebarView extends ItemView {
     );
   }
 
-  private renderHeader(container: Element): void {
+  private renderHeader(container: Element, file: TFile | null): void {
     const header = container.createDiv({ cls: "yh-ov-head" });
     header.createSpan({ cls: "yh-ov-title", text: "Inklight" });
     const actions = header.createDiv({ cls: "yh-ov-head-actions" });
+
+    if (file && isReadingNoteSource(file)) {
+      const fileMenu = actions.createEl("button", {
+        cls: "yh-icon-btn",
+        attr: { type: "button", title: "当前文件", "aria-label": "当前文件菜单" },
+      });
+      setIcon(fileMenu, "more-vertical");
+      fileMenu.addEventListener("click", (event) => {
+        const menu = new Menu();
+        menu.addItem((item) => item
+          .setTitle("打开当前阅读笔记")
+          .setIcon("notebook-pen")
+          .onClick(() => { void this.plugin.openCurrentReadingNote(file); }));
+        menu.showAtMouseEvent(event);
+      });
+    }
 
     const refresh = actions.createEl("button", {
       cls: "yh-icon-btn yh-ov-refresh",
