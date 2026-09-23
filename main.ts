@@ -1,11 +1,11 @@
 /**
  * [INPUT]: 依赖 Obsidian Plugin API、CM6 扩展、sidecar AnnotationStore、锚点算法、视图与设置模块
- * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、EPUB 阅读排版设置、设备 profile 和 vault 事件
+ * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、EPUB 阅读排版设置、设备 profile、封面缓存和 vault 事件
  * [POS]: 插件装配根，协调模块但不修改用户 Markdown 原文
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
-import { addIcon, Editor, MarkdownPostProcessorContext, MarkdownView, Modal, Notice, Platform, Plugin, TFile } from "obsidian";
+import { addIcon, Editor, MarkdownPostProcessorContext, MarkdownView, Modal, Notice, Platform, Plugin, TFile, TFolder } from "obsidian";
 
 import { createTextAnchor, relocateDocumentAnchors } from "./src/anchor/textAnchor";
 import { createHighlightExtension } from "./src/editor/highlightExtension";
@@ -41,6 +41,7 @@ import { AnnotationPopover } from "./src/views/annotationPopover";
 import { ANNOTATION_SIDEBAR_VIEW, AnnotationSidebarView } from "./src/views/sidebarView";
 import { EpubReaderView, EPUB_READER_VIEW_TYPE } from "./src/epub/EpubReaderView";
 import { ReadingLibraryView, EPUB_BOOKSHELF_VIEW_TYPE } from "./src/epub/EpubBookshelfView";
+import { BookCoverCache } from "./src/epub/BookCoverCache";
 import { registerEpubGotoHandler } from "./src/epub/EpubGotoHandler";
 import {
   detectReaderDeviceClass,
@@ -85,6 +86,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private pdfViewerAdapter!: PdfViewerAdapter;
   private annotationLinks!: AnnotationLinkService;
   private epubDeviceProfileStore!: EpubDeviceProfileStore;
+  private bookCoverCache!: BookCoverCache;
   private lastSelection: SelectionSnapshot | null = null;
   private renameMigrationTimer: number | null = null;
   private annotationUndo: {
@@ -104,6 +106,8 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       getEpubDeviceProfileStorageKey(this.manifest.id, this.app.vault.getName()),
       (message) => new Notice(message, 7000),
     );
+    const vaultKey = this.getLocalVaultKey();
+    this.bookCoverCache = new BookCoverCache(vaultKey, this.getIndexedDb());
     console.info(`yh-inklight loaded v${this.manifest.version}`);
     this.store = new AnnotationStore(this.app, () => this.settings.annotationTags);
     await this.store.initialize();
@@ -120,6 +124,8 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         () => this.getEpubReadingProfile(),
         (profile) => this.updateEpubReadingProfile(profile),
         () => this.resetEpubReadingProfile(),
+        this.bookCoverCache,
+        (path) => this.refreshReadingLibrary(path),
       ),
     );
     // 把 foliate 支持的所有电子书格式绑定到阅读器视图：registerView 只注册视图工厂，
@@ -140,6 +146,8 @@ export default class OverlayAnnotationsPlugin extends Plugin {
         (file) => this.openEpubBook(file),
         () => this.getEpubReadingProfile(),
         () => this.settings.pdfProgressTracking,
+        this.bookCoverCache,
+        `${this.manifest.id}:library-view:v1:${encodeURIComponent(vaultKey)}`,
       ),
     );
     this.registerEditorExtension([
@@ -234,6 +242,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
     this.toolbar?.destroy();
     this.popover?.destroy();
+    void this.bookCoverCache?.close();
     this.app.workspace.detachLeavesOfType(ANNOTATION_SIDEBAR_VIEW);
     this.app.workspace.detachLeavesOfType(EPUB_BOOKSHELF_VIEW_TYPE);
   }
@@ -300,6 +309,28 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     } catch (error) {
       console.warn("yh-inklight: localStorage unavailable", error);
       return null;
+    }
+  }
+
+  private getIndexedDb(): IDBFactory | null {
+    try { return window.indexedDB ?? null; } catch { return null; }
+  }
+
+  private getLocalVaultKey(): string {
+    try {
+      const adapter = this.app.vault.adapter as { getBasePath?: () => string };
+      return adapter.getBasePath?.() || this.app.vault.getName();
+    } catch {
+      return this.app.vault.getName();
+    }
+  }
+
+  private refreshReadingLibrary(coverPath?: string): void {
+    for (const leaf of this.app.workspace.getLeavesOfType(EPUB_BOOKSHELF_VIEW_TYPE)) {
+      if (leaf.view instanceof ReadingLibraryView) {
+        if (coverPath) leaf.view.coverUpdated(coverPath);
+        else leaf.view.refresh();
+      }
     }
   }
 
@@ -416,6 +447,21 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   }
 
   private registerEvents(): void {
+    this.registerEvent(this.app.vault.on("delete", (file) => {
+      if (file instanceof TFile && (SUPPORTED_BOOK_EXTENSIONS as readonly string[]).includes(file.extension.toLowerCase())) {
+        void this.bookCoverCache.remove(file.path);
+      } else if (file instanceof TFolder) {
+        void this.bookCoverCache.removeUnder(file.path);
+      }
+    }));
+    this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
+      const oldExtension = oldPath.split(".").pop()?.toLowerCase() ?? "";
+      if (file instanceof TFile && (SUPPORTED_BOOK_EXTENSIONS as readonly string[]).includes(oldExtension)) {
+        void this.bookCoverCache.remove(oldPath);
+      } else if (file instanceof TFolder) {
+        void this.bookCoverCache.removeUnder(oldPath);
+      }
+    }));
     this.registerDomEvent(document, "selectionchange", () => this.toolbar.showForSelection());
     this.registerDomEvent(document, "mousedown", (event) => {
       if (!(event.target instanceof HTMLElement) || !event.target.closest(".yh-selection-toolbar")) {

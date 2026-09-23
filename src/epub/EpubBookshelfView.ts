@@ -4,8 +4,9 @@ import { AnnotationStore } from "../storage/annotationStore";
 import { EpubReadingProfile, SUPPORTED_BOOK_EXTENSIONS } from "../storage/types";
 import {
   createReadingLibraryItem, DEFAULT_READING_LIBRARY_QUERY, queryReadingLibrary,
-  ReadingLibraryItem, ReadingLibraryQuery,
+  normalizeLibraryViewMode, LibraryViewMode, ReadingLibraryItem, ReadingLibraryQuery,
 } from "./readingLibrary";
+import { BookCoverCache } from "./BookCoverCache";
 
 export const EPUB_BOOKSHELF_VIEW_TYPE = "inklight-epub-bookshelf";
 
@@ -19,6 +20,13 @@ export class ReadingLibraryView extends ItemView {
   private countEl!: HTMLElement;
   private formatSelect!: HTMLSelectElement;
   private parentSelect!: HTMLSelectElement;
+  private viewMode: LibraryViewMode = "list";
+  private listButton!: HTMLButtonElement;
+  private gridButton!: HTMLButtonElement;
+  private coverGeneration = 0;
+  private objectUrls = new Set<string>();
+  private coverMemory = new Map<string, { mtime: number; blob: Blob }>();
+  private coverChecked = new Map<string, number>();
 
   constructor(
     leaf: WorkspaceLeaf,
@@ -27,6 +35,8 @@ export class ReadingLibraryView extends ItemView {
     private readonly openPdf: (file: TFile) => void,
     private readonly getReadingProfile: () => EpubReadingProfile,
     private readonly isPdfProgressTrackingEnabled: () => boolean,
+    private readonly coverCache: BookCoverCache,
+    private readonly viewModeStorageKey: string,
   ) {
     super(leaf);
     this.observedStoreVersion = store.version;
@@ -37,10 +47,15 @@ export class ReadingLibraryView extends ItemView {
   getIcon(): string { return "library"; }
 
   async onOpen(): Promise<void> {
+    this.viewMode = this.readViewMode();
     this.buildShell();
     this.registerEvent(this.app.vault.on("create", () => this.refresh()));
     this.registerEvent(this.app.vault.on("delete", () => this.refresh()));
     this.registerEvent(this.app.vault.on("rename", () => this.refresh()));
+    this.registerEvent(this.app.vault.on("modify", (file) => {
+      if (file instanceof TFile && (file.extension.toLowerCase() === "pdf"
+        || (SUPPORTED_BOOK_EXTENSIONS as readonly string[]).includes(file.extension.toLowerCase()))) this.refresh();
+    }));
     this.registerInterval(window.setInterval(() => {
       if (this.observedStoreVersion !== this.store.version) {
         this.observedStoreVersion = this.store.version;
@@ -52,6 +67,10 @@ export class ReadingLibraryView extends ItemView {
 
   async onClose(): Promise<void> {
     this.generation++;
+    this.coverGeneration++;
+    this.releaseObjectUrls();
+    this.coverMemory.clear();
+    this.coverChecked.clear();
     if (this.renderTimer !== null) window.clearTimeout(this.renderTimer);
     this.renderTimer = null;
     this.contentEl.empty();
@@ -64,6 +83,12 @@ export class ReadingLibraryView extends ItemView {
       this.renderTimer = null;
       void this.render();
     }, delay);
+  }
+
+  coverUpdated(path: string): void {
+    this.coverMemory.delete(path);
+    this.coverChecked.delete(path);
+    this.refresh();
   }
 
   private async render(): Promise<void> {
@@ -123,8 +148,37 @@ export class ReadingLibraryView extends ItemView {
       (value) => { this.query.parentPath = value === "" ? null : decodeURIComponent(value.slice(2)); this.renderResults(); });
     this.createSelect(filters, "排序", [["recent", "最近阅读"], ["title", "标题"], ["progress", "进度"]],
       (value) => { this.query.sort = value as ReadingLibraryQuery["sort"]; this.renderResults(); });
-    this.countEl = container.createDiv({ cls: "bookshelf-count" });
+    const viewBar = container.createDiv({ cls: "bookshelf-view-bar" });
+    this.countEl = viewBar.createDiv({ cls: "bookshelf-count" });
+    const viewSwitch = viewBar.createDiv({ cls: "bookshelf-view-switch", attr: { role: "group", "aria-label": "资料库视图" } });
+    this.listButton = this.createViewButton(viewSwitch, "list", "列表视图", "list");
+    this.gridButton = this.createViewButton(viewSwitch, "grid", "封面网格", "grid-2x2");
+    this.updateViewButtons();
     this.resultsEl = container.createDiv({ cls: "bookshelf-results" });
+  }
+
+  private createViewButton(parent: HTMLElement, mode: LibraryViewMode, label: string, icon: string): HTMLButtonElement {
+    const button = parent.createEl("button", { cls: "bookshelf-view-button", attr: { type: "button", title: label, "aria-label": label } });
+    setIcon(button, icon);
+    button.addEventListener("click", () => {
+      if (this.viewMode === mode) return;
+      this.viewMode = mode;
+      try { window.localStorage.setItem(this.viewModeStorageKey, mode); }
+      catch (error) { console.warn("yh-inklight: cannot save local library view", error); }
+      this.updateViewButtons();
+      this.renderResults();
+    });
+    return button;
+  }
+
+  private readViewMode(): LibraryViewMode {
+    try { return normalizeLibraryViewMode(window.localStorage.getItem(this.viewModeStorageKey)); }
+    catch { return "list"; }
+  }
+
+  private updateViewButtons(): void {
+    this.listButton.setAttribute("aria-pressed", String(this.viewMode === "list"));
+    this.gridButton.setAttribute("aria-pressed", String(this.viewMode === "grid"));
   }
 
   private createSelect(
@@ -152,6 +206,8 @@ export class ReadingLibraryView extends ItemView {
   }
 
   private renderResults(): void {
+    const coverGeneration = ++this.coverGeneration;
+    this.releaseObjectUrls();
     const selected = queryReadingLibrary(this.entries.map(({ item }) => item), this.query);
     const files = new Map(this.entries.map(({ file }) => [file.path, file]));
     this.countEl.textContent = `${selected.length} / ${this.entries.length}`;
@@ -162,12 +218,21 @@ export class ReadingLibraryView extends ItemView {
       return;
     }
     const list = this.resultsEl.createDiv({ cls: "bookshelf-list" });
+    list.toggleClass("bookshelf-grid", this.viewMode === "grid");
+    const coverSlots: Array<{ file: TFile; element: HTMLElement }> = [];
     for (const item of selected) {
       const file = files.get(item.path);
       if (!file) continue;
       const row = list.createEl("button", { cls: "bookshelf-item", attr: { type: "button" } });
-      const icon = row.createSpan({ cls: "bookshelf-file-icon" });
-      setIcon(icon, item.kind === "pdf" ? "file-text" : "book-open");
+      if (this.viewMode === "grid") {
+        const cover = row.createDiv({ cls: "bookshelf-cover" });
+        cover.createSpan({ cls: "bookshelf-cover-initial", text: Array.from(item.basename.trim())[0] ?? "·" });
+        cover.createSpan({ cls: "bookshelf-cover-format", text: item.extension.toUpperCase() });
+        if (item.kind === "ebook") coverSlots.push({ file, element: cover });
+      } else {
+        const icon = row.createSpan({ cls: "bookshelf-file-icon" });
+        setIcon(icon, item.kind === "pdf" ? "file-text" : "book-open");
+      }
       const body = row.createDiv({ cls: "bookshelf-body" });
       body.createDiv({ cls: "bookshelf-title", text: item.basename });
       body.createDiv({ cls: "bookshelf-path", text: `${item.extension.toUpperCase()} · ${item.parentPath || "/"}` });
@@ -186,6 +251,45 @@ export class ReadingLibraryView extends ItemView {
       }
       row.addEventListener("click", () => item.kind === "pdf" ? this.openPdf(file) : this.openBook(file));
     }
+    if (coverSlots.length > 0) void this.loadCovers(coverSlots, coverGeneration);
+  }
+
+  private async loadCovers(slots: Array<{ file: TFile; element: HTMLElement }>, generation: number): Promise<void> {
+    const pending = slots.map(({ file }) => ({ file, mtime: file.stat.mtime })).filter(({ file, mtime }) => {
+      const cached = this.coverMemory.get(file.path);
+      if (cached && cached.mtime !== mtime) this.coverMemory.delete(file.path);
+      return this.coverChecked.get(file.path) !== mtime;
+    });
+    if (pending.length > 0) {
+      const covers = await this.coverCache.getMany(pending.map(({ file, mtime }) => ({ path: file.path, mtime })));
+      for (const { file, mtime } of pending) {
+        this.coverChecked.set(file.path, mtime);
+        const blob = covers.get(file.path);
+        if (blob) this.coverMemory.set(file.path, { mtime, blob });
+      }
+    }
+    if (generation !== this.coverGeneration) return;
+    for (const { file, element } of slots) {
+      const cached = this.coverMemory.get(file.path);
+      if (!cached || cached.mtime !== file.stat.mtime) continue;
+      const blob = cached.blob;
+      const url = URL.createObjectURL(blob);
+      this.objectUrls.add(url);
+      const image = element.createEl("img", { attr: { alt: "" } });
+      image.onload = () => element.addClass("has-image");
+      image.onerror = () => {
+        element.removeClass("has-image");
+        image.remove();
+        URL.revokeObjectURL(url);
+        this.objectUrls.delete(url);
+      };
+      image.src = url;
+    }
+  }
+
+  private releaseObjectUrls(): void {
+    for (const url of this.objectUrls) URL.revokeObjectURL(url);
+    this.objectUrls.clear();
   }
 }
 

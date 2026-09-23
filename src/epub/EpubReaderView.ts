@@ -2,10 +2,10 @@
  * [INPUT]: 依赖 Obsidian FileView/WorkspaceLeaf/TFile、foliate-js view API、
  *          storage/types 的 EPUB 标注/进度/主题类型、AnnotationStore 的 sidecar 持久化、
  *          EpubFoliateLoader 的引擎加载与 EpubStylesheetInliner 的安全过滤、
- *          EpubThemeManager 的主题颜色解析、设备独立排版 profile 服务
+ *          EpubThemeManager 的主题颜色解析、设备独立排版 profile 服务与本机封面缓存
  * [OUTPUT]: 对外提供 EpubReaderView，将 foliate-js 渲染引擎嵌入 Obsidian leaf，
  *          承载工具栏、侧边栏（目录/搜索）、阅读区（iframe）、进度条、
- *          选区上下文菜单、标注 CRUD、进度持久化与阅读时间追踪；搜索、选区和布局由专用控制器承载
+ *          选区上下文菜单、标注 CRUD、进度持久化、阅读时间追踪及开书后异步封面缓存；搜索、选区和布局由专用控制器承载
  * [POS]: epub 模块的唯一视图入口，由插件主类通过 registerView 注册
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -50,6 +50,7 @@ import { EpubLayoutController } from "./EpubLayoutController";
 import { EpubSearchController } from "./EpubSearch";
 import { EpubSelectionController, EpubSelectionSnapshot } from "./EpubSelectionController";
 import { EpubReadingSettingsModal } from "./EpubReadingSettingsModal";
+import { BookCoverCache, extractFoliateCover } from "./BookCoverCache";
 
 // ---- 常量 ----
 
@@ -133,6 +134,8 @@ export class EpubReaderView extends FileView {
 	private readonly getReadingProfile: () => EpubReadingProfile;
 	private readonly saveReadingProfile: (profile: EpubReadingProfile) => Promise<void>;
 	private readonly resetReadingProfile: () => Promise<EpubReadingProfile>;
+	private readonly coverCache: BookCoverCache;
+	private readonly refreshLibrary: (path: string) => void;
 
 	// ---- foliate 实例 ----
 
@@ -208,6 +211,8 @@ export class EpubReaderView extends FileView {
 		getReadingProfile: () => EpubReadingProfile,
 		saveReadingProfile: (profile: EpubReadingProfile) => Promise<void>,
 		resetReadingProfile: () => Promise<EpubReadingProfile>,
+		coverCache: BookCoverCache,
+		refreshLibrary: (path: string) => void,
 	) {
 		super(leaf);
 		this.store = store;
@@ -217,6 +222,8 @@ export class EpubReaderView extends FileView {
 		this.getReadingProfile = getReadingProfile;
 		this.saveReadingProfile = saveReadingProfile;
 		this.resetReadingProfile = resetReadingProfile;
+		this.coverCache = coverCache;
+		this.refreshLibrary = refreshLibrary;
 		this.themeManager = new EpubThemeManager();
 		this.selectionController = new EpubSelectionController({
 			getFoliateView: () => this.foliateView,
@@ -328,11 +335,13 @@ export class EpubReaderView extends FileView {
 		this.destroyRendition();
 
 		try {
+			const sourceMtime = file.stat.mtime;
 			const arrayBuffer = await this.app.vault.readBinary(file);
 			this.foliateView = await createFoliateView(this.readerContainerEl);
 			this.configureFoliateView(this.foliateView);
 			this.registerFoliateEvents(this.foliateView);
 			await openBookFromBuffer(this.foliateView, arrayBuffer, file.name);
+			void this.cacheOpenedBookCover(file.path, sourceMtime, this.foliateView.book);
 			this.applyFoliateLayout();
 			this.tocEntries = this.buildFoliateTocEntries(this.foliateView.book?.toc ?? []);
 			this.applyFoliateAppearance();
@@ -345,6 +354,11 @@ export class EpubReaderView extends FileView {
 			console.error("yh-inklight: EPUB load failed", error);
 			new Notice(`墨光 EPUB 加载失败: ${error instanceof Error ? error.message : String(error)}`);
 		}
+	}
+
+	private async cacheOpenedBookCover(path: string, sourceMtime: number, book: FoliateViewHandle["book"]): Promise<void> {
+		const cover = await extractFoliateCover(book);
+		if (cover && await this.coverCache.put(path, sourceMtime, cover)) this.refreshLibrary(path);
 	}
 
 	/**

@@ -15,14 +15,15 @@ tags/tagDomain.ts: 统一语义标签的默认值、名称校验、旧字段映�
 views/annotationPopover.ts: 窄屏与阅读模式弹层，点击高亮后展示 sidecar 中的高亮和便签内容。
 views/sidebarView.ts: 右侧总览面板，使用彩色卡片合并 highlight 与关联 note，并承载搜索、可折叠过滤、排序、导出、跳转与内联编辑。
 settings/settingsTab.ts: 插件设置页，管理默认颜色、统一标签、EPUB 阅读排版 profile、作者和迁移策略。
-epub/EpubReaderView.ts: EPUB FileView 生命周期、目录/搜索覆盖面板、进度、批注业务、尺寸变化恢复、电子墨水作用域与控制器装配。
+epub/EpubReaderView.ts: EPUB FileView 生命周期、目录/搜索覆盖面板、进度、批注业务、尺寸变化恢复、电子墨水作用域与控制器装配；正常开书后异步缓存封面。
 epub/EpubSearch.ts: EPUB 侧栏唯一搜索入口、结果标准化、过期查询保护与搜索监听清理。
 epub/EpubSelectionController.ts: foliate iframe 选区监听、CFI/坐标转换和事件释放。
 epub/EpubLayoutController.ts: foliate flow、间距、正文宽度、预设/本机字体、电子墨水黑白规则和阅读外观 CSS 应用。
 epub/EpubReadingSettingsModal.ts: EPUB 书内预设字体、本机字体、字号、行距、宽度、对齐、流模式、主题和电子墨水设置。
 epub/EpubDeviceProfileStore.ts: 按桌面/平板/手机隔离 EPUB 排版覆盖值，只写本机 localStorage。
-epub/EpubBookshelfView.ts: 保留旧视图 ID 的阅读资料库侧栏，展示电子书和 PDF 进度，并提供内存搜索、筛选与排序控件。
-epub/readingLibrary.ts: 统一资料库只读模型、进度状态计算和纯内存查询派生。
+epub/EpubBookshelfView.ts: 保留旧视图 ID 的阅读资料库侧栏，展示电子书和 PDF 进度，提供内存检索与设备本地列表/封面网格切换。
+epub/readingLibrary.ts: 统一资料库只读模型、进度状态计算、纯内存查询派生及视图模式归一化。
+epub/BookCoverCache.ts: 原生 IndexedDB 设备本地封面缓存；mtime 校验、数量/体积限制、删除清理与不可用回退。
 
 法则: 类型单一真相·标签集中解析·业务不懂存储·渲染只做投影·UI 只做交互·总览优先于常驻叠层
 

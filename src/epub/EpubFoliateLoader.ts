@@ -13,7 +13,7 @@
  * - 渲染器：view.renderer.setStyles(css) / render() / getContents()[{index,doc}]
  *
  * 简化说明：weave 的 FoliateVaultPublicationParser（加载+metadata+CFI 规范化+搜索）是为高级功能。
- * 本基础实现直接 view.open(Blob)，先满足渲染/选区/标注/进度；metadata/搜索等留待后续按需引入。
+ * 本基础实现直接 view.open(Blob)；阅读器仅在正常打开后读取 book.getCover() 用于设备本地封面缓存。
  */
 
 import { installFoliateCustomElementGuard } from "./EpubFoliateGuard";
@@ -28,6 +28,7 @@ type FoliateViewModule = {
 
 type FoliateBookHandle = {
   transformTarget?: EventTarget;
+  getCover?: () => Promise<Blob | null> | Blob | null;
   toc?: Array<{ label?: string; href?: string; subitems?: unknown[] }>;
   sections?: Array<{ id?: unknown; cfi?: string; size?: number; linear?: string }>;
   [key: string]: unknown;

@@ -1720,6 +1720,75 @@ span.yh-ov-expand-btn:hover {
   gap: 8px;
 }
 
+.bookshelf-list.bookshelf-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 112px), 1fr));
+  align-items: stretch;
+}
+
+.bookshelf-grid .bookshelf-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+  padding: 7px;
+}
+
+.bookshelf-cover {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  overflow: hidden;
+  border: 1px solid var(--background-modifier-border);
+  background: var(--background-secondary);
+  color: var(--text-muted);
+}
+
+.bookshelf-cover-initial {
+  max-width: 90%;
+  overflow: hidden;
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.bookshelf-cover-format {
+  font-size: var(--yh-font-xs);
+  font-weight: 600;
+}
+
+.bookshelf-cover.has-image .bookshelf-cover-initial,
+.bookshelf-cover.has-image .bookshelf-cover-format {
+  visibility: hidden;
+}
+
+.bookshelf-cover img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.bookshelf-grid .bookshelf-title {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  font-size: var(--yh-font-sm);
+}
+
+.bookshelf-grid .bookshelf-path {
+  white-space: nowrap;
+}
+
 .bookshelf-item {
   display: flex;
   align-items: flex-start;
@@ -1763,9 +1832,52 @@ span.yh-ov-expand-btn:hover {
 }
 
 .bookshelf-count {
-  margin-bottom: 8px;
   color: var(--text-muted);
   font-size: var(--yh-font-xs);
+}
+
+.bookshelf-view-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.bookshelf-view-switch {
+  display: inline-flex;
+  flex: none;
+  border: 1px solid var(--background-modifier-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.bookshelf-view-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--background-primary);
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.bookshelf-view-button + .bookshelf-view-button {
+  border-left: 1px solid var(--background-modifier-border);
+}
+
+.bookshelf-view-button[aria-pressed="true"] {
+  background: var(--background-secondary);
+  color: var(--text-normal);
+}
+
+.bookshelf-view-button:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: -2px;
 }
 
 .bookshelf-item:focus-visible {

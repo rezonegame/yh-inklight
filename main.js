@@ -13040,6 +13040,188 @@ var EpubReadingSettingsModal = class extends import_obsidian12.Modal {
   }
 };
 
+// src/epub/BookCoverCache.ts
+var DATABASE_NAME = "yh-inklight-local-v1";
+var STORE_NAME = "book-covers";
+var MAX_COVERS = 100;
+var MAX_BYTES = 32 * 1024 * 1024;
+var SAFE_IMAGE_MIMES = /* @__PURE__ */ new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif", "image/bmp"]);
+function coverCacheKey(vaultKey, path) {
+  return `${encodeURIComponent(vaultKey)}:${path.replace(/\\/g, "/").replace(/^\/+/, "")}`;
+}
+function coverIsUsable(record, sourceMtime) {
+  return record.sourceMtime === sourceMtime && SAFE_IMAGE_MIMES.has(record.mime) && record.blob instanceof Blob && record.byteSize === record.blob.size && record.byteSize > 0 && record.byteSize <= MAX_BYTES;
+}
+function coverEvictions(records) {
+  const ordered = [...records].sort((a3, b3) => a3.lastAccess - b3.lastAccess || a3.key.localeCompare(b3.key));
+  const evicted = [];
+  let bytes = ordered.reduce((total, record) => total + record.byteSize, 0);
+  while (ordered.length > MAX_COVERS || bytes > MAX_BYTES) {
+    const oldest = ordered.shift();
+    if (!oldest) break;
+    evicted.push(oldest.key);
+    bytes -= oldest.byteSize;
+  }
+  return evicted;
+}
+async function extractFoliateCover(book) {
+  if (typeof book?.getCover !== "function") return null;
+  try {
+    const cover = await book.getCover();
+    if (!(cover instanceof Blob) || cover.size === 0 || cover.size > MAX_BYTES) return null;
+    if (SAFE_IMAGE_MIMES.has(cover.type.toLowerCase())) return cover;
+    if (cover.type && cover.type.toLowerCase() !== "application/octet-stream") return null;
+    const signature = new Uint8Array(await cover.slice(0, 16).arrayBuffer());
+    const mime = detectBitmapMime(signature);
+    return mime ? new Blob([cover], { type: mime }) : null;
+  } catch (error) {
+    console.warn("yh-inklight: book cover unavailable", error);
+    return null;
+  }
+}
+function detectBitmapMime(bytes) {
+  const ascii = (start, value) => [...value].every((letter, index) => bytes[start + index] === letter.charCodeAt(0));
+  if (bytes[0] === 137 && ascii(1, "PNG\r\n\n")) return "image/png";
+  if (bytes[0] === 255 && bytes[1] === 216 && bytes[2] === 255) return "image/jpeg";
+  if (ascii(0, "GIF87a") || ascii(0, "GIF89a")) return "image/gif";
+  if (ascii(0, "RIFF") && ascii(8, "WEBP")) return "image/webp";
+  if (ascii(4, "ftypavif") || ascii(4, "ftypavis")) return "image/avif";
+  if (ascii(0, "BM")) return "image/bmp";
+  return null;
+}
+function requestResult(request) {
+  return new Promise((resolve, reject) => {
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+function transactionDone(transaction) {
+  const done = new Promise((resolve, reject) => {
+    transaction.oncomplete = () => resolve();
+    transaction.onerror = () => reject(transaction.error);
+    transaction.onabort = () => reject(transaction.error);
+  });
+  void done.catch(() => void 0);
+  return done;
+}
+var BookCoverCache = class {
+  constructor(vaultKey, factory) {
+    this.vaultKey = vaultKey;
+    this.factory = factory;
+    this.databasePromise = null;
+    this.warned = false;
+  }
+  async database() {
+    if (!this.factory) throw new Error("IndexedDB unavailable");
+    if (!this.databasePromise) {
+      this.databasePromise = new Promise((resolve, reject) => {
+        const request = this.factory.open(DATABASE_NAME, 1);
+        request.onupgradeneeded = () => {
+          if (!request.result.objectStoreNames.contains(STORE_NAME)) {
+            request.result.createObjectStore(STORE_NAME, { keyPath: "key" });
+          }
+        };
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+        request.onblocked = () => reject(new Error("IndexedDB open blocked"));
+      });
+    }
+    return this.databasePromise;
+  }
+  async put(path, sourceMtime, blob) {
+    if (!Number.isFinite(sourceMtime) || !SAFE_IMAGE_MIMES.has(blob.type.toLowerCase()) || blob.size === 0 || blob.size > MAX_BYTES) return false;
+    try {
+      const database = await this.database();
+      const transaction = database.transaction(STORE_NAME, "readwrite");
+      const done = transactionDone(transaction);
+      const store = transaction.objectStore(STORE_NAME);
+      const record = {
+        key: coverCacheKey(this.vaultKey, path),
+        sourceMtime,
+        mime: blob.type.toLowerCase(),
+        blob,
+        byteSize: blob.size,
+        lastAccess: Date.now()
+      };
+      await requestResult(store.put(record));
+      const all = await requestResult(store.getAll());
+      for (const key of coverEvictions(all)) store.delete(key);
+      await done;
+      return true;
+    } catch (error) {
+      this.warn(error);
+      return false;
+    }
+  }
+  async getMany(files) {
+    const result = /* @__PURE__ */ new Map();
+    if (files.length === 0) return result;
+    try {
+      const database = await this.database();
+      const transaction = database.transaction(STORE_NAME, "readwrite");
+      const done = transactionDone(transaction);
+      const store = transaction.objectStore(STORE_NAME);
+      const all = await requestResult(store.getAll());
+      const requested = new Map(files.map(({ path, mtime }) => [coverCacheKey(this.vaultKey, path), { path, mtime }]));
+      const now = Date.now();
+      for (const record of all) {
+        const file = requested.get(record.key);
+        if (!file) continue;
+        if (!coverIsUsable(record, file.mtime)) {
+          store.delete(record.key);
+          continue;
+        }
+        result.set(file.path, record.blob);
+        store.put({ ...record, lastAccess: now });
+      }
+      await done;
+    } catch (error) {
+      this.warn(error);
+    }
+    return result;
+  }
+  async remove(path) {
+    try {
+      const database = await this.database();
+      const transaction = database.transaction(STORE_NAME, "readwrite");
+      const done = transactionDone(transaction);
+      transaction.objectStore(STORE_NAME).delete(coverCacheKey(this.vaultKey, path));
+      await done;
+    } catch (error) {
+      this.warn(error);
+    }
+  }
+  async removeUnder(folderPath) {
+    try {
+      const database = await this.database();
+      const transaction = database.transaction(STORE_NAME, "readwrite");
+      const done = transactionDone(transaction);
+      const store = transaction.objectStore(STORE_NAME);
+      const prefix = `${coverCacheKey(this.vaultKey, folderPath).replace(/\/+$/, "")}/`;
+      const keys = await requestResult(store.getAllKeys());
+      for (const key of keys) {
+        if (typeof key === "string" && key.startsWith(prefix)) store.delete(key);
+      }
+      await done;
+    } catch (error) {
+      this.warn(error);
+    }
+  }
+  async close() {
+    if (!this.databasePromise) return;
+    try {
+      (await this.databasePromise).close();
+    } catch {
+    }
+    this.databasePromise = null;
+  }
+  warn(error) {
+    if (this.warned) return;
+    this.warned = true;
+    console.warn("yh-inklight: local cover cache unavailable; using placeholders", error);
+  }
+};
+
 // src/epub/EpubReaderView.ts
 var EPUB_READER_VIEW_TYPE = "inklight-epub-reader";
 var READING_TIME_FLUSH_INTERVAL_MS = 6e4;
@@ -13049,7 +13231,7 @@ var EpubReaderView = class extends import_obsidian13.FileView {
   // ================================================================
   // 构造 & 生命周期
   // ================================================================
-  constructor(leaf, store, settings, refreshAnnotations, offerAnnotationUndo, getReadingProfile, saveReadingProfile, resetReadingProfile) {
+  constructor(leaf, store, settings, refreshAnnotations, offerAnnotationUndo, getReadingProfile, saveReadingProfile, resetReadingProfile, coverCache, refreshLibrary) {
     super(leaf);
     // ---- foliate 实例 ----
     this.foliateView = null;
@@ -13131,6 +13313,8 @@ var EpubReaderView = class extends import_obsidian13.FileView {
     this.getReadingProfile = getReadingProfile;
     this.saveReadingProfile = saveReadingProfile;
     this.resetReadingProfile = resetReadingProfile;
+    this.coverCache = coverCache;
+    this.refreshLibrary = refreshLibrary;
     this.themeManager = new EpubThemeManager();
     this.selectionController = new EpubSelectionController({
       getFoliateView: () => this.foliateView,
@@ -13229,11 +13413,13 @@ var EpubReaderView = class extends import_obsidian13.FileView {
   async onLoadFile(file) {
     this.destroyRendition();
     try {
+      const sourceMtime = file.stat.mtime;
       const arrayBuffer = await this.app.vault.readBinary(file);
       this.foliateView = await createFoliateView(this.readerContainerEl);
       this.configureFoliateView(this.foliateView);
       this.registerFoliateEvents(this.foliateView);
       await openBookFromBuffer(this.foliateView, arrayBuffer, file.name);
+      void this.cacheOpenedBookCover(file.path, sourceMtime, this.foliateView.book);
       this.applyFoliateLayout();
       this.tocEntries = this.buildFoliateTocEntries(this.foliateView.book?.toc ?? []);
       this.applyFoliateAppearance();
@@ -13244,6 +13430,10 @@ var EpubReaderView = class extends import_obsidian13.FileView {
       console.error("yh-inklight: EPUB load failed", error);
       new import_obsidian13.Notice(`\u58A8\u5149 EPUB \u52A0\u8F7D\u5931\u8D25: ${error instanceof Error ? error.message : String(error)}`);
     }
+  }
+  async cacheOpenedBookCover(path, sourceMtime, book) {
+    const cover = await extractFoliateCover(book);
+    if (cover && await this.coverCache.put(path, sourceMtime, cover)) this.refreshLibrary(path);
   }
   /**
    * Obsidian FileView 文件卸载钩子。
@@ -14363,6 +14553,9 @@ var EpubReaderView = class extends import_obsidian13.FileView {
 var import_obsidian14 = require("obsidian");
 
 // src/epub/readingLibrary.ts
+function normalizeLibraryViewMode(value) {
+  return value === "grid" ? "grid" : "list";
+}
 var DEFAULT_READING_LIBRARY_QUERY = {
   search: "",
   status: "all",
@@ -14415,17 +14608,24 @@ function createReadingLibraryItem(file, epubProgress, pdfProgress, pdfProgressTr
 // src/epub/EpubBookshelfView.ts
 var EPUB_BOOKSHELF_VIEW_TYPE = "inklight-epub-bookshelf";
 var ReadingLibraryView = class extends import_obsidian14.ItemView {
-  constructor(leaf, store, openBook, openPdf, getReadingProfile, isPdfProgressTrackingEnabled) {
+  constructor(leaf, store, openBook, openPdf, getReadingProfile, isPdfProgressTrackingEnabled, coverCache, viewModeStorageKey) {
     super(leaf);
     this.store = store;
     this.openBook = openBook;
     this.openPdf = openPdf;
     this.getReadingProfile = getReadingProfile;
     this.isPdfProgressTrackingEnabled = isPdfProgressTrackingEnabled;
+    this.coverCache = coverCache;
+    this.viewModeStorageKey = viewModeStorageKey;
     this.renderTimer = null;
     this.generation = 0;
     this.entries = [];
     this.query = { ...DEFAULT_READING_LIBRARY_QUERY };
+    this.viewMode = "list";
+    this.coverGeneration = 0;
+    this.objectUrls = /* @__PURE__ */ new Set();
+    this.coverMemory = /* @__PURE__ */ new Map();
+    this.coverChecked = /* @__PURE__ */ new Map();
     this.observedStoreVersion = store.version;
   }
   getViewType() {
@@ -14438,10 +14638,14 @@ var ReadingLibraryView = class extends import_obsidian14.ItemView {
     return "library";
   }
   async onOpen() {
+    this.viewMode = this.readViewMode();
     this.buildShell();
     this.registerEvent(this.app.vault.on("create", () => this.refresh()));
     this.registerEvent(this.app.vault.on("delete", () => this.refresh()));
     this.registerEvent(this.app.vault.on("rename", () => this.refresh()));
+    this.registerEvent(this.app.vault.on("modify", (file) => {
+      if (file instanceof import_obsidian14.TFile && (file.extension.toLowerCase() === "pdf" || SUPPORTED_BOOK_EXTENSIONS.includes(file.extension.toLowerCase()))) this.refresh();
+    }));
     this.registerInterval(window.setInterval(() => {
       if (this.observedStoreVersion !== this.store.version) {
         this.observedStoreVersion = this.store.version;
@@ -14452,6 +14656,10 @@ var ReadingLibraryView = class extends import_obsidian14.ItemView {
   }
   async onClose() {
     this.generation++;
+    this.coverGeneration++;
+    this.releaseObjectUrls();
+    this.coverMemory.clear();
+    this.coverChecked.clear();
     if (this.renderTimer !== null) window.clearTimeout(this.renderTimer);
     this.renderTimer = null;
     this.contentEl.empty();
@@ -14463,6 +14671,11 @@ var ReadingLibraryView = class extends import_obsidian14.ItemView {
       this.renderTimer = null;
       void this.render();
     }, delay);
+  }
+  coverUpdated(path) {
+    this.coverMemory.delete(path);
+    this.coverChecked.delete(path);
+    this.refresh();
   }
   async render() {
     const generation = ++this.generation;
@@ -14557,8 +14770,40 @@ var ReadingLibraryView = class extends import_obsidian14.ItemView {
         this.renderResults();
       }
     );
-    this.countEl = container.createDiv({ cls: "bookshelf-count" });
+    const viewBar = container.createDiv({ cls: "bookshelf-view-bar" });
+    this.countEl = viewBar.createDiv({ cls: "bookshelf-count" });
+    const viewSwitch = viewBar.createDiv({ cls: "bookshelf-view-switch", attr: { role: "group", "aria-label": "\u8D44\u6599\u5E93\u89C6\u56FE" } });
+    this.listButton = this.createViewButton(viewSwitch, "list", "\u5217\u8868\u89C6\u56FE", "list");
+    this.gridButton = this.createViewButton(viewSwitch, "grid", "\u5C01\u9762\u7F51\u683C", "grid-2x2");
+    this.updateViewButtons();
     this.resultsEl = container.createDiv({ cls: "bookshelf-results" });
+  }
+  createViewButton(parent, mode, label, icon) {
+    const button = parent.createEl("button", { cls: "bookshelf-view-button", attr: { type: "button", title: label, "aria-label": label } });
+    (0, import_obsidian14.setIcon)(button, icon);
+    button.addEventListener("click", () => {
+      if (this.viewMode === mode) return;
+      this.viewMode = mode;
+      try {
+        window.localStorage.setItem(this.viewModeStorageKey, mode);
+      } catch (error) {
+        console.warn("yh-inklight: cannot save local library view", error);
+      }
+      this.updateViewButtons();
+      this.renderResults();
+    });
+    return button;
+  }
+  readViewMode() {
+    try {
+      return normalizeLibraryViewMode(window.localStorage.getItem(this.viewModeStorageKey));
+    } catch {
+      return "list";
+    }
+  }
+  updateViewButtons() {
+    this.listButton.setAttribute("aria-pressed", String(this.viewMode === "list"));
+    this.gridButton.setAttribute("aria-pressed", String(this.viewMode === "grid"));
   }
   createSelect(parent, label, options, onChange) {
     const select = parent.createEl("select", { cls: "bookshelf-select", attr: { "aria-label": label, title: label } });
@@ -14581,6 +14826,8 @@ var ReadingLibraryView = class extends import_obsidian14.ItemView {
     this.parentSelect.value = this.query.parentPath === null ? "" : `p:${encodeURIComponent(this.query.parentPath)}`;
   }
   renderResults() {
+    const coverGeneration = ++this.coverGeneration;
+    this.releaseObjectUrls();
     const selected = queryReadingLibrary(this.entries.map(({ item }) => item), this.query);
     const files = new Map(this.entries.map(({ file }) => [file.path, file]));
     this.countEl.textContent = `${selected.length} / ${this.entries.length}`;
@@ -14593,12 +14840,21 @@ var ReadingLibraryView = class extends import_obsidian14.ItemView {
       return;
     }
     const list = this.resultsEl.createDiv({ cls: "bookshelf-list" });
+    list.toggleClass("bookshelf-grid", this.viewMode === "grid");
+    const coverSlots = [];
     for (const item of selected) {
       const file = files.get(item.path);
       if (!file) continue;
       const row = list.createEl("button", { cls: "bookshelf-item", attr: { type: "button" } });
-      const icon = row.createSpan({ cls: "bookshelf-file-icon" });
-      (0, import_obsidian14.setIcon)(icon, item.kind === "pdf" ? "file-text" : "book-open");
+      if (this.viewMode === "grid") {
+        const cover = row.createDiv({ cls: "bookshelf-cover" });
+        cover.createSpan({ cls: "bookshelf-cover-initial", text: Array.from(item.basename.trim())[0] ?? "\xB7" });
+        cover.createSpan({ cls: "bookshelf-cover-format", text: item.extension.toUpperCase() });
+        if (item.kind === "ebook") coverSlots.push({ file, element: cover });
+      } else {
+        const icon = row.createSpan({ cls: "bookshelf-file-icon" });
+        (0, import_obsidian14.setIcon)(icon, item.kind === "pdf" ? "file-text" : "book-open");
+      }
       const body = row.createDiv({ cls: "bookshelf-body" });
       body.createDiv({ cls: "bookshelf-title", text: item.basename });
       body.createDiv({ cls: "bookshelf-path", text: `${item.extension.toUpperCase()} \xB7 ${item.parentPath || "/"}` });
@@ -14617,6 +14873,43 @@ var ReadingLibraryView = class extends import_obsidian14.ItemView {
       }
       row.addEventListener("click", () => item.kind === "pdf" ? this.openPdf(file) : this.openBook(file));
     }
+    if (coverSlots.length > 0) void this.loadCovers(coverSlots, coverGeneration);
+  }
+  async loadCovers(slots, generation) {
+    const pending = slots.map(({ file }) => ({ file, mtime: file.stat.mtime })).filter(({ file, mtime }) => {
+      const cached = this.coverMemory.get(file.path);
+      if (cached && cached.mtime !== mtime) this.coverMemory.delete(file.path);
+      return this.coverChecked.get(file.path) !== mtime;
+    });
+    if (pending.length > 0) {
+      const covers = await this.coverCache.getMany(pending.map(({ file, mtime }) => ({ path: file.path, mtime })));
+      for (const { file, mtime } of pending) {
+        this.coverChecked.set(file.path, mtime);
+        const blob = covers.get(file.path);
+        if (blob) this.coverMemory.set(file.path, { mtime, blob });
+      }
+    }
+    if (generation !== this.coverGeneration) return;
+    for (const { file, element } of slots) {
+      const cached = this.coverMemory.get(file.path);
+      if (!cached || cached.mtime !== file.stat.mtime) continue;
+      const blob = cached.blob;
+      const url = URL.createObjectURL(blob);
+      this.objectUrls.add(url);
+      const image = element.createEl("img", { attr: { alt: "" } });
+      image.onload = () => element.addClass("has-image");
+      image.onerror = () => {
+        element.removeClass("has-image");
+        image.remove();
+        URL.revokeObjectURL(url);
+        this.objectUrls.delete(url);
+      };
+      image.src = url;
+    }
+  }
+  releaseObjectUrls() {
+    for (const url of this.objectUrls) URL.revokeObjectURL(url);
+    this.objectUrls.clear();
   }
 };
 function formatReadingTime(seconds) {
@@ -14949,6 +15242,8 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
       getEpubDeviceProfileStorageKey(this.manifest.id, this.app.vault.getName()),
       (message) => new import_obsidian16.Notice(message, 7e3)
     );
+    const vaultKey = this.getLocalVaultKey();
+    this.bookCoverCache = new BookCoverCache(vaultKey, this.getIndexedDb());
     console.info(`yh-inklight loaded v${this.manifest.version}`);
     this.store = new AnnotationStore(this.app, () => this.settings.annotationTags);
     await this.store.initialize();
@@ -14963,7 +15258,9 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
         (file, annotationId, label) => this.offerAnnotationUndo(file, annotationId, label),
         () => this.getEpubReadingProfile(),
         (profile) => this.updateEpubReadingProfile(profile),
-        () => this.resetEpubReadingProfile()
+        () => this.resetEpubReadingProfile(),
+        this.bookCoverCache,
+        (path) => this.refreshReadingLibrary(path)
       )
     );
     try {
@@ -14979,7 +15276,9 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
         (file) => this.openEpubBook(file),
         (file) => this.openEpubBook(file),
         () => this.getEpubReadingProfile(),
-        () => this.settings.pdfProgressTracking
+        () => this.settings.pdfProgressTracking,
+        this.bookCoverCache,
+        `${this.manifest.id}:library-view:v1:${encodeURIComponent(vaultKey)}`
       )
     );
     this.registerEditorExtension([
@@ -15068,6 +15367,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
     }
     this.toolbar?.destroy();
     this.popover?.destroy();
+    void this.bookCoverCache?.close();
     this.app.workspace.detachLeavesOfType(ANNOTATION_SIDEBAR_VIEW);
     this.app.workspace.detachLeavesOfType(EPUB_BOOKSHELF_VIEW_TYPE);
   }
@@ -15123,6 +15423,29 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
     } catch (error) {
       console.warn("yh-inklight: localStorage unavailable", error);
       return null;
+    }
+  }
+  getIndexedDb() {
+    try {
+      return window.indexedDB ?? null;
+    } catch {
+      return null;
+    }
+  }
+  getLocalVaultKey() {
+    try {
+      const adapter = this.app.vault.adapter;
+      return adapter.getBasePath?.() || this.app.vault.getName();
+    } catch {
+      return this.app.vault.getName();
+    }
+  }
+  refreshReadingLibrary(coverPath) {
+    for (const leaf of this.app.workspace.getLeavesOfType(EPUB_BOOKSHELF_VIEW_TYPE)) {
+      if (leaf.view instanceof ReadingLibraryView) {
+        if (coverPath) leaf.view.coverUpdated(coverPath);
+        else leaf.view.refresh();
+      }
     }
   }
   async refreshAnnotations() {
@@ -15223,6 +15546,21 @@ ${lines.slice(0, 8).join("\n")}`);
     });
   }
   registerEvents() {
+    this.registerEvent(this.app.vault.on("delete", (file) => {
+      if (file instanceof import_obsidian16.TFile && SUPPORTED_BOOK_EXTENSIONS.includes(file.extension.toLowerCase())) {
+        void this.bookCoverCache.remove(file.path);
+      } else if (file instanceof import_obsidian16.TFolder) {
+        void this.bookCoverCache.removeUnder(file.path);
+      }
+    }));
+    this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
+      const oldExtension = oldPath.split(".").pop()?.toLowerCase() ?? "";
+      if (file instanceof import_obsidian16.TFile && SUPPORTED_BOOK_EXTENSIONS.includes(oldExtension)) {
+        void this.bookCoverCache.remove(oldPath);
+      } else if (file instanceof import_obsidian16.TFolder) {
+        void this.bookCoverCache.removeUnder(oldPath);
+      }
+    }));
     this.registerDomEvent(document, "selectionchange", () => this.toolbar.showForSelection());
     this.registerDomEvent(document, "mousedown", (event) => {
       if (!(event.target instanceof HTMLElement) || !event.target.closest(".yh-selection-toolbar")) {

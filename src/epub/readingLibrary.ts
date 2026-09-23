@@ -17,6 +17,11 @@ export interface ReadingLibraryItem {
 
 export type LibraryStatusFilter = ReadingStatus | "all" | "recent";
 export type LibrarySort = "recent" | "title" | "progress";
+export type LibraryViewMode = "list" | "grid";
+
+export function normalizeLibraryViewMode(value: unknown): LibraryViewMode {
+  return value === "grid" ? "grid" : "list";
+}
 
 export interface ReadingLibraryQuery {
   search: string;
