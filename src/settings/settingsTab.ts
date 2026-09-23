@@ -362,6 +362,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
         toggle.setValue(this.plugin.settings.pdfProgressTracking).onChange(async (value) => {
           this.plugin.settings.pdfProgressTracking = value;
           await this.plugin.saveSettings();
+          await this.plugin.refreshAnnotations();
         });
       });
   }

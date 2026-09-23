@@ -126,6 +126,13 @@ export class AnnotationStore {
     return this.documents.get(this.toCacheKey(filePath)) ?? null;
   }
 
+  async getExistingDocument(file: TFile): Promise<FileAnnotationDocument | null> {
+    const cached = this.getCachedDocument(file.path);
+    if (cached) return cached;
+    if (!(await this.app.vault.adapter.exists(this.toSidecarPath(file.path)))) return null;
+    return this.getDocument(file);
+  }
+
   async getIndexedDocuments(): Promise<FileAnnotationDocument[]> {
     const documents: FileAnnotationDocument[] = [];
     const filePaths = Object.keys(this.index.files).sort((left, right) => left.localeCompare(right));

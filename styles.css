@@ -1721,12 +1721,34 @@ span.yh-ov-expand-btn:hover {
 }
 
 .bookshelf-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
   padding: 10px 12px;
   border: 1px solid var(--yh-border);
   border-radius: var(--yh-radius);
   background: var(--background-primary);
   cursor: pointer;
   transition: border-color 0.12s, box-shadow 0.12s;
+}
+
+.bookshelf-item:focus-visible {
+  outline: 2px solid var(--interactive-accent);
+  outline-offset: 2px;
+}
+
+.bookshelf-file-icon {
+  flex: none;
+  color: var(--text-muted);
+}
+
+.bookshelf-body {
+  min-width: 0;
+  flex: 1;
 }
 
 .bookshelf-item:hover {
@@ -1771,6 +1793,11 @@ span.yh-ov-expand-btn:hover {
   border-radius: 2px;
   background: var(--background-modifier-border);
   overflow: hidden;
+}
+
+.bookshelf-progress-bar > div {
+  height: 100%;
+  background: var(--interactive-accent);
 }
 
 .bookshelf-percent {

@@ -40,7 +40,7 @@ import {
 import { AnnotationPopover } from "./src/views/annotationPopover";
 import { ANNOTATION_SIDEBAR_VIEW, AnnotationSidebarView } from "./src/views/sidebarView";
 import { EpubReaderView, EPUB_READER_VIEW_TYPE } from "./src/epub/EpubReaderView";
-import { EpubBookshelfView, EPUB_BOOKSHELF_VIEW_TYPE } from "./src/epub/EpubBookshelfView";
+import { ReadingLibraryView, EPUB_BOOKSHELF_VIEW_TYPE } from "./src/epub/EpubBookshelfView";
 import { registerEpubGotoHandler } from "./src/epub/EpubGotoHandler";
 import {
   detectReaderDeviceClass,
@@ -133,11 +133,13 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
     this.registerView(
       EPUB_BOOKSHELF_VIEW_TYPE,
-      (leaf) => new EpubBookshelfView(
+      (leaf) => new ReadingLibraryView(
         leaf,
         this.store,
         (file) => this.openEpubBook(file),
+        (file) => this.openEpubBook(file),
         () => this.getEpubReadingProfile(),
+        () => this.settings.pdfProgressTracking,
       ),
     );
     this.registerEditorExtension([
@@ -311,7 +313,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
     for (const leaf of this.app.workspace.getLeavesOfType(EPUB_BOOKSHELF_VIEW_TYPE)) {
       const view = leaf.view;
-      if (view instanceof EpubBookshelfView) {
+      if (view instanceof ReadingLibraryView) {
         view.refresh();
       }
     }
@@ -369,7 +371,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
     this.addCommand({
       id: "open-epub-bookshelf",
-      name: "打开 EPUB 书架",
+      name: "打开阅读资料库",
       callback: () => this.activateBookshelf(),
     });
 
@@ -753,7 +755,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
     this.app.workspace.revealLeaf(leaf);
     const view = leaf.view;
-    if (view instanceof EpubBookshelfView) {
+    if (view instanceof ReadingLibraryView) {
       view.refresh();
     }
   }

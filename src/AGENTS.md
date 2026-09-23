@@ -9,7 +9,7 @@ editor/readingViewHighlight.ts: Reading View DOM 高亮层，使用延迟渲染�
 editor/selectionToolbar.ts: 选中文本后的工具栏，桌面显示在选区附近，移动端固定在底部安全区，提供颜色、便签、复制和总览入口。
 pdf/pdfAnnotationLayer.ts: PDF 注释控制器，使用页码与矩形百分比坐标绘制非侵入式高亮和右侧便签栏。
 storage/types.ts: sidecar JSON、设置、锚点、高亮、笔记、标签字段、代码选区标记、索引的类型真相源。
-storage/annotationStore.ts: .obsidian-annotations 持久化后端，读写文件 JSON 与全局 index。
+storage/annotationStore.ts: .obsidian-annotations 持久化后端，读写文件 JSON 与全局 index；资料库只读取已有 sidecar，避免新书哈希。
 storage/documentMerge.ts: storage 纯逻辑三方合并器，保护跨设备新增、删除、修改和阅读进度。
 tags/tagDomain.ts: 统一语义标签的默认值、名称校验、旧字段映射与显示解析。
 views/annotationPopover.ts: 窄屏与阅读模式弹层，点击高亮后展示 sidecar 中的高亮和便签内容。
@@ -21,7 +21,8 @@ epub/EpubSelectionController.ts: foliate iframe 选区监听、CFI/坐标转换�
 epub/EpubLayoutController.ts: foliate flow、间距、正文宽度、预设/本机字体、电子墨水黑白规则和阅读外观 CSS 应用。
 epub/EpubReadingSettingsModal.ts: EPUB 书内预设字体、本机字体、字号、行距、宽度、对齐、流模式、主题和电子墨水设置。
 epub/EpubDeviceProfileStore.ts: 按桌面/平板/手机隔离 EPUB 排版覆盖值，只写本机 localStorage。
-epub/EpubBookshelfView.ts: 展示电子书阅读进度，并按当前设备 profile 应用电子墨水作用域样式。
+epub/EpubBookshelfView.ts: 保留旧视图 ID 的阅读资料库侧栏，展示电子书和 PDF 进度并应用电子墨水作用域样式。
+epub/readingLibrary.ts: 统一资料库只读模型与进度状态计算。
 
 法则: 类型单一真相·标签集中解析·业务不懂存储·渲染只做投影·UI 只做交互·总览优先于常驻叠层
 

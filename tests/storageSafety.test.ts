@@ -63,12 +63,14 @@ class FakeAdapter {
 class FakeVault {
   readonly adapter = new FakeAdapter();
   readonly source = new FakeFile("books/example.epub");
+  readBinaryCalls = 0;
 
   getAbstractFileByPath(path: string): FakeFile | null {
     return path === this.source.path ? this.source : null;
   }
 
   async readBinary(): Promise<ArrayBuffer> {
+    this.readBinaryCalls++;
     return new ArrayBuffer(0);
   }
 
@@ -76,6 +78,15 @@ class FakeVault {
     return "book";
   }
 }
+
+test("library lookup skips hashing books without sidecars", async () => {
+  const vault = new FakeVault();
+  const store = new AnnotationStore(createApp(vault) as never);
+  await store.initialize();
+  assert.equal(await store.getExistingDocument(vault.source), null);
+  assert.equal(vault.readBinaryCalls, 0);
+  assert.equal(vault.adapter.files.has(store.toSidecarPath(vault.source.path)), false);
+});
 
 function createApp(vault: FakeVault): { vault: FakeVault } {
   return { vault };

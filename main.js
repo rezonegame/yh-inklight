@@ -9865,6 +9865,7 @@ var AnnotationSettingsTab = class extends import_obsidian6.PluginSettingTab {
       toggle.setValue(this.plugin.settings.pdfProgressTracking).onChange(async (value) => {
         this.plugin.settings.pdfProgressTracking = value;
         await this.plugin.saveSettings();
+        await this.plugin.refreshAnnotations();
       });
     });
   }
@@ -10054,6 +10055,12 @@ var AnnotationStore = class {
   }
   getCachedDocument(filePath) {
     return this.documents.get(this.toCacheKey(filePath)) ?? null;
+  }
+  async getExistingDocument(file) {
+    const cached = this.getCachedDocument(file.path);
+    if (cached) return cached;
+    if (!await this.app.vault.adapter.exists(this.toSidecarPath(file.path))) return null;
+    return this.getDocument(file);
   }
   async getIndexedDocuments() {
     const documents = [];
@@ -14354,108 +14361,151 @@ var EpubReaderView = class extends import_obsidian13.FileView {
 
 // src/epub/EpubBookshelfView.ts
 var import_obsidian14 = require("obsidian");
+
+// src/epub/readingLibrary.ts
+function createReadingLibraryItem(file, epubProgress, pdfProgress, pdfProgressTracking) {
+  const kind = file.extension.toLowerCase() === "pdf" ? "pdf" : "ebook";
+  const tracked = kind === "ebook" || pdfProgressTracking;
+  const saved = kind === "pdf" ? pdfProgress : epubProgress;
+  const rawProgress = saved?.percent;
+  const progress = tracked && typeof rawProgress === "number" && Number.isFinite(rawProgress) ? Math.max(0, Math.min(1, rawProgress)) : null;
+  const status = !tracked ? "untracked" : progress === null || progress === 0 ? "unstarted" : progress >= 0.99 ? "finished" : "reading";
+  return {
+    ...file,
+    kind,
+    progress,
+    status,
+    lastRead: tracked && saved?.lastRead ? saved.lastRead : null,
+    readingTimeSeconds: kind === "ebook" && epubProgress && Number.isFinite(epubProgress.readingTimeSeconds) ? Math.max(0, epubProgress.readingTimeSeconds) : null,
+    estimatedRemainingMinutes: kind === "ebook" && epubProgress?.estimatedRemainingMinutes != null && Number.isFinite(epubProgress.estimatedRemainingMinutes) ? Math.max(0, epubProgress.estimatedRemainingMinutes) : null
+  };
+}
+
+// src/epub/EpubBookshelfView.ts
 var EPUB_BOOKSHELF_VIEW_TYPE = "inklight-epub-bookshelf";
-var EpubBookshelfView = class extends import_obsidian14.ItemView {
-  constructor(leaf, store, onOpen, getReadingProfile) {
+var ReadingLibraryView = class extends import_obsidian14.ItemView {
+  constructor(leaf, store, openBook, openPdf, getReadingProfile, isPdfProgressTrackingEnabled) {
     super(leaf);
     this.store = store;
-    this.openCallback = onOpen;
+    this.openBook = openBook;
+    this.openPdf = openPdf;
     this.getReadingProfile = getReadingProfile;
+    this.isPdfProgressTrackingEnabled = isPdfProgressTrackingEnabled;
+    this.renderTimer = null;
+    this.generation = 0;
+    this.observedStoreVersion = store.version;
   }
   getViewType() {
     return EPUB_BOOKSHELF_VIEW_TYPE;
   }
   getDisplayText() {
-    return "EPUB \u4E66\u67B6";
+    return "\u9605\u8BFB\u8D44\u6599\u5E93";
   }
   getIcon() {
-    return "book-open";
+    return "library";
   }
   async onOpen() {
-    this.render();
+    this.registerEvent(this.app.vault.on("create", () => this.refresh()));
+    this.registerEvent(this.app.vault.on("delete", () => this.refresh()));
+    this.registerEvent(this.app.vault.on("rename", () => this.refresh()));
+    this.registerInterval(window.setInterval(() => {
+      if (this.observedStoreVersion !== this.store.version) {
+        this.observedStoreVersion = this.store.version;
+        this.refresh(5e3);
+      }
+    }, 1e3));
+    await this.render();
   }
   async onClose() {
+    this.generation++;
+    if (this.renderTimer !== null) window.clearTimeout(this.renderTimer);
+    this.renderTimer = null;
     this.contentEl.empty();
   }
-  refresh() {
-    this.render();
+  refresh(delay = 150) {
+    if (this.renderTimer !== null && delay > 150) return;
+    if (this.renderTimer !== null) window.clearTimeout(this.renderTimer);
+    this.renderTimer = window.setTimeout(() => {
+      this.renderTimer = null;
+      void this.render();
+    }, delay);
   }
-  render() {
+  async render() {
+    const generation = ++this.generation;
+    const files = this.app.vault.getFiles().filter((file) => file.extension.toLowerCase() === "pdf" || SUPPORTED_BOOK_EXTENSIONS.includes(file.extension.toLowerCase())).sort((a3, b3) => a3.path.localeCompare(b3.path));
+    const items = [];
+    for (const file of files) {
+      try {
+        const document2 = await this.store.getExistingDocument(file);
+        items.push({ file, item: createReadingLibraryItem(
+          {
+            path: file.path,
+            basename: file.basename,
+            extension: file.extension,
+            parentPath: file.parent?.path ?? ""
+          },
+          document2?.epubProgress,
+          document2?.pdfProgress,
+          this.isPdfProgressTrackingEnabled()
+        ) });
+      } catch (error) {
+        console.warn(`yh-inklight: cannot read library progress for ${file.path}`, error);
+        items.push({ file, item: createReadingLibraryItem(
+          {
+            path: file.path,
+            basename: file.basename,
+            extension: file.extension,
+            parentPath: file.parent?.path ?? ""
+          },
+          void 0,
+          void 0,
+          this.isPdfProgressTrackingEnabled()
+        ) });
+      }
+      if (generation !== this.generation) return;
+    }
+    if (generation !== this.generation) return;
     const container = this.contentEl;
     container.empty();
     container.addClass("yh-epub-bookshelf-view");
     container.toggleClass("yh-epub-eink", this.getReadingProfile().einkMode === true);
-    container.createEl("h4", {
-      cls: "bookshelf-heading",
-      text: "\u{1F4DA} \u7535\u5B50\u4E66\u4E66\u67B6"
-    });
-    const bookFiles = this.app.vault.getFiles().filter((f3) => SUPPORTED_BOOK_EXTENSIONS.includes(f3.extension.toLowerCase()));
-    if (bookFiles.length === 0) {
-      container.createEl("p", {
-        cls: "bookshelf-empty",
-        text: "Vault \u4E2D\u6CA1\u6709\u627E\u5230\u7535\u5B50\u4E66\u6587\u4EF6\u3002"
-      });
+    container.createEl("h4", { cls: "bookshelf-heading", text: "\u9605\u8BFB\u8D44\u6599\u5E93" });
+    if (items.length === 0) {
+      container.createEl("p", { cls: "bookshelf-empty", text: "Vault \u4E2D\u6CA1\u6709\u627E\u5230\u7535\u5B50\u4E66\u6216 PDF \u6587\u4EF6\u3002" });
       return;
     }
     const list = container.createDiv({ cls: "bookshelf-list" });
-    for (const file of bookFiles) {
-      const progress = this.store.getCachedDocument(file.path)?.epubProgress;
-      const percent = progress ? Math.round(progress.percent * 100) : 0;
-      const item = list.createDiv({ cls: "bookshelf-item" });
-      const info = item.createDiv({ cls: "bookshelf-info" });
-      info.createEl("div", { cls: "bookshelf-title", text: file.basename });
-      info.createEl("div", {
-        cls: "bookshelf-path",
-        text: `${file.extension.toUpperCase()} \xB7 ${file.path}`
-      });
-      const meta = item.createDiv({ cls: "bookshelf-meta" });
-      const progressBar = meta.createDiv({ cls: "bookshelf-progress-wrap" });
-      const bar = progressBar.createDiv({ cls: "bookshelf-progress-bar" });
-      bar.setCssProps({ width: `${percent}%` });
-      progressBar.createEl("span", {
-        cls: "bookshelf-percent",
-        text: `${percent}%`
-      });
-      if (progress) {
-        meta.createEl("div", {
-          cls: "bookshelf-last-read",
-          text: `\u4E0A\u6B21\u9605\u8BFB\uFF1A${progress.chapter || "\u672A\u77E5\u7AE0\u8282"} \xB7 ${progress.lastRead.slice(0, 10)}`
-        });
-        const readingSeconds = progress.readingTimeSeconds ?? 0;
-        if (readingSeconds > 0) {
-          meta.createEl("div", {
-            cls: "bookshelf-reading-time",
-            text: `\u5DF2\u8BFB ${this.formatReadingTime(readingSeconds)}`
-          });
-        }
-        if (progress.estimatedRemainingMinutes != null && progress.estimatedRemainingMinutes > 0) {
-          meta.createEl("div", {
-            cls: "bookshelf-remaining",
-            text: `\u5269\u4F59\u7EA6 ${Math.ceil(progress.estimatedRemainingMinutes)} \u5206\u949F`
-          });
-        }
+    for (const { file, item } of items) {
+      const row = list.createEl("button", { cls: "bookshelf-item", attr: { type: "button" } });
+      const icon = row.createSpan({ cls: "bookshelf-file-icon" });
+      (0, import_obsidian14.setIcon)(icon, item.kind === "pdf" ? "file-text" : "book-open");
+      const body = row.createDiv({ cls: "bookshelf-body" });
+      body.createDiv({ cls: "bookshelf-title", text: item.basename });
+      body.createDiv({ cls: "bookshelf-path", text: `${item.extension.toUpperCase()} \xB7 ${item.parentPath || "/"}` });
+      const meta = body.createDiv({ cls: "bookshelf-meta" });
+      if (item.status === "untracked") {
+        meta.createSpan({ text: "\u672A\u8BB0\u5F55\u8FDB\u5EA6" });
+      } else {
+        const wrap2 = meta.createDiv({ cls: "bookshelf-progress-wrap" });
+        const bar = wrap2.createDiv({ cls: "bookshelf-progress-bar" });
+        bar.createDiv().setCssProps({ width: `${Math.round((item.progress ?? 0) * 100)}%` });
+        wrap2.createSpan({ cls: "bookshelf-percent", text: `${Math.round((item.progress ?? 0) * 100)}%` });
       }
-      item.addEventListener("click", () => {
-        this.openCallback(file);
-      });
+      if (item.lastRead) meta.createDiv({ cls: "bookshelf-last-read", text: `\u6700\u8FD1\u9605\u8BFB\uFF1A${item.lastRead.slice(0, 10)}` });
+      if (item.readingTimeSeconds && item.readingTimeSeconds > 0) {
+        meta.createDiv({ cls: "bookshelf-reading-time", text: `\u5DF2\u8BFB ${formatReadingTime(item.readingTimeSeconds)}` });
+      }
+      row.addEventListener("click", () => item.kind === "pdf" ? this.openPdf(file) : this.openBook(file));
     }
-  }
-  formatReadingTime(seconds) {
-    const total = Math.max(0, Math.floor(seconds));
-    const hours = Math.floor(total / 3600);
-    const minutes = Math.floor(total % 3600 / 60);
-    const secs = total % 60;
-    const parts = [];
-    if (hours > 0) {
-      parts.push(`${hours}\u5C0F\u65F6`);
-    }
-    if (minutes > 0 || hours > 0) {
-      parts.push(`${minutes}\u5206`);
-    }
-    parts.push(`${secs}\u79D2`);
-    return parts.join("");
   }
 };
+function formatReadingTime(seconds) {
+  const total = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(total / 3600);
+  const minutes = Math.floor(total % 3600 / 60);
+  const secs = total % 60;
+  return `${hours > 0 ? `${hours}\u5C0F\u65F6` : ""}${minutes > 0 || hours > 0 ? `${minutes}\u5206` : ""}${secs}\u79D2`;
+}
 
 // src/epub/EpubGotoHandler.ts
 var import_obsidian15 = require("obsidian");
@@ -14803,11 +14853,13 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
     }
     this.registerView(
       EPUB_BOOKSHELF_VIEW_TYPE,
-      (leaf) => new EpubBookshelfView(
+      (leaf) => new ReadingLibraryView(
         leaf,
         this.store,
         (file) => this.openEpubBook(file),
-        () => this.getEpubReadingProfile()
+        (file) => this.openEpubBook(file),
+        () => this.getEpubReadingProfile(),
+        () => this.settings.pdfProgressTracking
       )
     );
     this.registerEditorExtension([
@@ -14963,7 +15015,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
     }
     for (const leaf of this.app.workspace.getLeavesOfType(EPUB_BOOKSHELF_VIEW_TYPE)) {
       const view = leaf.view;
-      if (view instanceof EpubBookshelfView) {
+      if (view instanceof ReadingLibraryView) {
         view.refresh();
       }
     }
@@ -15012,7 +15064,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian16.Plugin {
     });
     this.addCommand({
       id: "open-epub-bookshelf",
-      name: "\u6253\u5F00 EPUB \u4E66\u67B6",
+      name: "\u6253\u5F00\u9605\u8BFB\u8D44\u6599\u5E93",
       callback: () => this.activateBookshelf()
     });
     this.addCommand({
@@ -15344,7 +15396,7 @@ ${lines.slice(0, 8).join("\n")}`);
     }
     this.app.workspace.revealLeaf(leaf);
     const view = leaf.view;
-    if (view instanceof EpubBookshelfView) {
+    if (view instanceof ReadingLibraryView) {
       view.refresh();
     }
   }
