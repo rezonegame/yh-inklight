@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 Obsidian Plugin API、CM6 扩展、sidecar AnnotationStore、锚点算法、视图与设置模块
- * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、EPUB 阅读排版设置、设备 profile、封面缓存、阅读笔记绑定和 vault 事件
+ * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、EPUB 阅读排版设置、设备 profile、封面缓存、阅读笔记绑定与同步和 vault 事件
  * [POS]: 插件装配根，协调模块但不修改用户 Markdown 原文
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -44,6 +44,7 @@ import { ReadingLibraryView, EPUB_BOOKSHELF_VIEW_TYPE } from "./src/epub/EpubBoo
 import { BookCoverCache } from "./src/epub/BookCoverCache";
 import { registerEpubGotoHandler } from "./src/epub/EpubGotoHandler";
 import { ReadingNoteBindingService, normalizeReadingNoteFolder } from "./src/readingNotes/readingNoteBinding";
+import { ReadingNoteSync } from "./src/readingNotes/readingNoteSync";
 import {
   detectReaderDeviceClass,
   EpubDeviceProfileStorage,
@@ -81,6 +82,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   settings: AnnotationPluginSettings = DEFAULT_SETTINGS;
   store!: AnnotationStore;
   private readingNotes!: ReadingNoteBindingService;
+  private readingNoteSync!: ReadingNoteSync;
   private lastOpenedReadingNote: { sourcePath: string; notePath: string } | null = null;
 
   private toolbar!: SelectionToolbar;
@@ -115,6 +117,12 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     this.store = new AnnotationStore(this.app, () => this.settings.annotationTags);
     await this.store.initialize();
     this.readingNotes = new ReadingNoteBindingService(this.app, this.store);
+    this.readingNoteSync = new ReadingNoteSync(
+      this.app, this.store, this.readingNotes,
+      () => this.settings.readingNoteFolder,
+      () => this.settings.annotationTags,
+    );
+    this.store.setAnnotationChangeListener((file) => this.readingNoteSync.schedule(file));
 
     this.registerView(ANNOTATION_SIDEBAR_VIEW, (leaf) => new AnnotationSidebarView(leaf, this));
     this.registerView(
@@ -241,6 +249,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   }
 
   onunload(): void {
+    this.readingNoteSync?.dispose();
     if (this.renameMigrationTimer !== null) {
       window.clearTimeout(this.renameMigrationTimer);
     }
@@ -470,6 +479,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       const note = await this.readingNotes.openOrCreate(file, this.settings.readingNoteFolder);
       this.lastOpenedReadingNote = { sourcePath: file.path, notePath: note.path };
       await this.app.workspace.getLeaf("tab").openFile(note);
+      this.readingNoteSync.schedule(file, 0);
     } catch (error) {
       new Notice(error instanceof Error ? error.message : "阅读笔记打开失败");
       console.error("yh-inklight: reading note binding failed", error);

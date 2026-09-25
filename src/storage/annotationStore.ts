@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 obsidian App/Vault/Adapter 的文件读写能力，依赖 storage/types 的 sidecar JSON 合约
- * [OUTPUT]: 对外提供 AnnotationStore，负责 Markdown/PDF 的 .obsidian-annotations sidecar 文件、索引、缓存、阅读笔记绑定持久化与导出
+ * [OUTPUT]: 对外提供 AnnotationStore，负责 Markdown/PDF 的 .obsidian-annotations sidecar 文件、索引、缓存、阅读笔记绑定持久化、批注变更通知与导出
  * [POS]: storage 模块的唯一持久化入口，隔离原始 Markdown 与注释数据
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -85,6 +85,7 @@ export class AnnotationStore {
   private indexWriteTail: Promise<unknown> = Promise.resolve();
   private index: AnnotationIndex = EMPTY_INDEX;
   private changeVersion = 0;
+  private annotationChangeListener: ((file: TFile) => void) | null = null;
 
   constructor(
     private readonly app: App,
@@ -93,6 +94,10 @@ export class AnnotationStore {
 
   get version(): number {
     return this.changeVersion;
+  }
+
+  setAnnotationChangeListener(listener: (file: TFile) => void): void {
+    this.annotationChangeListener = listener;
   }
 
   async initialize(): Promise<void> {
@@ -193,6 +198,13 @@ export class AnnotationStore {
       const disk = await this.readDocumentFromDisk(file);
       const nextDocument = mergeAnnotationDocuments(base, intended, disk);
       await this.persistDocument(nextDocument);
+      if (this.annotationChangeListener && readingAnnotationsChanged(disk, nextDocument)) {
+        try {
+          this.annotationChangeListener(file);
+        } catch (error) {
+          console.error("yh-inklight: failed to schedule reading note sync", error);
+        }
+      }
       return this.getCachedDocument(file.path) ?? nextDocument;
     });
   }
@@ -805,6 +817,11 @@ export class AnnotationStore {
   }
 }
 
+function readingAnnotationsChanged(before: FileAnnotationDocument, after: FileAnnotationDocument): boolean {
+  const fields = ["pdfHighlights", "pdfComments", "epubHighlights", "epubComments"] as const;
+  return fields.some((field) => JSON.stringify(before[field]) !== JSON.stringify(after[field]));
+}
+
 function hashPath(value: string): string {
   let hash = 0x811c9dc5;
   for (let index = 0; index < value.length; index += 1) {
@@ -845,10 +862,6 @@ function buildExportLines(
 
   if (format === "notes-only") {
     return [...lines, ...renderNotesOnly(entries)];
-  }
-
-  if (format === "reading-notes") {
-    return [...lines, ...renderReadingNotes(entries)];
   }
 
   return [...lines, ...renderSummary(entries)];
@@ -979,16 +992,6 @@ function renderNotesOnly(entries: ExportEntry[]): string[] {
     return ["No notes found.", ""];
   }
   return ["## Notes", "", ...notes.flatMap((entry) => renderAnnotationBlock(entry))];
-}
-
-function renderReadingNotes(entries: ExportEntry[]): string[] {
-  return [
-    "## Reading Notes",
-    "",
-    ...entries.flatMap((entry) => {
-      return [`### ${entrySource(entry)}`, "", ...renderAnnotationBlock(entry)];
-    }),
-  ];
 }
 
 function renderAnnotationBlock(entry: ExportEntry): string[] {

@@ -522,7 +522,6 @@ export class AnnotationSidebarView extends ItemView {
     exportFormat.createEl("option", { text: "默认摘要", value: "summary" });
     exportFormat.createEl("option", { text: "按颜色分组", value: "by-color" });
     exportFormat.createEl("option", { text: "只导出笔记", value: "notes-only" });
-    exportFormat.createEl("option", { text: "阅读笔记", value: "reading-notes" });
     exportFormat.value = this.exportFormat;
     exportFormat.addEventListener("change", async () => {
       this.exportFormat = exportFormat.value as AnnotationExportFormat;
@@ -979,7 +978,6 @@ export class AnnotationSidebarView extends ItemView {
       summary: "导出为 Markdown 摘要",
       "by-color": "按颜色分组导出",
       "notes-only": "只导出带笔记的批注",
-      "reading-notes": "导出为阅读笔记格式",
     };
     return labels[this.exportFormat];
   }

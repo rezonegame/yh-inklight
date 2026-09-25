@@ -167,3 +167,29 @@ test("AnnotationStore does not change the main sidecar when backup creation fail
   await assert.rejects(store.addEpubHighlight(vault.source, highlight("second", "第二条")));
   assert.equal(vault.adapter.files.get(sidecarPath), before);
 });
+
+test("annotation change listener ignores progress and only runs after a successful write", async () => {
+  const vault = new FakeVault();
+  const store = new AnnotationStore(createApp(vault) as never);
+  await store.initialize();
+  const changed: string[] = [];
+  store.setAnnotationChangeListener((file) => changed.push(file.path));
+  await store.saveEpubProgress(vault.source, {
+    cfi: "epubcfi(/6/2)", chapter: "第一章", percent: 0.2,
+    lastRead: timeForTest(), readingTimeSeconds: 10,
+  });
+  assert.deepEqual(changed, []);
+  await store.addEpubHighlight(vault.source, highlight("first", "第一条"));
+  assert.deepEqual(changed, [vault.source.path]);
+  await store.removeAnnotation(vault.source, "first");
+  assert.deepEqual(changed, [vault.source.path, vault.source.path]);
+  await store.addEpubHighlight(vault.source, highlight("again", "重新添加"));
+  assert.equal(changed.length, 3);
+  vault.adapter.failBackup = true;
+  await assert.rejects(store.removeAnnotation(vault.source, "again"));
+  assert.equal(changed.length, 3);
+});
+
+function timeForTest(): string {
+  return "2026-09-25T08:00:00.000Z";
+}
