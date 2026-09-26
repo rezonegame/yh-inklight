@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 Obsidian Plugin API、CM6 扩展、sidecar AnnotationStore、锚点算法、视图与设置模块
- * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、EPUB 阅读排版设置、设备 profile、封面缓存、阅读笔记绑定与同步和 vault 事件
+ * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、EPUB 阅读排版设置、设备 profile、封面缓存、阅读笔记绑定/同步/迁移和 vault 事件
  * [POS]: 插件装配根，协调模块但不修改用户 Markdown 原文
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -43,8 +43,10 @@ import { EpubReaderView, EPUB_READER_VIEW_TYPE } from "./src/epub/EpubReaderView
 import { ReadingLibraryView, EPUB_BOOKSHELF_VIEW_TYPE } from "./src/epub/EpubBookshelfView";
 import { BookCoverCache } from "./src/epub/BookCoverCache";
 import { registerEpubGotoHandler } from "./src/epub/EpubGotoHandler";
-import { ReadingNoteBindingService, normalizeReadingNoteFolder } from "./src/readingNotes/readingNoteBinding";
+import { ReadingNoteBindingService, isReadingNoteSource, normalizeReadingNoteFolder } from "./src/readingNotes/readingNoteBinding";
 import { ReadingNoteSync } from "./src/readingNotes/readingNoteSync";
+import { ReadingNoteLifecycle } from "./src/readingNotes/readingNoteLifecycle";
+import { readReadingNoteIdentity } from "./src/readingNotes/readingNoteIdentity";
 import {
   detectReaderDeviceClass,
   EpubDeviceProfileStorage,
@@ -83,6 +85,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   store!: AnnotationStore;
   private readingNotes!: ReadingNoteBindingService;
   private readingNoteSync!: ReadingNoteSync;
+  private readingNoteLifecycle!: ReadingNoteLifecycle;
   private lastOpenedReadingNote: { sourcePath: string; notePath: string } | null = null;
 
   private toolbar!: SelectionToolbar;
@@ -93,7 +96,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private epubDeviceProfileStore!: EpubDeviceProfileStore;
   private bookCoverCache!: BookCoverCache;
   private lastSelection: SelectionSnapshot | null = null;
-  private renameMigrationTimer: number | null = null;
+  private readonly renameMigrationTimers = new Map<TFile, { oldPath: string; timer: number }>();
   private annotationUndo: {
     filePath: string;
     annotationId: string;
@@ -121,6 +124,9 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       this.app, this.store, this.readingNotes,
       () => this.settings.readingNoteFolder,
       () => this.settings.annotationTags,
+    );
+    this.readingNoteLifecycle = new ReadingNoteLifecycle(
+      this.app, this.store, this.readingNoteSync, () => this.settings.annotationTags,
     );
     this.store.setAnnotationChangeListener((file) => this.readingNoteSync.schedule(file));
 
@@ -250,9 +256,8 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
   onunload(): void {
     this.readingNoteSync?.dispose();
-    if (this.renameMigrationTimer !== null) {
-      window.clearTimeout(this.renameMigrationTimer);
-    }
+    for (const pending of this.renameMigrationTimers.values()) window.clearTimeout(pending.timer);
+    this.renameMigrationTimers.clear();
     this.toolbar?.destroy();
     this.popover?.destroy();
     void this.bookCoverCache?.close();
@@ -401,6 +406,11 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       callback: () => { void this.openCurrentReadingNote(); },
     });
     this.addCommand({
+      id: "confirm-current-reading-note-binding",
+      name: "确认当前阅读笔记绑定",
+      callback: () => { void this.confirmCurrentReadingNoteBinding(); },
+    });
+    this.addCommand({
       id: "highlight-selection",
       name: "高亮选中文本",
       hotkeys: [{ modifiers: ["Mod", "Shift"], key: "h" }],
@@ -486,8 +496,43 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
   }
 
+  async confirmCurrentReadingNoteBinding(file = this.app.workspace.getActiveFile()): Promise<void> {
+    if (!file || !isReadingNoteSource(file)) {
+      new Notice("请先打开 PDF 或电子书文件");
+      return;
+    }
+    try {
+      const document = await this.store.getFreshDocument(file);
+      const notePath = document.readingNoteBinding?.notePath;
+      const note = notePath ? this.app.vault.getAbstractFileByPath(notePath) : null;
+      if (!(note instanceof TFile)) throw new Error("当前文件没有可确认的阅读笔记绑定");
+      const identity = readReadingNoteIdentity(await this.app.vault.read(note));
+      if (identity.sourcePath === file.path) {
+        new Notice("阅读笔记来源已与当前文件一致");
+        return;
+      }
+      const confirmed = await new ConfirmReadingNoteBindingModal(this.app, note.path, identity.sourcePath, file.path).openAndRead();
+      if (!confirmed) return;
+      await this.readingNotes.confirmSource(file);
+      this.readingNoteSync.schedule(file, 0);
+      new Notice("已确认阅读笔记来源，正在同步批注");
+    } catch (error) {
+      new Notice(error instanceof Error ? error.message : "阅读笔记绑定确认失败");
+      console.error("yh-inklight: reading note confirmation failed", error);
+    }
+  }
+
   private registerEvents(): void {
     this.registerEvent(this.app.vault.on("delete", (file) => {
+      if (this.lastOpenedReadingNote
+        && (this.lastOpenedReadingNote.notePath === file.path
+          || this.lastOpenedReadingNote.notePath.startsWith(`${file.path}/`))) {
+        this.lastOpenedReadingNote = null;
+      }
+      void this.readingNoteLifecycle.onNoteDeleted(file).catch((error) => {
+        console.error("yh-inklight: reading note delete migration failed", error);
+        new Notice("阅读笔记绑定清理失败，请检查 sidecar 状态");
+      });
       if (file instanceof TFile && (SUPPORTED_BOOK_EXTENSIONS as readonly string[]).includes(file.extension.toLowerCase())) {
         void this.bookCoverCache.remove(file.path);
       } else if (file instanceof TFolder) {
@@ -495,6 +540,14 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       }
     }));
     this.registerEvent(this.app.vault.on("rename", (file, oldPath) => {
+      if (this.lastOpenedReadingNote?.notePath === oldPath
+        || this.lastOpenedReadingNote?.notePath.startsWith(`${oldPath}/`)) {
+        this.lastOpenedReadingNote.notePath = `${file.path}${this.lastOpenedReadingNote.notePath.slice(oldPath.length)}`;
+      }
+      void this.readingNoteLifecycle.onNoteRenamed(file, oldPath).catch((error) => {
+        console.error("yh-inklight: reading note rename migration failed", error);
+        new Notice("阅读笔记路径迁移失败，请检查绑定状态");
+      });
       const oldExtension = oldPath.split(".").pop()?.toLowerCase() ?? "";
       if (file instanceof TFile && (SUPPORTED_BOOK_EXTENSIONS as readonly string[]).includes(oldExtension)) {
         void this.bookCoverCache.remove(oldPath);
@@ -543,15 +596,25 @@ export default class OverlayAnnotationsPlugin extends Plugin {
           return;
         }
 
-        if (this.renameMigrationTimer !== null) {
-          window.clearTimeout(this.renameMigrationTimer);
-        }
-
-        this.renameMigrationTimer = window.setTimeout(async () => {
-          await this.store.migrateFilePath(oldPath, file);
-          await this.refreshAnnotations();
-          this.renameMigrationTimer = null;
+        const prior = this.renameMigrationTimers.get(file);
+        if (prior) window.clearTimeout(prior.timer);
+        const firstOldPath = prior?.oldPath ?? oldPath;
+        const timer = window.setTimeout(async () => {
+          this.renameMigrationTimers.delete(file);
+          try {
+            this.readingNoteSync.cancel(firstOldPath);
+            await this.store.migrateFilePath(firstOldPath, file);
+            await this.readingNoteLifecycle.onSourceRenamed(file, firstOldPath);
+            if (this.lastOpenedReadingNote?.sourcePath === firstOldPath) {
+              this.lastOpenedReadingNote.sourcePath = file.path;
+            }
+            await this.refreshAnnotations();
+          } catch (error) {
+            console.error("yh-inklight: file rename migration failed", error);
+            new Notice("文件改名后的批注或阅读笔记迁移失败，请检查来源链接");
+          }
         }, 100);
+        this.renameMigrationTimers.set(file, { oldPath: firstOldPath, timer });
       }),
     );
 
@@ -1223,6 +1286,47 @@ function nthIndexOf(source: string, target: string, occurrenceIndex: number): nu
     cursor = source.indexOf(target, cursor + target.length);
   }
   return -1;
+}
+
+class ConfirmReadingNoteBindingModal extends Modal {
+  private resolveResult: ((confirmed: boolean) => void) | null = null;
+
+  constructor(
+    app: OverlayAnnotationsPlugin["app"],
+    private readonly notePath: string,
+    private readonly previousSource: string,
+    private readonly nextSource: string,
+  ) {
+    super(app);
+  }
+
+  openAndRead(): Promise<boolean> {
+    return new Promise((resolve) => {
+      this.resolveResult = resolve;
+      this.open();
+    });
+  }
+
+  onOpen(): void {
+    this.contentEl.empty();
+    this.contentEl.createEl("h2", { text: "确认阅读笔记绑定" });
+    this.contentEl.createEl("p", { text: `阅读笔记：${this.notePath}` });
+    this.contentEl.createEl("p", { text: `笔记当前来源：${this.previousSource}` });
+    this.contentEl.createEl("p", { text: `将改为：${this.nextSource}` });
+    const actions = this.contentEl.createDiv({ cls: "modal-button-container" });
+    actions.createEl("button", { text: "取消" }).addEventListener("click", () => this.close());
+    actions.createEl("button", { text: "确认绑定", cls: "mod-cta" }).addEventListener("click", () => {
+      this.resolveResult?.(true);
+      this.resolveResult = null;
+      this.close();
+    });
+  }
+
+  onClose(): void {
+    this.resolveResult?.(false);
+    this.resolveResult = null;
+    this.contentEl.empty();
+  }
 }
 
 class CommentModal extends Modal {

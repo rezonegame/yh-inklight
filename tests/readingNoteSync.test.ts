@@ -58,7 +58,8 @@ test("damaged managed markers reject writes without changing the note", async ()
   const source = file("books/book.pdf");
   const note = file("墨光阅读笔记/book - 阅读笔记.md");
   const current = document(source, note);
-  let body = "## 我的笔记\n用户自己的内容";
+  let body = initialReadingNote(source).replace("<!-- yh-inklight:managed:start -->", "用户自己的内容");
+  const before = body;
   const app = { vault: { process: async (_file: TFile, update: (value: string) => string) => {
     body = update(body);
     return body;
@@ -68,6 +69,28 @@ test("damaged managed markers reject writes without changing the note", async ()
   const sync = new ReadingNoteSync(app as never, store as unknown as AnnotationStore,
     binding as unknown as ReadingNoteBindingService, () => "墨光阅读笔记", () => []);
   await assert.rejects(sync.sync(source), /受管标记/);
-  assert.equal(body, "## 我的笔记\n用户自己的内容");
+  assert.equal(body, before);
+  sync.dispose();
+});
+
+test("a failed sync can retry after the user restores the markers", async () => {
+  const source = file("books/book.pdf");
+  const note = file("墨光阅读笔记/book - 阅读笔记.md");
+  const current = document(source, note);
+  let body = initialReadingNote(source).replace("<!-- yh-inklight:managed:end -->", "");
+  const app = { vault: { process: async (_file: TFile, update: (value: string) => string) => {
+    body = update(body);
+    return body;
+  } } };
+  const store = { getFreshDocument: async () => current };
+  const binding = { openOrCreate: async () => note };
+  const sync = new ReadingNoteSync(app as never, store as unknown as AnnotationStore,
+    binding as unknown as ReadingNoteBindingService, () => "墨光阅读笔记", () => []);
+  await assert.rejects(sync.sync(source), /受管标记/);
+  body = initialReadingNote(source);
+  current.pdfHighlights.push({ id: "one", color: "yellow",
+    anchor: { pageNumber: 1, selectedText: "摘录", rects: [] }, createdAt: timestamp });
+  await sync.sync(source);
+  assert.match(body, /\^pdf-one/);
   sync.dispose();
 });

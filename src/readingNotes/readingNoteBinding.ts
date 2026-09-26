@@ -1,7 +1,15 @@
+/**
+ * [INPUT]: PDF/电子书源文件、sidecar 绑定和 Vault 文件
+ * [OUTPUT]: 显式创建/打开阅读笔记，确认时只修复已绑定笔记的来源信息
+ * [POS]: readingNotes 绑定服务，不按书名认领 Markdown 文件
+ * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
+ */
+
 import { App, normalizePath, TFile, TFolder } from "obsidian";
 
 import type { AnnotationStore } from "../storage/annotationStore";
 import { SUPPORTED_BOOK_EXTENSIONS } from "../storage/types";
+import { assertReadingNoteIdentity, readReadingNoteIdentity, rewriteReadingNoteSource } from "./readingNoteIdentity";
 
 export function normalizeReadingNoteFolder(value: string): string | null {
   const parts = value.trim().replace(/\\/g, "/").split("/");
@@ -73,6 +81,7 @@ export class ReadingNoteBindingService {
       if (!(bound instanceof TFile) || bound.extension.toLowerCase() !== "md") {
         throw new Error(`绑定的阅读笔记不存在：${current.readingNoteBinding.notePath}`);
       }
+      assertReadingNoteIdentity(await this.app.vault.read(bound), source.path);
       return bound;
     }
 
@@ -106,6 +115,22 @@ export class ReadingNoteBindingService {
       }
       throw error;
     }
+  }
+
+  async confirmSource(source: TFile): Promise<void> {
+    const document = await this.store.getFreshDocument(source);
+    const notePath = document.readingNoteBinding?.notePath;
+    const note = notePath ? this.app.vault.getAbstractFileByPath(notePath) : null;
+    if (!(note instanceof TFile)) throw new Error("当前文件没有可确认的阅读笔记绑定");
+    const otherBinding = (await this.store.getIndexedDocuments()).find((candidate) =>
+      candidate.filePath !== source.path && candidate.readingNoteBinding?.notePath === note.path);
+    if (otherBinding) throw new Error(`此阅读笔记已绑定到 ${otherBinding.filePath}，不能重新认领`);
+    await this.app.vault.process(note, (content) => {
+      const identity = readReadingNoteIdentity(content);
+      const expectedType = source.extension.toLowerCase() === "pdf" ? "pdf" : "ebook";
+      if (identity.sourceType !== expectedType) throw new Error("阅读笔记格式与当前文件不一致，不能确认绑定");
+      return rewriteReadingNoteSource(content, identity.sourcePath, source.path, null);
+    });
   }
 
   private async ensureFolder(path: string): Promise<void> {

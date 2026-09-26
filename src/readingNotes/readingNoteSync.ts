@@ -1,6 +1,6 @@
 /**
  * [INPUT]: sidecar 成功变更通知、显式阅读笔记绑定与 Vault.process
- * [OUTPUT]: 防抖、按笔记路径串行的受管区同步；失败仅提示，不回滚批注
+ * [OUTPUT]: 防抖、按笔记路径串行并校验 frontmatter 来源的受管区同步；失败仅提示，不回滚批注
  * [POS]: readingNotes 编排层，不改变 source 文件或 sidecar 事实源
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -10,6 +10,7 @@ import { App, Notice, TFile } from "obsidian";
 import type { AnnotationStore } from "../storage/annotationStore";
 import type { AnnotationTagDefinition } from "../tags/tagDomain";
 import { ReadingNoteBindingService, isReadingNoteSource } from "./readingNoteBinding";
+import { assertReadingNoteIdentity } from "./readingNoteIdentity";
 import { renderReadingNoteProjection, replaceManagedSection } from "./readingNoteProjection";
 
 export class ReadingNoteSync {
@@ -49,7 +50,10 @@ export class ReadingNoteSync {
         throw new Error("阅读笔记绑定已变化，停止写入旧文件");
       }
       const projection = renderReadingNoteProjection(document, this.getTags());
-      await this.app.vault.process(note, (current) => replaceManagedSection(current, projection));
+      await this.app.vault.process(note, (current) => {
+        assertReadingNoteIdentity(current, file.path);
+        return replaceManagedSection(current, projection);
+      });
     });
     this.noteQueues.set(note.path, job);
     void job.then(
@@ -63,5 +67,11 @@ export class ReadingNoteSync {
     this.disposed = true;
     for (const timer of this.timers.values()) clearTimeout(timer);
     this.timers.clear();
+  }
+
+  cancel(sourcePath: string): void {
+    const timer = this.timers.get(sourcePath);
+    if (timer) clearTimeout(timer);
+    this.timers.delete(sourcePath);
   }
 }

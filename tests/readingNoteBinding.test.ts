@@ -46,6 +46,7 @@ test("repeated or concurrent commands create one bound note", async () => {
       return file;
     },
     cachedRead: async (file: TFile) => content.get(file.path) ?? "",
+    read: async (file: TFile) => content.get(file.path) ?? "",
     delete: async (file: TFile) => { files.delete(file.path); },
   } };
   const store = {
@@ -86,4 +87,22 @@ test("unrelated Markdown is not claimed even when it has the preferred name", as
     .openOrCreate(pdf, "墨光阅读笔记");
   assert.equal(note.path, created);
   assert.equal(note.path, readingNotePath("墨光阅读笔记", pdf, true));
+});
+
+test("confirmation refuses a note already bound to another source", async () => {
+  const pdf = source("a/book.pdf");
+  const other = source("b/book.pdf");
+  const note = source("墨光阅读笔记/book - 阅读笔记.md");
+  const current = { filePath: pdf.path,
+    readingNoteBinding: { notePath: note.path, schemaVersion: 1 as const, boundAt: "2026-09-27T08:00:00Z" } } as FileAnnotationDocument;
+  const claimed = { filePath: other.path, readingNoteBinding: current.readingNoteBinding } as FileAnnotationDocument;
+  let writes = 0;
+  const app = { vault: {
+    getAbstractFileByPath: (path: string) => path === note.path ? note : null,
+    process: async () => { writes++; return ""; },
+  } };
+  const store = { getFreshDocument: async () => current, getIndexedDocuments: async () => [current, claimed] };
+  const service = new ReadingNoteBindingService(app as never, store as unknown as AnnotationStore);
+  await assert.rejects(service.confirmSource(pdf), /已绑定到/);
+  assert.equal(writes, 0);
 });

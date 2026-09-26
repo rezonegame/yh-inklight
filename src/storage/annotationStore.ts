@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 obsidian App/Vault/Adapter 的文件读写能力，依赖 storage/types 的 sidecar JSON 合约
- * [OUTPUT]: 对外提供 AnnotationStore，负责 Markdown/PDF 的 .obsidian-annotations sidecar 文件、索引、缓存、阅读笔记绑定持久化、批注变更通知与导出
+ * [OUTPUT]: 对外提供 AnnotationStore，负责 Markdown/PDF 的 .obsidian-annotations sidecar 文件、索引、缓存、阅读笔记绑定持久化、批注变更通知与导出；源文件迁移不改名已绑定阅读笔记
  * [POS]: storage 模块的唯一持久化入口，隔离原始 Markdown 与注释数据
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -403,7 +403,7 @@ export class AnnotationStore {
     this.documents.delete(this.toCacheKey(normalizedOldPath));
 
     // 同步迁移摘录导出文件（*-notes.md / 《名》摘录.md）：更新内部 source 路径引用 + 重命名文件。
-    await this.migrateExcerptFile(normalizedOldPath, this.normalizeVaultPath(file.path));
+    await this.migrateExcerptFile(normalizedOldPath, this.normalizeVaultPath(file.path), oldDocument.readingNoteBinding?.notePath);
   }
 
   /**
@@ -412,7 +412,7 @@ export class AnnotationStore {
    * 2. 文件内容里所有指向旧路径的 source 引用（标题、[[wikilink]]、data-yh-source-path）替换为新路径。
    * 摘录文件不存在时静默跳过。
    */
-  private async migrateExcerptFile(oldPath: string, newPath: string): Promise<void> {
+  private async migrateExcerptFile(oldPath: string, newPath: string, readingNotePath?: string): Promise<void> {
     if (oldPath === newPath) {
       return;
     }
@@ -427,6 +427,7 @@ export class AnnotationStore {
     ];
     for (const candidate of candidates) {
       const candidatePath = normalizePath(`${oldParent}/${candidate}`);
+      if (candidatePath === readingNotePath) continue;
       const excerptFile = this.app.vault.getAbstractFileByPath(candidatePath);
       if (!(excerptFile instanceof TFile)) {
         continue;

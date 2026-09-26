@@ -12,6 +12,8 @@ storage/types.ts: sidecar JSON、设置、锚点、高亮、笔记、标签字�
 storage/annotationStore.ts: .obsidian-annotations 持久化后端，读写文件 JSON 与全局 index；资料库只读取已有 sidecar，避免新书哈希。
 storage/documentMerge.ts: storage 纯逻辑三方合并器，保护跨设备新增、删除、修改和阅读进度。
 readingNotes/readingNoteBinding.ts: PDF/电子书阅读笔记的路径、初始模板、同名冲突处理与显式 sidecar 绑定。
+readingNotes/readingNoteIdentity.ts: 阅读笔记来源 frontmatter 校验与源文件改名时的最小内容迁移。
+readingNotes/readingNoteLifecycle.ts: 阅读笔记及源文件改名/删除的显式绑定迁移。
 readingNotes/readingNoteProjection.ts: PDF/EPUB 批注分组、去重、稳定回链和受管区保护的纯逻辑投影。
 readingNotes/readingNoteSync.ts: 300ms 防抖和按笔记路径串行的自动同步编排。
 tags/tagDomain.ts: 统一语义标签的默认值、名称校验、旧字段映射与显示解析。

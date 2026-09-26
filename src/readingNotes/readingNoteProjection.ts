@@ -138,6 +138,13 @@ export function renderReadingNoteProjection(document: FileAnnotationDocument, ta
 }
 
 export function replaceManagedSection(note: string, projection: string): string {
+  const { start, end } = managedRange(note);
+  const before = note.slice(0, start + MANAGED_START.length);
+  const after = note.slice(end);
+  return `${before}\n${projection ? `${projection}\n` : ""}${after}`;
+}
+
+export function managedRange(note: string): { start: number; end: number } {
   const start = note.indexOf(MANAGED_START);
   const end = note.indexOf(MANAGED_END);
   if (start < 0 || end < 0 || start >= end
@@ -145,7 +152,5 @@ export function replaceManagedSection(note: string, projection: string): string 
     || note.indexOf(MANAGED_END, end + MANAGED_END.length) >= 0) {
     throw new Error("阅读笔记受管标记缺失或重复，已停止同步以保护手写内容");
   }
-  const before = note.slice(0, start + MANAGED_START.length);
-  const after = note.slice(end);
-  return `${before}\n${projection ? `${projection}\n` : ""}${after}`;
+  return { start, end };
 }

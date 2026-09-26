@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 Obsidian ItemView、AnnotationStore 数据与插件主类回调
- * [OUTPUT]: 对外提供 AnnotationSidebarView，将当前文件或全库 annotation 合并为可筛选、可跳转、可导出的总览卡片，并提供当前阅读笔记菜单入口
+ * [OUTPUT]: 对外提供 AnnotationSidebarView，将当前文件或全库 annotation 合并为可筛选、可跳转、可导出的总览卡片，并提供打开/确认阅读笔记入口
  * [POS]: views 模块的右侧 Leaf 总览面板，承载搜索、筛选、排序、行内编辑、跳转、删除与导出模板
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -407,6 +407,10 @@ export class AnnotationSidebarView extends ItemView {
           .setTitle("打开当前阅读笔记")
           .setIcon("notebook-pen")
           .onClick(() => { void this.plugin.openCurrentReadingNote(file); }));
+        menu.addItem((item) => item
+          .setTitle("确认当前阅读笔记绑定")
+          .setIcon("link")
+          .onClick(() => { void this.plugin.confirmCurrentReadingNoteBinding(file); }));
         menu.showAtMouseEvent(event);
       });
     }

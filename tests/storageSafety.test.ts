@@ -190,6 +190,25 @@ test("annotation change listener ignores progress and only runs after a successf
   assert.equal(changed.length, 3);
 });
 
+test("source rename does not rename a bound reading note with a legacy export filename", async () => {
+  const vault = new FakeVault();
+  const note = new FakeFile("books/example-notes.md");
+  const originalLookup = vault.getAbstractFileByPath.bind(vault);
+  vault.getAbstractFileByPath = (path: string) => path === note.path ? note : originalLookup(path);
+  const store = new AnnotationStore(createApp(vault) as never);
+  await store.initialize();
+  await store.addEpubHighlight(vault.source, highlight("first", "第一条"));
+  await store.mutateDocument(vault.source, (document) => ({
+    ...document,
+    readingNoteBinding: { notePath: note.path, schemaVersion: 1, boundAt: timeForTest() },
+  }));
+  const oldPath = vault.source.path;
+  vault.source.path = "books/renamed.epub";
+  await store.migrateFilePath(oldPath, vault.source);
+  assert.equal((await store.getFreshDocument(vault.source)).readingNoteBinding?.notePath, note.path);
+  assert.equal(note.path, "books/example-notes.md");
+});
+
 function timeForTest(): string {
   return "2026-09-25T08:00:00.000Z";
 }
