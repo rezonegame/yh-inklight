@@ -1720,6 +1720,11 @@ span.yh-ov-expand-btn:hover {
   gap: 8px;
 }
 
+.yh-toolbar-action > svg {
+  width: 14px;
+  height: 14px;
+}
+
 .bookshelf-list.bookshelf-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
@@ -2085,8 +2090,6 @@ a.yh-epub-goto-link {
 
 a.yh-epub-goto-link:hover {
   text-decoration: underline;
-}
-  transform: translate(-50%, -100%) translateY(-4px);
 }
 
 /* 段落模式 */

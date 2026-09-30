@@ -1,10 +1,11 @@
 /**
- * [INPUT]: 依赖 DOM selection 与 Obsidian 命令回调，接收高亮颜色与便签动作
+ * [INPUT]: 依赖 DOM selection、Obsidian setIcon 与命令回调，接收高亮颜色与便签动作
  * [OUTPUT]: 对外提供 SelectionToolbar，在选中文本附近显示非侵入式阅读工具条
  * [POS]: editor 模块的交互入口，被 main.ts 装配并调用
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
+import { setIcon } from "obsidian";
 import { ANNOTATION_COLORS, AnnotationColor, COLOR_LABELS } from "../storage/types";
 
 interface SelectionToolbarOptions {
@@ -78,17 +79,17 @@ export class SelectionToolbar {
 
     this.element.createDiv({ cls: "yh-toolbar-sep" });
 
-    const commentButton = this.iconButton("添加便签", NOTE_ICON);
+    const commentButton = this.iconButton("添加便签", "message-square");
     commentButton.addEventListener("click", () => this.options.onComment());
 
-    const copyButton = this.iconButton("复制", COPY_ICON);
+    const copyButton = this.iconButton("复制", "copy");
     copyButton.addEventListener("click", () => this.options.onCopy());
 
-    const sidebarButton = this.iconButton("打开总览", OVERVIEW_ICON);
+    const sidebarButton = this.iconButton("打开总览", "list");
     sidebarButton.addEventListener("click", () => this.options.onOpenSidebar());
   }
 
-  private iconButton(label: string, svg: string): HTMLButtonElement {
+  private iconButton(label: string, icon: string): HTMLButtonElement {
     const button = this.element.createEl("button", {
       cls: "yh-toolbar-action",
       attr: {
@@ -97,7 +98,7 @@ export class SelectionToolbar {
         title: label,
       },
     });
-    button.innerHTML = svg;
+    setIcon(button, icon);
     return button;
   }
 }
@@ -122,36 +123,3 @@ function isSelectionInsideAnnotatableContent(range: Range): boolean {
     ),
   );
 }
-
-const NOTE_ICON = `
-  <svg width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round">
-    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5
-      a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-  </svg>
-`;
-
-const COPY_ICON = `
-  <svg width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round">
-    <rect x="9" y="9" width="13" height="13"
-      rx="2" ry="2"/>
-    <path d="M5 15H4a2 2 0 0 1-2-2V4
-      a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-  </svg>
-`;
-
-const OVERVIEW_ICON = `
-  <svg width="14" height="14" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor" stroke-width="2"
-    stroke-linecap="round" stroke-linejoin="round">
-    <line x1="8" y1="6" x2="21" y2="6"/>
-    <line x1="8" y1="12" x2="21" y2="12"/>
-    <line x1="8" y1="18" x2="21" y2="18"/>
-    <line x1="3" y1="6" x2="3.01" y2="6"/>
-    <line x1="3" y1="12" x2="3.01" y2="12"/>
-    <line x1="3" y1="18" x2="3.01" y2="18"/>
-  </svg>
-`;

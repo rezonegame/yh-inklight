@@ -1,352 +1,89 @@
-# yh-InkLight（墨光批注）
+# yh-InkLight
 
-yh-InkLight is a non-invasive reading and annotation plugin for Markdown, PDF, and EPUB. Highlights, notes, and tags are stored separately from source files. Requires Obsidian 1.7.2 or later.
+Read and annotate Markdown, PDF, and EPUB in Obsidian. Highlights, notes, tags, and reading progress are stored in separate sidecar JSON files so annotations do not change the original documents.
 
-一款非侵入式的 Obsidian 阅读 + 批注插件，支持 **EPUB / PDF / Markdown** 三种格式。高亮与笔记存储在独立 sidecar JSON 中，所有批注都汇入右侧统一面板——**绝不会修改你的原始文档**。
+Requires **Obsidian 1.7.2 or later**. [中文说明](README.zh-CN.md).
 
-> 从单一的「Markdown/PDF 批注」工具，演进为覆盖 EPUB 全文阅读（foliate-js 引擎）+ 统一批注面板 + 摘录导出 + 双向溯源的综合阅读平台。
+## Features
 
----
+- **Markdown annotations:** highlight text in Live Preview and Reading View, add comments, and jump back to the source.
+- **PDF annotations:** display highlights as overlays, attach notes, and navigate to the original page.
+- **EPUB reading:** read with the bundled foliate-js engine, switch between pagination and scrolling, search within books, and customize fonts, spacing, width, alignment, and themes.
+- **Unified annotation sidebar:** browse Markdown, PDF, and EPUB annotations together; filter by color, type, and tag; edit comments; and export Markdown summaries.
+- **Reading library:** browse books and PDFs with search, reading-status filters, progress, recent reading, and a cover grid.
+- **Reading notes:** link PDFs and ebooks to generated Markdown notes. Annotation changes update only the explicitly managed section and preserve handwritten content outside it.
+- **Return to source:** exported annotations use `obsidian://inklight` links to return to the relevant text, PDF page, or EPUB location.
+- **Device preferences:** desktop, tablet, and phone keep their own EPUB layout preferences. An optional high-contrast e-ink mode applies to the plugin's reading interface.
 
-## ✨ 核心特性
+## Installation
 
-### 📖 EPUB 阅读（foliate-js 引擎）
-- **完整阅读体验**：渲染 / 翻页 / 滚动 / 字号 / 6 种主题（跟随 Obsidian、白、暖光、护眼绿、羊皮纸、夜间）
-- **设备独立排版**：桌面、平板、手机分别记忆 EPUB 阅读排版；本机设置不进入 Vault 同步
-- **本机字体覆盖**：可填写当前设备已安装的字体名称即时预览；字体缺失时自动回退，不下载或安装字体文件
-- **移动端体感**：手机和平板的选区操作固定在底部安全区；EPUB 目录和搜索使用覆盖面板，不遮挡原生标签页和边缘滑动
-- **正文键盘导航**：可重排 EPUB 的分页模式用方向键翻页，滚动模式用方向键逐步滚动；正文 iframe 内同样有效，输入控件和 Shift 选区保持原行为
-- **连续滚轮阅读**：滚动模式按距离移动正文，保留触控板小幅输入并限制单次大幅滚动，避免一次跳整屏；章节边界由 foliate 接续
-- **电子墨水模式**：EPUB 和书架可切换纯黑白、高对比、无动画/阴影/模糊模式；只作用于墨光界面，不改变 Obsidian 全局主题
-- **阅读资料库**：统一列出电子书和 PDF，显示所在目录、进度、最近阅读和已有阅读时间；点击后由对应阅读器打开
-- **资料库检索**：按名称或路径搜索，组合阅读状态、格式和父目录筛选，并按最近阅读、标题或进度排序
-- **封面网格**：资料库支持列表/封面网格切换；正常打开电子书时提取封面并缓存在当前设备，PDF 使用轻量占位封面
-- **6 色高亮 + 想法标注**：选中文本弹出浮动菜单，画线或写想法
-- **全文搜索**：工具栏搜索图标打开侧栏搜索，统一显示 EPUB 搜索结果并支持回跳
-- **阅读进度**：自动保存位置 + 阅读时间统计 + 剩余时间估算
-- **多格式支持**：foliate 原生支持 EPUB / MOBI / AZW3 / FB2 / CBZ / TXT
+### Community directory
 
-### 📝 统一批注面板（墨光批注侧栏）
-- **三格式统一**：Markdown / PDF / EPUB 批注汇入同一个总览面板
-- **筛选与搜索**：按颜色 / 类型 / 标签筛选，关键词搜索批注内容
-- **语义标签**：默认提供洞见、疑问、提醒；最多启用 5 个标签，可改名、排序、停用和自定义预设图标
-- **行内编辑**：直接在面板编辑想法、添加笔记
-- **跳转**：点卡片跳回原文对应位置（Markdown 偏移 / PDF 页码 / EPUB CFI）
-- **导出**：统一导出 Markdown 摘要、按颜色分组或只导出带笔记的批注；PDF/电子书阅读笔记另行自动同步
-- **阅读笔记保护**：笔记移动后跟随显式绑定，源文件改名更新来源与回链；来源信息异常时停止同步，手写区不会被自动重建
+The plugin has been submitted to the Obsidian Community directory. Availability inside Obsidian depends on its automated review status.
 
-### 🔗 统一导出 + 双向溯源（EPUB）
-- **导出批注**：侧栏底部「导出批注」统一导出 Markdown / PDF / EPUB 标注
-- **统一深链**：摘录和侧栏均可生成 `obsidian://inklight` 链接，点击后精确回到 Markdown、PDF 或 EPUB 批注
-- **兼容回链**：保留旧 EPUB/PDF 导出中的隐藏定位锚点，升级后旧摘录仍可使用
+When available, open **Settings -> Community plugins -> Browse**, search for **yh-InkLight**, install it, and enable it.
 
-### 📌 PDF 批注
-- 覆盖层高亮矩形 + 便签
-- 选区检测 + 颜色标注
-- 汇入统一批注面板
+### BRAT
 
-### ✍️ Markdown 批注
-- CM6 编辑模式高亮扩展
-- 阅读模式高亮后处理
-- 点击高亮弹出便签
+1. Install [BRAT](https://github.com/TfTHacker/obsidian42-brat).
+2. Add the repository `rezonegame/yh-inklight`.
+3. Enable **yh-InkLight**.
 
----
+### Manual installation
 
-## 🚀 安装
+1. Download `main.js`, `manifest.json`, and `styles.css` from the [latest GitHub release](https://github.com/rezonegame/yh-inklight/releases/latest).
+2. Copy the files into `<vault>/.obsidian/plugins/yh-inklight/`.
+3. Enable **yh-InkLight** under Community plugins.
 
-### 通过 BRAT（推荐）
-1. 安装 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 插件
-2. BRAT → Add Plugin → 填入仓库地址：`rezonegame/yh-inklight`
-3. 安装后启用「yh-InkLight」
-4. **重要**：更新后请**完全退出 Obsidian 再重开**（不是 reload 插件）
+After updating the EPUB engine, fully quit and restart Obsidian to reload its custom elements. To show EPUB files in the file explorer, enable **Detect all file extensions** under Files and links.
 
-### 手动
-1. 从 [Releases](https://github.com/rezonegame/yh-inklight/releases) 下载 `main.js`、`manifest.json`、`styles.css`
-2. 放入 `<vault>/.obsidian/plugins/yh-inklight/`
-3. 设置 → 第三方插件 → 启用「yh-InkLight」
+## Usage
 
-### 打开 EPUB 的前置条件
-- 设置 → 文件与链接 → 开启**「检测所有文件扩展名」**
-- 这样 `.epub` 等格式才会在文件树显示
+Select text in a supported reader to highlight it or attach a comment. Open the annotation sidebar to browse, filter, edit, export, or return to annotations. Open the reading library to find books and PDFs in the vault.
 
----
+Use the command palette for highlight, comment, annotation overview, reading library, and reading-note actions. Configure highlight colors, annotation tags, EPUB layout, reading-note folder, and PDF progress under **Settings -> yh-InkLight**.
 
-## ⚙️ 设置
+## Storage and permissions
 
-在 设置 → yh-InkLight 中配置：
+- Annotation data and reading progress are stored in `<vault>/.obsidian-annotations/` as sidecar JSON files. The plugin reads source documents and scans vault file paths to build its reading library.
+- Generated reading notes and exported summaries are Markdown files inside the vault. Only a generated note's marked managed region is automatically synchronized; handwritten sections are preserved.
+- EPUB layout preferences use device-local `localStorage`. Cover thumbnails use device-local IndexedDB. These caches are separate from annotation sidecars.
+- Copy actions write selected text or annotation links to the clipboard.
+- The EPUB engine is bundled in the release. No plugin account or subscription is required. Annotation storage does not depend on an external service.
 
-| 设置 | 说明 |
-|------|------|
-| 默认高亮颜色 | 新建高亮的默认色 |
-| 默认作者 | 批注署名 |
-| 批注标签 | 管理笔记标签；最多启用 5 个，禁止重复名称 |
-| EPUB 阅读排版 | 当前设备的预设字体或本机字体、字号、行距、正文宽度、正文对齐、分页 / 滚动和阅读主题 |
-| 电子墨水模式 | 当前设备的 EPUB 黑白高对比阅读界面；关闭后恢复原主题和排版 |
-| EPUB 高亮样式 | 填充 / 下划线 / 波浪线 |
-| PDF 阅读进度 | 是否记录当前 PDF 页码与阅读进度 |
+Back up `.obsidian-annotations/` together with your vault to preserve annotations. Removing sidecars does not remove the original documents, but does remove the stored annotations and progress.
 
----
+## Development
 
-## 📂 数据存储
-
-所有批注数据存储在 `<vault>/.obsidian-annotations/` 目录下的 sidecar JSON 文件中：
-- 每个被批注的文件对应一个 `<filename>.json`
-- 包含：高亮、笔记、阅读进度，以及为兼容旧版保留的历史字段
-- **原始文档零修改**，可随时删除 sidecar 还原
-
-```text
-.obsidian-annotations/
-  index.json
-  notes__reading__book.md.json      # Markdown 批注
-  papers__example.pdf.json           # PDF 批注
-  books__novel.epub.json             # EPUB 批注（含 CFI 锚点和阅读进度）
+```sh
+npm ci
+npm run dev
+npm run verify
+npm run build
 ```
 
----
+`npm run verify` runs the existing tests, TypeScript checks, and release metadata checks. Test built assets in a separate Obsidian vault.
 
-## ⌨️ 命令与快捷键
+## Release notes
 
-| 命令 | 快捷键 | 功能 |
-|------|--------|------|
-| 高亮选中文本 | `Ctrl+Shift+H` | Markdown/PDF 选区高亮 |
-| 为选中文本添加便签 | `Ctrl+Alt+M` | 添加想法 |
-| 打开批注总览 | — | 打开墨光批注侧栏 |
-| 打开阅读资料库 | — | 浏览 Vault 内电子书和 PDF |
-| 导出批注 | — | 在墨光批注侧栏底部统一导出当前文件或全库批注 |
+### 0.23.6
 
----
+- Address community review errors: preserve workspace leaf positions on unload; render toolbar icons through Obsidian's icon API; use standard settings headings and SVG style helpers; and remove a malformed CSS fragment.
+- Build the annotation undo notice from a DocumentFragment so it does not require a notification API newer than the declared minimum app version.
+- Provide this English README with the full Chinese documentation preserved separately, and correct the author profile link.
 
-## 🛠 技术架构
+### 0.23.5
 
-- **EPUB 引擎**：[foliate-js](https://github.com/johnfactotz/foliate-js) 1.0.1（单引擎，原生多格式）
-- **渲染**：foliate-view 自定义元素嵌入 Obsidian leaf，CSP/sandbox 补丁适配桌面端
-- **数据层**：sidecar JSON（`AnnotationStore`），统一 `FileAnnotationDocument`
-- **标注同步**：`renderedAnnotationMeta` 跟踪 foliate 高亮层，保证增删即时刷新
-- **非侵入**：所有批注 overlay 叠加，不触碰原文
+- Use the directory display name **yh-InkLight** and an English summary.
+- Correct the minimum Obsidian version to 1.7.2. The plugin ID remains `yh-inklight`.
+- Reading and annotation behavior remains the same as 0.23.4.
 
----
+See [the Chinese documentation](README.zh-CN.md) and [GitHub releases](https://github.com/rezonegame/yh-inklight/releases) for earlier changes.
 
-## 📋 版本历史
+## License and attribution
 
-### v0.23.5
-- 社区目录发布准备：商店显示名称改为 yh-InkLight，插件 ID 仍为 `yh-inklight`；中文功能界面和已有批注数据保持兼容。
-- 使用英文简短描述，并将最低 Obsidian 版本更正为 1.7.2，以覆盖阅读笔记文件夹建议等使用的 API。
-- 阅读、滚动、批注和笔记同步功能与 0.23.4 一致。
+MIT. See [LICENSE](LICENSE) and [third-party notices](THIRD_PARTY_NOTICES.md).
 
-### v0.23.4
-- 根据 BRAT 反馈修复“已切为竖向滚动，滚轮却一次跳一屏”的体感问题：正文容器和 iframe 统一按距离滚动，兼容像素/行/整页信号，单次最多移动 120px 或短窗口的四分之一。
-- 保留触控板小幅连续输入；章节末尾的小数位置不会阻止接续下一章。修饰键、输入控件和不支持滚动的固定版式保留原行为。
-- 已验收的方向键导航、分页滚轮、排版保存逻辑不变；增加滚轮与章节边界回归测试以及可重跑的实际 Foliate 浏览器 fixture，不改书籍、批注或阅读笔记数据。
-
-### v0.23.3
-- 修复书内阅读流模式尚未保存时，被批注或其他刷新重新改回旧模式的问题；快速关闭或切换书籍前先保存排版选择，避免滚动/分页设置丢失。
-- 补齐正文 iframe 的方向键监听：分页模式左/上翻上一页、右/下翻下一页；滚动模式左/上向前、右/下向后逐步移动。输入控件、组合键和 Shift 选区保持原行为。
-- 分页滚轮导航也接入正文 iframe，切换书籍或关闭阅读器时释放监听，避免重复触发。
-
-### v0.23.2
-- 阅读笔记改名或移动后更新 sidecar 绑定；删除笔记时清除绑定，下次批注新建笔记但不恢复已删除的手写内容。源 PDF/电子书改名后更新笔记来源与回链，不擅自改笔记文件名。
-- 同步前核对 frontmatter 来源、格式和受管标记；不一致时停止写入。新增“确认当前阅读笔记绑定”命令和侧栏菜单项，须由用户确认后才修复来源字段。旧的一次性导出文件不会被认领。
-- 同一文件连续改名合并迁移；与旧摘录导出文件同名的受管阅读笔记不再被旧迁移逻辑误改名。插件禁用或卸载不触碰笔记。
-
-### v0.23.1
-- PDF 与电子书批注新增、编辑、删除或即时撤销成功后，自动将最新内容同步到已绑定的阅读笔记；首次创建批注会自动创建阅读笔记。同步按 PDF 页码或 EPUB 章节整理，保留标签、评论与返回原文链接。
-- 只改写 `yh-inklight:managed` 标记之间的区域，手写区保留；标记损坏时停止同步并提示。阅读进度变化不会触发笔记写入，批注仍以 sidecar 为唯一事实源。
-- 统一“导出批注”移除易混淆的一次性“阅读笔记”格式，其他导出格式不变；既有导出文件不删除、不自动绑定。
-
-### v0.23.0
-- PDF 和电子书增加显式阅读笔记绑定：命令面板“打开当前阅读笔记”或批注侧栏的当前文件菜单可创建并打开笔记；再次执行直接打开同一笔记。
-- 设置中可指定 Vault 内阅读笔记文件夹，默认“墨光阅读笔记”。新笔记包含来源 frontmatter、手写区和空的受管标记；同名无关文件不会被自动认领。
-- 本版尚不自动同步批注到阅读笔记。原有 sidecar、导出和深链保持不变。
-
-### v0.22.4
-- 修复阅读资料库封面网格在窄窗口下仍强制排四列、标题与进度等内容被挤出卡片的问题。网格按可用宽度自动调整列数，卡片正文与元数据严格限制在卡片内。
-- 不更改阅读进度、批注 sidecar、书籍文件或封面缓存；列表视图行为保持不变。
-
-### v0.22.3
-- 修复阅读资料库列表与封面网格的条目高度被 Obsidian 通用按钮样式压短，导致标题、路径和进度越过边框相互重叠的问题。
-- 条目仍可鼠标点击，并支持键盘 Enter / 空格打开；封面保持固定比例。未改动批注 sidecar、书籍文件或封面缓存格式。
-
-### v0.22.2
-- 阅读资料库新增紧凑列表与封面网格切换，视图偏好只保存在当前设备；无封面时显示格式与书名首字的占位封面。
-- 仅在正常打开电子书并取得 foliate 封面时写入本机 IndexedDB；首次进入资料库不批量解析书库，PDF 始终使用占位封面。
-- 封面缓存以来源 mtime 校验，源文件变化后失效；删除或移动文件时清理旧缓存。缓存限制为 100 个或 32 MiB，IndexedDB 不可用时仍可正常浏览和打开文件。
-
-### v0.22.1
-- 阅读资料库支持名称/完整路径搜索，按阅读状态、格式与直接父目录组合筛选，以及最近阅读、标题、进度排序。
-- “最近”显示有阅读记录的最新 20 项；搜索和筛选只处理已加载的列表，不重复扫描 Vault 或读取 sidecar。
-- 无结果时显示明确空态；文件新增、删除、改名和进度更新后保留当前检索条件并刷新结果。
-
-### v0.22.0
-- 将原 EPUB 书架升级为统一阅读资料库，包含 EPUB、MOBI、AZW3、FB2、FBZ、CBZ、TXT 和 PDF；保留原视图 ID，旧工作区布局无需重建。
-- 列表显示格式、所在目录、阅读进度、最近阅读时间及已有阅读时长；关闭 PDF 进度记录时显示“未记录进度”。
-- 电子书仍由 foliate 阅读器打开，PDF 仍由 Obsidian 原生查看器打开；文件变化和进度保存后自动刷新。
-- 仅从 Vault 文件及现有 sidecar 派生列表，不新增书籍数据库，也不解析 PDF 或提取封面。搜索筛选与封面视图留待后续版本。
-
-### v0.21.5
-- 新增：EPUB 阅读设置增加电子墨水模式，提供纯黑白、高对比、无动画、无阴影、无模糊和非平滑滚动显示。
-- 作用域：模式只应用于墨光 EPUB 阅读视图、内部目录/搜索、选区菜单和电子书架，不改变 Obsidian 全局主题。
-- 交互：电子墨水模式下工具栏、目录、搜索和选区操作按钮放大到至少 48px；链接使用下划线，选区和当前 tab 使用黑白对比区分。
-- 兼容：模式作为当前设备 profile 的可选字段保存；旧 profile 默认关闭，关闭后恢复原先主题、排版和控件样式。
-- 验证：补充 profile 迁移、显式开关和黑白颜色策略测试。
-
-### v0.21.4
-- 新增：手机和平板上 Markdown/PDF 选区工具条与 EPUB 选区菜单固定在底部安全区，主要操作按钮不小于 44px。
-- 调整：EPUB 目录和搜索在窄屏使用覆盖面板，点击条目后自动收起；保留 Obsidian 原生标签页和系统边缘滑动手势。
-- 调整：批注侧栏的高级筛选统一由筛选按钮展开/收起，手机默认收起，避免窄屏横向拥挤。
-- 增强：EPUB 阅读区尺寸变化时通过 ResizeObserver 重新应用布局并恢复当前 CFI，横竖屏切换不跳回章节开头。
-- 兼容：不改变批注 sidecar、阅读进度、PDF 原生查看器和桌面窗口布局。
-
-### v0.21.3
-- 新增：EPUB 阅读排版支持填写当前设备已安装的字体名称，并在书内面板和设置页即时预览、短暂防抖保存。
-- 兼容：本机字体只保存到当前设备 localStorage，不写入 Vault `data.json`、批注 sidecar 或统一导出；旧 profile 自动使用原有预设。
-- 安全：字体名限制为单一字体族名称并进行 CSS 转义，拒绝 CSS 声明、路径、列表和控制字符；代码、数学公式、SVG 与图标字体保留原有字体规则。
-- 回退：未知或缺失字体自动回退到所选预设，跟随书籍模式使用系统 serif 兜底；关闭自定义后恢复原有书籍/预设字体行为。
-- 验证：补充本机字体迁移、非法值、CSS 转义、设备隔离和回退测试。
-
-### v0.21.2
-- 新增：EPUB 排版 profile 按桌面、平板、手机分别保存在当前设备的 localStorage，桌面窄窗口仍使用桌面 profile。
-- 兼容：旧版同步排版设置继续作为各设备的默认值，升级不丢失字号、主题、流模式和其他排版配置。
-- 增强：书内排版面板和设置页显示当前设备并共用同一 profile；支持清除当前设备覆盖值并恢复同步默认。
-- 保护：localStorage 不可用、损坏或写入失败时回退同步默认值并提示，不阻止 EPUB 打开；批注、进度和 sidecar 数据不受影响。
-
-### v0.21.1
-- 视觉：以墨滴与打开的书页构成全新单色图标，适配 Obsidian 深浅主题与侧栏小尺寸显示。
-- 兼容：仅替换插件身份图标，不改变批注、阅读、导出和 sidecar 存储行为。
-
-### v0.21.0
-- 新增：EPUB 统一阅读排版面板，支持字体、字号、行距、正文宽度、正文对齐、滚动/分页和阅读主题。
-- 调整：字号、主题和流模式不再以多个常驻工具栏控件呈现，统一通过阅读设置面板管理；保留目录、搜索、必要导航和设置入口。
-- 兼容：旧版 `epubFontSize`、`epubDefaultFlow` 和 `epubReadingTheme` 会自动迁移到新的阅读排版 profile，并继续写回旧字段供降级版本读取。
-- 体验：修改排版时优先按当前 CFI 恢复阅读位置，不因重排跳回章节开头；设置页和书内面板使用同一份配置。
-- 工程：增加 profile 范围归一化与旧设置迁移测试；不引入设备独立配置、移动底栏或电子墨水模式。
-  
-### v0.20.5
-- 重构：将 EPUB 搜索、iframe 选区和 foliate 布局属性从主视图拆分为专用控制器，降低单文件复杂度。
-- 调整：目录与全文搜索统一进入 EPUB 侧栏；工具栏搜索按钮只负责打开侧栏并切换到搜索标签，不再创建重复搜索浮层。
-- 兼容：搜索结果同时兼容 foliate 数组和异步生成器接口，保留结果回跳、当前内容回退搜索、分页/滚动、主题、字号、批注和进度行为。
-- 工程：新增搜索结果标准化、过期查询令牌和布局属性测试；移除废弃的工具栏搜索 DOM 与 CSS。
-  
-### v0.20.4
-- 修复：每次批注写入前读取磁盘最新 sidecar，按稳定 ID 合并本地操作，避免缓存覆盖其他设备的新批注。
-- 增强：已有 sidecar 覆盖前保存一份 `.bak`，写入后执行完整文档校验；备份或校验失败时保留原数据。
-- 增强：损坏的 `index.json` 会先原样备份，再从有效 sidecar 重建；损坏的批注 sidecar 不会被空数据覆盖。
-- 工程：新增存储三方合并、并发写入、损坏保护、索引重建和备份失败测试，原有 8 项测试继续通过。
-
-### v0.20.3
-- Fixed: Render the immediate Undo action directly inside Obsidian's notice message container so the action is visible and clickable after annotation creation.
-
-### v0.20.2
-- Added: PDF text selection again opens the color annotation menu. The same selection actions remain available through keyboard shortcuts.
-- Fixed: The immediate Undo action now covers newly created Markdown, PDF, and EPUB highlights and annotations, refreshing the corresponding reader surface after undo.
-
-### v0.20.1
-- Fixed: After creating a Markdown highlight, a seven-second "Undo" action is shown. Undoing refreshes both Reading View and the annotation sidebar.
-- Fixed: The selection toolbar now responds only to Markdown editor and Reading View body text, excluding note titles, sidebars, search, settings, and other input controls.
-
-### v0.20.0
-- 新增：Markdown、PDF、EPUB 共用的语义标签系统；默认提供洞见、疑问、提醒，最多启用 5 个标签
-- 新增：设置页支持标签改名、排序、停用、启用、预设图标与恢复默认；名称会进行空格、全半角、大小写归一化并强制禁止重复
-- 新增：右侧墨光批注侧栏可按标签统一筛选当前文件或全库批注，未分类和已停用标签也可追溯
-- 调整：标签改名即时同步显示到批注卡片、编辑器和后续导出，不批量改写 sidecar；已经导出的 Markdown 仅在再次导出时更新标签文字
-- 兼容：旧 Markdown/PDF `title` 与 EPUB `noteType` 自动映射到默认标签；自定义标签以稳定 ID 保存，旧数据不强制迁移
-- 导出：四种统一导出格式均包含笔记标签，同时保留深链和旧版定位锚点
-- 工程：新增纯逻辑测试，覆盖标签校验、旧分类映射和深链编码；加入 PDF 阅读进度设置开关
-
-### v0.19.1
-- 维护：文档、设置和运行时描述与实际功能对齐；清理不再使用的便签避让工具
-
-### v0.19.0
-- 重构：统一 Markdown / PDF / EPUB 批注深链；侧栏和导出均可使用同一条 `obsidian://inklight` 回跳链接
-- 修复：批注与阅读进度的写入改为串行队列，避免并发保存覆盖 sidecar 与索引
-- 修复：重命名迁移覆盖 PDF，跨目录移动时能迁移导出文件并更新 URL 编码路径
-- 清理：下线 EPUB 书签运行时入口和残留样式；旧书签与 Canvas 数据继续只读保留
-- 体验：侧栏卡片将复制链接和删除操作收进溢出菜单，阅读界面不新增工具栏按钮
-- 发布：BRAT 更新使用精确标签 `0.19.0`，Release 提供 `main.js`、`manifest.json` 和 `styles.css`
-
-### v0.18.2
-- 修复：Markdown 有批注时，正文下方出现冗余的便签泳道（StickyNoteLane）卡片堆叠并撑出大块空白、遮挡后续内容的问题。右侧墨光批注侧栏已完整覆盖全部功能，故彻底停用泳道
-- 清理：移除泳道相关的 4 个设置项（便签宽度 / 显示位置 / 窄屏折叠阈值 / 显示连接线）及对应 CSS、孤立代码文件
-- 兼容：`types.ts` 中相关设置字段保留为 optional，旧 `data.json` 升级后不报错
-
-### v0.17.0
-- 修复：EPUB 想法标注的 noteType 分类（洞见/疑问/提醒）此前被丢弃，现已持久化并在侧栏卡片显示分类标签
-- 修复：从侧栏删除 Markdown 批注后，阅读视图高亮现在即时同步移除（此前需手动 rerender）
-- 修复：重命名/移动源文件时，对应的摘录导出文件（`*-notes.md`）现在跟随迁移并更新内部 source 引用
-- 修复：`yh-pdf-goto-page` 事件监听器此前未解绑，热重载时会累积泄漏，现已通过 register 正确解绑
-- 清理：移除从未被调用的 Canvas 集成死代码（bindCanvas/sendToCanvas 等）；types 字段保留为 optional 兼容旧 sidecar
-- 清理：移除 EPUB AI 占位符（AI 按钮 + 「即将上线」提示 + 5 个未使用的 AI 设置字段）
-- 清理：移除 PDF 书签 4 个死方法、PdfAnchor.createdScale 等多处死代码
-- 重构：抽取共享 Markdown 高亮颜色表、formatTime 工具函数；合并 EPUB CFI 跳转逻辑到统一入口
-
-### v0.16.3
-- 迁移：旧摘录导出的 callout、EPUB CFI hidden anchor、Back to source 回跳能力并入统一「导出批注」
-- 增强：统一导出为 Markdown/PDF/EPUB 批注生成可定位 callout；PDF 使用 page link，EPUB 使用 CFI 回跳
-- 清理：删除废弃 `EpubExcerptExporter`、独立摘录目录/回链设置，以及主类中的旧 exporter 引用
-
-### v0.16.2
-- 调整：PDF/EPUB 不再显示额外导出摘录入口，统一走侧栏底部「导出批注」
-- 调整：暂时下线 PDF 书签相关侧栏按钮和命令，避免当前页码获取不稳定影响阅读
-- 修复：统一导出批注现在同时收集 Markdown、PDF、EPUB 标注
-
-### v0.16.1
-- 重构：PDF 书签/列表/删除/导出入口收拢到「墨光批注」侧栏，不再依赖临时 Menu 或 document 事件
-- 新增：侧栏内固定 PDF bookmarks 面板，支持点击跳转、当前页提示、逐条删除
-- 修复：PDF 摘录导出改为 PDF/EPUB 分支，PDF comment 使用 content 字段并生成 page anchor
-
-### v0.16.0
-- 新增：PDF Viewer Adapter，统一当前 PDF、当前页、页数、页面元素、跳转与 pdf.js 生命周期入口
-- 优化：PDF 进度恢复、侧栏批注跳转、书签跳转统一走 adapter
-- 修复：PDF 添加书签增加写入后校验，降低偶发“点了但没加上”的不确定性
-
-### v0.11.5
-- 修复工具栏搜索框 CSS `position: relative`（v0.11.4 脚本静默失败导致定位错误）
-
-### v0.11.4
-- 搜索框移到工具栏下方（贴工具栏，非容器底部）
-- 搜索功能：缓存当前 section doc，`getContents` 不可靠时回退到缓存
-- 菜单消失：标注框 / 删除框点击外部立即关闭（不再死等 8 秒或依赖 mouseleave）
-- 段落模式：移除工具栏按钮（作用不大）
-- 侧栏搜索：改为只刷新列表不重建搜索框，保持输入焦点
-
-### v0.11.0 ~ v0.11.3
-- **Phase 4-B 完成**：摘录导出 / 双向溯源 / 书签 / 脚注预览 / 全文搜索 / Canvas 集成
-- 搜索移到工具栏，回链跳转修复（HTML 注释 → hidden span）
-
-### v0.9.0 ~ v0.10.1
-- **Phase 4-A 完成**：epubjs → foliate-js 单引擎迁移，移除 epubjs 依赖
-- 统一批注系统：EPUB 批注接入墨光批注面板（与 Markdown/PDF 统一）
-- 书签系统、想法 Modal、删除链路
-
-### v0.6.0 ~ v0.8.2
-- EPUB 核心阅读（foliate 引擎接入、CSP/sandbox 修复、选区菜单、坐标映射）
-- 统一标注面板、即时刷新、颜色点修复
-
-### v0.5.x 及更早
-- Markdown / PDF 批注基础（高亮、便签栏、侧栏总览、全库搜索、导出模板）
-
----
-
-## 🔧 开发
-
-```bash
-npm install
-npm run dev      # 开发构建
-npm run build    # 生产构建
-```
-
-类型检查：`npx tsc --noEmit`
-
-将 `main.js`、`manifest.json`、`styles.css` 复制到 `<vault>/.obsidian/plugins/yh-inklight/` 测试。
-
----
-
-## 📝 许可
-
-MIT
-
-## 🙏 致谢与参考
-
-- [foliate-js](https://github.com/johnfactotz/foliate-js) — EPUB 渲染引擎
-- [obsidian-weave-reader](https://github.com/) — foliate 集成、脚注/搜索/Canvas 参考
-- [ob-epub-reader](https://github.com/) — 摘录回跳、深链方案参考
-- [Axl Light](https://github.com/rezonegame/axl-light) — 原始项目基础
+- [foliate-js](https://github.com/johnfactotum/foliate-js) provides the ebook rendering engine.
+- [obsidian-pdf-plus](https://github.com/RyotaUshio/obsidian-pdf-plus) informed the adapted PDF text-layer offset implementation described in the third-party notices.
+- Earlier integration work is documented in [the Chinese README](README.zh-CN.md).

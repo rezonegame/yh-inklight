@@ -13,8 +13,9 @@ versions.json: Obsidian 版本到插件版本的发布映射。
 tsconfig.json: TypeScript 编译约束，收紧类型边界与构建目标。
 esbuild.config.mjs: esbuild 打包入口，把 src/main.ts 编译为 Obsidian 可加载产物。
 styles.css: 标注面板与阅读视图高亮样式。
-main.ts: 插件主入口，装配 sidecar store、CM6 extension、Markdown 选区菜单、PDF 层、sidebar、settings 与 vault 事件。
+main.ts: 插件主入口，装配 sidecar store、CM6 extension、Markdown 选区菜单、PDF 层、sidebar、settings 与 vault 事件；卸载保留视图布局，撤销通知使用兼容的 DocumentFragment。
 README.md: 使用说明与非侵入式 sidecar 存储承诺。
+README.zh-CN.md: 完整中文说明与历史版本记录，供英文社区目录 README 链接。
 SUBMISSION_CHECKLIST.md: Obsidian Community 目录提交清单，核对发布材料、账号连接与自动审核。
 scripts/AGENTS.md: 发布校验与安装脚本地图。
 src/AGENTS.md: src 模块地图，描述 Markdown/PDF 注释通道与核心代码分层。

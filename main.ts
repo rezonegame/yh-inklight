@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Obsidian Plugin API、CM6 扩展、sidecar AnnotationStore、锚点算法、视图与设置模块
  * [OUTPUT]: 对外提供 OverlayAnnotationsPlugin 主类，注册 ribbon 图标、命令、浮动工具栏、高亮、窄屏弹层、侧栏、EPUB 阅读排版设置、设备 profile、封面缓存、阅读笔记绑定/同步/迁移和 vault 事件
- * [POS]: 插件装配根，协调模块但不修改用户 Markdown 原文
+ * [POS]: 插件装配根，协调模块但不修改用户 Markdown 原文；撤销通知使用 DocumentFragment，卸载保留视图布局
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
@@ -261,8 +261,6 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     this.toolbar?.destroy();
     this.popover?.destroy();
     void this.bookCoverCache?.close();
-    this.app.workspace.detachLeavesOfType(ANNOTATION_SIDEBAR_VIEW);
-    this.app.workspace.detachLeavesOfType(EPUB_BOOKSHELF_VIEW_TYPE);
   }
 
   async loadSettings(): Promise<void> {
@@ -756,15 +754,15 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   private offerAnnotationUndo(file: TFile, annotationId: string, label: string): void {
     this.clearAnnotationUndo();
 
-    const notice = new Notice("", 7000);
-    const message = notice.messageEl ?? notice.noticeEl;
-    message.empty();
-    message.createSpan({ text: `已添加${label} ` });
-    const undoButton = message.createEl("button", {
+    const message = createFragment();
+    message.appendChild(createSpan({ text: `已添加${label} ` }));
+    const undoButton = createEl("button", {
       cls: "mod-cta",
       text: "撤销",
       attr: { type: "button" },
     });
+    message.appendChild(undoButton);
+    const notice = new Notice(message, 7000);
     const timer = window.setTimeout(() => {
       if (this.annotationUndo?.annotationId === annotationId) {
         this.annotationUndo = null;

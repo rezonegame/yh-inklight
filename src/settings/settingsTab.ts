@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 Obsidian PluginSettingTab/Setting 与 storage/types 的设置模型
- * [OUTPUT]: 对外提供 AnnotationSettingsTab，负责默认颜色、统一标签、阅读笔记目录、阅读与迁移设置
+ * [OUTPUT]: 对外提供 AnnotationSettingsTab，使用 Setting 标题组织默认颜色、统一标签、阅读笔记目录、阅读与迁移设置
  * [POS]: settings 模块的用户配置界面，被 main.ts 注册
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -42,7 +42,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
   display(): void {
     const { containerEl } = this;
     containerEl.empty();
-    containerEl.createEl("h2", { text: "墨光批注" });
+    new Setting(containerEl).setName("墨光批注").setHeading();
 
     new Setting(containerEl)
       .setName("默认高亮颜色")
@@ -82,7 +82,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
 
   private renderReadingNoteSettings(): void {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: "阅读笔记" });
+    new Setting(containerEl).setName("阅读笔记").setHeading();
     new Setting(containerEl)
       .setName("阅读笔记文件夹")
       .setDesc("PDF 和电子书的阅读笔记默认保存位置。")
@@ -104,7 +104,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
 
   private renderTagSettings(): void {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: "批注标签" });
+    new Setting(containerEl).setName("批注标签").setHeading();
     containerEl.createDiv({
       cls: "setting-item-description",
       text: `标签用于分类笔记和想法。最多启用 ${MAX_ENABLED_ANNOTATION_TAGS} 个；修改名称会立即同步显示，不会批量改写批注文件。`,
@@ -223,7 +223,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
   /** EPUB 阅读相关设置：统一排版 profile 与批注高亮样式。 */
   private renderEpubSettings(): void {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: `EPUB 阅读（当前设备：${this.plugin.getEpubReadingDeviceLabel()}）` });
+    new Setting(containerEl).setName(`EPUB 阅读（当前设备：${this.plugin.getEpubReadingDeviceLabel()}）`).setHeading();
 
     const profile = this.getEpubProfile();
 
@@ -378,7 +378,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
 
   private renderPdfSettings(): void {
     const { containerEl } = this;
-    containerEl.createEl("h3", { text: "PDF 阅读" });
+    new Setting(containerEl).setName("PDF 阅读").setHeading();
     new Setting(containerEl)
       .setName("记录 PDF 阅读进度")
       .setDesc("保存当前页和阅读进度；关闭后不会删除已有进度。")

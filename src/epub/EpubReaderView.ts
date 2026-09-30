@@ -6,7 +6,7 @@
  * [OUTPUT]: 对外提供 EpubReaderView，将 foliate-js 渲染引擎嵌入 Obsidian leaf，
  *          承载工具栏、侧边栏（目录/搜索）、阅读区（iframe）、进度条、
  *          选区上下文菜单、标注 CRUD、进度持久化、阅读时间追踪及开书后异步封面缓存；搜索、选区、布局和 iframe 导航由专用控制器承载
- * [POS]: epub 模块的唯一视图入口，由插件主类通过 registerView 注册
+ * [POS]: epub 模块的唯一视图入口，由插件主类通过 registerView 注册；SVG 高亮使用 Obsidian 样式助手
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
@@ -1545,7 +1545,7 @@ export class EpubReaderView extends FileView {
 				highlight.setAttribute("height", String(height));
 				highlight.setAttribute("rx", "2");
 				highlight.setAttribute("fill", rgba);
-				highlight.setAttribute("style", "mix-blend-mode:multiply;pointer-events:none");
+				highlight.setCssProps({ "mix-blend-mode": "multiply", "pointer-events": "none" });
 				group.appendChild(highlight);
 				continue;
 			}
@@ -1561,7 +1561,7 @@ export class EpubReaderView extends FileView {
 			if (style === "wavy") {
 				line.setAttribute("stroke-dasharray", "2 2");
 			}
-			line.setAttribute("style", "pointer-events:none");
+			line.setCssProps({ "pointer-events": "none" });
 			group.appendChild(line);
 		}
 
