@@ -8,7 +8,7 @@
  * - 注册：guard 后 customElements.define("foliate-view", View)，View 来自 foliate-js/view.js
  * - 打开书：view.open(book)，book 可直接传 Blob（foliate 自动识别 epub/mobi/azw3/fb2/cbz/txt）
  * - 事件：relocate{cfi,index} / load{doc,index} / link{a,href} / draw-annotation{draw,annotation} / show-annotation{value,index,range}
- * - 导航：view.goTo(target) / goToTextStart() / goLeft()/goRight() 或 prev()/next()
+ * - 导航：view.goTo(target) / goToTextStart() / goLeft()/goRight() 或 prev(distance?)/next(distance?)
  * - 标注：view.addAnnotation({value:cfi,color,...}) / deleteAnnotation(value)
  * - 渲染器：view.renderer.setStyles(css) / render() / getContents()[{index,doc}]
  *
@@ -73,8 +73,8 @@ export interface FoliateViewHandle {
   resolveCFI?: (cfi: string) => unknown;
   init?: (options?: { lastLocation?: unknown; showTextStart?: boolean }) => Promise<unknown> | unknown;
   goToTextStart?: () => Promise<unknown> | unknown;
-  prev?: () => Promise<unknown> | unknown;
-  next?: () => Promise<unknown> | unknown;
+  prev?: (distance?: number) => Promise<unknown> | unknown;
+  next?: (distance?: number) => Promise<unknown> | unknown;
   goLeft?: () => Promise<unknown> | unknown;
   goRight?: () => Promise<unknown> | unknown;
   addAnnotation: (...args: unknown[]) => unknown;

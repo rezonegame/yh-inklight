@@ -13299,6 +13299,78 @@ var EpubSelectionController = class {
   }
 };
 
+// src/epub/EpubNavigationController.ts
+var ARROW_SCROLL_DISTANCE = 80;
+function isEditingTarget(target) {
+  const element = target;
+  if (typeof element?.closest !== "function") return false;
+  return element.isContentEditable || Boolean(element.closest(
+    "input, textarea, select, button, [role='textbox'], [role='combobox'], [role='slider']"
+  ));
+}
+var EpubNavigationController = class {
+  constructor(host) {
+    this.host = host;
+    this.containerCleanup = null;
+    this.documentCleanups = /* @__PURE__ */ new Map();
+  }
+  attachContainer(container) {
+    this.containerCleanup?.();
+    container.tabIndex = 0;
+    this.containerCleanup = this.listen(container);
+  }
+  attachDocument(doc) {
+    if (this.documentCleanups.has(doc)) return;
+    const removeListeners = this.listen(doc);
+    const cleanup = () => {
+      removeListeners();
+      doc.defaultView?.removeEventListener("pagehide", cleanup);
+      this.documentCleanups.delete(doc);
+    };
+    doc.defaultView?.addEventListener("pagehide", cleanup, { once: true });
+    this.documentCleanups.set(doc, cleanup);
+  }
+  disposeDocuments() {
+    for (const cleanup of this.documentCleanups.values()) cleanup();
+    this.documentCleanups.clear();
+  }
+  dispose() {
+    this.disposeDocuments();
+    this.containerCleanup?.();
+    this.containerCleanup = null;
+  }
+  listen(target) {
+    const keydown = (event) => this.handleKeydown(event);
+    const wheel = (event) => {
+      const wheelEvent = event;
+      if (!wheelEvent.defaultPrevented && !wheelEvent.ctrlKey && !wheelEvent.metaKey && !isEditingTarget(wheelEvent.target)) this.host.onWheel(wheelEvent);
+    };
+    target.addEventListener("keydown", keydown, { capture: true });
+    target.addEventListener("wheel", wheel, { capture: true, passive: false });
+    return () => {
+      target.removeEventListener("keydown", keydown, { capture: true });
+      target.removeEventListener("wheel", wheel, { capture: true });
+    };
+  }
+  handleKeydown(event) {
+    if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || isEditingTarget(event.target)) return;
+    const view = this.host.getView();
+    if (!view) return;
+    const backwards = event.key === "ArrowLeft" || event.key === "ArrowUp";
+    const forwards = event.key === "ArrowRight" || event.key === "ArrowDown";
+    if (!backwards && !forwards) return;
+    const action = backwards ? view.prev ?? view.goLeft : view.next ?? view.goRight;
+    if (!action) return;
+    event.preventDefault();
+    event.stopPropagation();
+    this.host.onNavigate();
+    const distance = this.host.getFlow() === "scrolled" ? ARROW_SCROLL_DISTANCE : void 0;
+    void Promise.resolve().then(() => action.call(view, distance)).catch((error) => {
+      console.warn("yh-inklight: EPUB keyboard navigation failed", error);
+    });
+  }
+};
+
 // src/epub/EpubReadingSettingsModal.ts
 var import_obsidian14 = require("obsidian");
 var FONT_FAMILIES = [
@@ -13651,6 +13723,7 @@ var EpubReaderView = class extends import_obsidian15.FileView {
       stripScriptsFromDocument(doc);
       void inlineBlockedStylesheets({ document: doc });
       this.selectionController.attach(doc, index);
+      this.navigationController.attachDocument(doc);
       this.handleRendered();
     };
     this.handleFoliateRelocate = (event) => {
@@ -13679,6 +13752,12 @@ var EpubReaderView = class extends import_obsidian15.FileView {
       getFoliateView: () => this.foliateView,
       getIframeForDocument: (doc) => this.findIframeForDocument(doc),
       onSelection: (snapshot) => this.handleTextSelected(snapshot)
+    });
+    this.navigationController = new EpubNavigationController({
+      getView: () => this.foliateView,
+      getFlow: () => this.currentFlowMode,
+      onNavigate: () => this.dismissContextMenu(),
+      onWheel: (event) => this.handleWheel(event)
     });
     this.readingProfile = getReadingProfile();
     this.applyProfileState(this.readingProfile);
@@ -13724,8 +13803,22 @@ var EpubReaderView = class extends import_obsidian15.FileView {
     }
     this.profileSaveTimer = window.setTimeout(() => {
       this.profileSaveTimer = null;
-      void this.saveReadingProfile(this.readingProfile);
+      void this.persistReadingProfile();
     }, 350);
+  }
+  async flushProfileSave() {
+    if (this.profileSaveTimer === null) return;
+    window.clearTimeout(this.profileSaveTimer);
+    this.profileSaveTimer = null;
+    await this.persistReadingProfile();
+  }
+  async persistReadingProfile() {
+    try {
+      await this.saveReadingProfile(this.readingProfile);
+    } catch (error) {
+      console.error("yh-inklight: EPUB reading profile save failed", error);
+      new import_obsidian15.Notice("EPUB \u9605\u8BFB\u6392\u7248\u4FDD\u5B58\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u5F53\u524D\u8BBE\u5907\u7684\u6392\u7248\u8BBE\u7F6E");
+    }
   }
   openReadingSettings() {
     new EpubReadingSettingsModal(
@@ -13756,9 +13849,11 @@ var EpubReaderView = class extends import_obsidian15.FileView {
   }
   /** 视图关闭时释放 foliate 资源与定时器 */
   async onClose() {
+    await this.flushProfileSave();
     this.stopReadingTimeTracker();
     this.dismissContextMenu();
     this.destroyRendition();
+    this.navigationController.dispose();
   }
   // ================================================================
   // 文件加载（FileView 核心）
@@ -13770,6 +13865,7 @@ var EpubReaderView = class extends import_obsidian15.FileView {
    * @param file - 用户打开的 EPUB TFile
    */
   async onLoadFile(file) {
+    await this.flushProfileSave();
     this.destroyRendition();
     try {
       const sourceMtime = file.stat.mtime;
@@ -13801,6 +13897,7 @@ var EpubReaderView = class extends import_obsidian15.FileView {
    * @param _file - 即将卸载的 TFile（未使用）
    */
   async onUnloadFile(_file2) {
+    await this.flushProfileSave();
     await this.flushReadingTime();
     await this.saveCurrentProgress();
     this.destroyRendition();
@@ -13840,8 +13937,7 @@ var EpubReaderView = class extends import_obsidian15.FileView {
       this.resizeObserver.observe(this.readerContainerEl);
     }
     this.progressEl = this.containerEl.createDiv({ cls: "yh-epub-progress" });
-    this.containerEl.addEventListener("keydown", (event) => this.handleKeydown(event));
-    this.readerContainerEl.addEventListener("wheel", (event) => this.handleWheel(event), { passive: false });
+    this.navigationController.attachContainer(this.readerContainerEl);
   }
   // ================================================================
   // 工具栏
@@ -14461,33 +14557,6 @@ var EpubReaderView = class extends import_obsidian15.FileView {
   // 键盘 & 滚轮导航
   // ================================================================
   /**
-   * 处理键盘导航事件。
-   * 方向键左/上 = 上一页，方向键右/下 = 下一页。
-   *
-   * @param event - 键盘事件
-   */
-  handleKeydown(event) {
-    if (event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLInputElement) {
-      return;
-    }
-    switch (event.key) {
-      case "ArrowLeft":
-      case "ArrowUp": {
-        event.preventDefault();
-        this.prevPage();
-        break;
-      }
-      case "ArrowRight":
-      case "ArrowDown": {
-        event.preventDefault();
-        this.nextPage();
-        break;
-      }
-      default:
-        break;
-    }
-  }
-  /**
    * 处理鼠标滚轮事件。
    * 在分页模式下通过滚轮翻页，带防抖保护。
    *
@@ -14683,6 +14752,7 @@ var EpubReaderView = class extends import_obsidian15.FileView {
   }
   /** 设置页保存 EPUB 排版后，同步已打开的阅读视图。 */
   refreshExternalSettings() {
+    if (this.profileSaveTimer !== null) return;
     const next = this.getReadingProfile();
     if (JSON.stringify(next) === JSON.stringify(this.readingProfile)) {
       return;
@@ -14720,6 +14790,7 @@ var EpubReaderView = class extends import_obsidian15.FileView {
     this.searchController?.dispose();
     this.searchController = null;
     this.selectionController.dispose();
+    this.navigationController.disposeDocuments();
     this.layoutController = null;
     if (this.foliateView) {
       try {

@@ -5,7 +5,7 @@
  *          EpubThemeManager 的主题颜色解析、设备独立排版 profile 服务与本机封面缓存
  * [OUTPUT]: 对外提供 EpubReaderView，将 foliate-js 渲染引擎嵌入 Obsidian leaf，
  *          承载工具栏、侧边栏（目录/搜索）、阅读区（iframe）、进度条、
- *          选区上下文菜单、标注 CRUD、进度持久化、阅读时间追踪及开书后异步封面缓存；搜索、选区和布局由专用控制器承载
+ *          选区上下文菜单、标注 CRUD、进度持久化、阅读时间追踪及开书后异步封面缓存；搜索、选区、布局和 iframe 导航由专用控制器承载
  * [POS]: epub 模块的唯一视图入口，由插件主类通过 registerView 注册
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -49,6 +49,7 @@ import { legacyNoteTypeForTag } from "../tags/tagDomain";
 import { EpubLayoutController } from "./EpubLayoutController";
 import { EpubSearchController } from "./EpubSearch";
 import { EpubSelectionController, EpubSelectionSnapshot } from "./EpubSelectionController";
+import { EpubNavigationController } from "./EpubNavigationController";
 import { EpubReadingSettingsModal } from "./EpubReadingSettingsModal";
 import { BookCoverCache, extractFoliateCover } from "./BookCoverCache";
 
@@ -141,6 +142,7 @@ export class EpubReaderView extends FileView {
 
 	private foliateView: FoliateViewHandle | null = null;
 	private readonly selectionController: EpubSelectionController;
+	private readonly navigationController: EpubNavigationController;
 	private layoutController: EpubLayoutController | null = null;
 	/** 最近一次 foliate load 事件的 section doc，供侧栏全文搜索使用（getContents 不可靠时的可靠来源） */
 	private currentLoadedDoc: Document | null = null;
@@ -230,6 +232,12 @@ export class EpubReaderView extends FileView {
 			getIframeForDocument: (doc) => this.findIframeForDocument(doc),
 			onSelection: (snapshot) => this.handleTextSelected(snapshot),
 		});
+		this.navigationController = new EpubNavigationController({
+			getView: () => this.foliateView,
+			getFlow: () => this.currentFlowMode,
+			onNavigate: () => this.dismissContextMenu(),
+			onWheel: (event) => this.handleWheel(event),
+		});
 		this.readingProfile = getReadingProfile();
 		this.applyProfileState(this.readingProfile);
 	}
@@ -278,8 +286,24 @@ export class EpubReaderView extends FileView {
 		}
 		this.profileSaveTimer = window.setTimeout(() => {
 			this.profileSaveTimer = null;
-			void this.saveReadingProfile(this.readingProfile);
+			void this.persistReadingProfile();
 		}, 350);
+	}
+
+	private async flushProfileSave(): Promise<void> {
+		if (this.profileSaveTimer === null) return;
+		window.clearTimeout(this.profileSaveTimer);
+		this.profileSaveTimer = null;
+		await this.persistReadingProfile();
+	}
+
+	private async persistReadingProfile(): Promise<void> {
+		try {
+			await this.saveReadingProfile(this.readingProfile);
+		} catch (error) {
+			console.error("yh-inklight: EPUB reading profile save failed", error);
+			new Notice("EPUB 阅读排版保存失败，请检查当前设备的排版设置");
+		}
 	}
 
 	private openReadingSettings(): void {
@@ -316,9 +340,11 @@ export class EpubReaderView extends FileView {
 
 	/** 视图关闭时释放 foliate 资源与定时器 */
 	override async onClose(): Promise<void> {
+		await this.flushProfileSave();
 		this.stopReadingTimeTracker();
 		this.dismissContextMenu();
 		this.destroyRendition();
+		this.navigationController.dispose();
 	}
 
 	// ================================================================
@@ -332,6 +358,7 @@ export class EpubReaderView extends FileView {
 	 * @param file - 用户打开的 EPUB TFile
 	 */
 	override async onLoadFile(file: TFile): Promise<void> {
+		await this.flushProfileSave();
 		this.destroyRendition();
 
 		try {
@@ -368,6 +395,7 @@ export class EpubReaderView extends FileView {
 	 * @param _file - 即将卸载的 TFile（未使用）
 	 */
 	override async onUnloadFile(_file: TFile): Promise<void> {
+		await this.flushProfileSave();
 		await this.flushReadingTime();
 		await this.saveCurrentProgress();
 		this.destroyRendition();
@@ -418,8 +446,7 @@ export class EpubReaderView extends FileView {
 
 		this.progressEl = this.containerEl.createDiv({ cls: "yh-epub-progress" });
 
-		this.containerEl.addEventListener("keydown", (event) => this.handleKeydown(event));
-		this.readerContainerEl.addEventListener("wheel", (event) => this.handleWheel(event), { passive: false });
+		this.navigationController.attachContainer(this.readerContainerEl);
 	}
 
 	// ================================================================
@@ -1145,35 +1172,6 @@ export class EpubReaderView extends FileView {
 	// ================================================================
 
 	/**
-	 * 处理键盘导航事件。
-	 * 方向键左/上 = 上一页，方向键右/下 = 下一页。
-	 *
-	 * @param event - 键盘事件
-	 */
-	private handleKeydown(event: KeyboardEvent): void {
-		if (event.target instanceof HTMLTextAreaElement || event.target instanceof HTMLInputElement) {
-			return;
-		}
-
-		switch (event.key) {
-			case "ArrowLeft":
-			case "ArrowUp": {
-				event.preventDefault();
-				this.prevPage();
-				break;
-			}
-			case "ArrowRight":
-			case "ArrowDown": {
-				event.preventDefault();
-				this.nextPage();
-				break;
-			}
-			default:
-				break;
-		}
-	}
-
-	/**
 	 * 处理鼠标滚轮事件。
 	 * 在分页模式下通过滚轮翻页，带防抖保护。
 	 *
@@ -1399,6 +1397,8 @@ export class EpubReaderView extends FileView {
 
 	/** 设置页保存 EPUB 排版后，同步已打开的阅读视图。 */
 	refreshExternalSettings(): void {
+		// Debounced book settings are newer than the stored profile until their save runs.
+		if (this.profileSaveTimer !== null) return;
 		const next = this.getReadingProfile();
 		if (JSON.stringify(next) === JSON.stringify(this.readingProfile)) {
 			return;
@@ -1440,6 +1440,7 @@ export class EpubReaderView extends FileView {
 		this.searchController?.dispose();
 		this.searchController = null;
 		this.selectionController.dispose();
+		this.navigationController.disposeDocuments();
 		this.layoutController = null;
 
 		if (this.foliateView) {
@@ -1500,6 +1501,7 @@ export class EpubReaderView extends FileView {
 		stripScriptsFromDocument(doc);
 		void inlineBlockedStylesheets({ document: doc });
 		this.selectionController.attach(doc, index);
+		this.navigationController.attachDocument(doc);
 		this.handleRendered();
 	};
 

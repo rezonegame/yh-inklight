@@ -1,6 +1,18 @@
 export class TFile {}
 export class TFolder {}
 
+export class FileView {
+  constructor(leaf) {
+    this.containerEl = leaf.containerEl;
+    this.app = leaf.app ?? {};
+  }
+}
+
+export class Modal {}
+export class Setting {}
+export const Platform = { isMobile: false };
+export function setIcon() {}
+
 export class Notice {
   constructor(message) {
     this.message = String(message);
