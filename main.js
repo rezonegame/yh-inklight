@@ -13301,6 +13301,12 @@ var EpubSelectionController = class {
 
 // src/epub/EpubNavigationController.ts
 var ARROW_SCROLL_DISTANCE = 80;
+function getEpubWheelDistance(event, viewportSize) {
+  if (!Number.isFinite(event.deltaY)) return 0;
+  const unit = event.deltaMode === 1 ? 24 : event.deltaMode === 2 ? 80 : 1;
+  const limit = Math.min(120, viewportSize / 4);
+  return Math.sign(event.deltaY) * Math.min(Math.abs(event.deltaY * unit), limit);
+}
 function isEditingTarget(target) {
   const element = target;
   if (typeof element?.closest !== "function") return false;
@@ -13313,6 +13319,7 @@ var EpubNavigationController = class {
     this.host = host;
     this.containerCleanup = null;
     this.documentCleanups = /* @__PURE__ */ new Map();
+    this.sectionTransition = null;
   }
   attachContainer(container) {
     this.containerCleanup?.();
@@ -13331,6 +13338,7 @@ var EpubNavigationController = class {
     this.documentCleanups.set(doc, cleanup);
   }
   disposeDocuments() {
+    this.sectionTransition = null;
     for (const cleanup of this.documentCleanups.values()) cleanup();
     this.documentCleanups.clear();
   }
@@ -13343,7 +13351,9 @@ var EpubNavigationController = class {
     const keydown = (event) => this.handleKeydown(event);
     const wheel = (event) => {
       const wheelEvent = event;
-      if (!wheelEvent.defaultPrevented && !wheelEvent.ctrlKey && !wheelEvent.metaKey && !isEditingTarget(wheelEvent.target)) this.host.onWheel(wheelEvent);
+      if (wheelEvent.defaultPrevented || wheelEvent.ctrlKey || wheelEvent.metaKey || wheelEvent.altKey || wheelEvent.shiftKey || isEditingTarget(wheelEvent.target)) return;
+      if (this.host.getFlow() === "scrolled") this.handleScrolledWheel(wheelEvent);
+      else this.host.onWheel(wheelEvent);
     };
     target.addEventListener("keydown", keydown, { capture: true });
     target.addEventListener("wheel", wheel, { capture: true, passive: false });
@@ -13351,6 +13361,38 @@ var EpubNavigationController = class {
       target.removeEventListener("keydown", keydown, { capture: true });
       target.removeEventListener("wheel", wheel, { capture: true });
     };
+  }
+  handleScrolledWheel(event) {
+    const view = this.host.getView();
+    const renderer = view?.renderer;
+    if (!view || !renderer?.scrolled) return;
+    const { containerPosition: position, size, viewSize } = renderer;
+    if (typeof position !== "number" || !Number.isFinite(position) || typeof size !== "number" || !Number.isFinite(size) || size <= 0 || typeof viewSize !== "number" || !Number.isFinite(viewSize) || viewSize <= 0) return;
+    const distance = getEpubWheelDistance(event, size);
+    if (!distance) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (this.sectionTransition) return;
+    this.host.onNavigate();
+    const start = Math.abs(position);
+    const end = Math.max(0, viewSize - size);
+    const next = Math.max(0, Math.min(end, start + distance));
+    const atBoundary = distance < 0 ? start <= 1 : end - start <= 1;
+    if (!atBoundary) {
+      renderer.containerPosition = renderer.scrollProp === "scrollLeft" ? -next : next;
+      return;
+    }
+    const action = distance < 0 ? view.prev : view.next;
+    if (!action) return;
+    const transition = {};
+    this.sectionTransition = transition;
+    void Promise.resolve().then(() => {
+      if (this.sectionTransition === transition && this.host.getView() === view && this.host.getFlow() === "scrolled") return action.call(view, Math.abs(distance));
+    }).catch((error) => {
+      console.warn("yh-inklight: EPUB wheel chapter navigation failed", error);
+    }).finally(() => {
+      if (this.sectionTransition === transition) this.sectionTransition = null;
+    });
   }
   handleKeydown(event) {
     if (event.defaultPrevented || event.isComposing || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || isEditingTarget(event.target)) return;

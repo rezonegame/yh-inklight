@@ -82,6 +82,11 @@ export interface FoliateViewHandle {
   addEventListener: HTMLElement["addEventListener"];
   removeEventListener: HTMLElement["removeEventListener"];
   renderer?: {
+    scrolled?: boolean;
+    scrollProp?: string;
+    size?: number;
+    viewSize?: number;
+    containerPosition?: number;
     setStyles?: (styles: string | [string, string]) => void;
     render?: () => void;
     getContents?: () => Array<{ index?: number; doc?: Document | null }>;

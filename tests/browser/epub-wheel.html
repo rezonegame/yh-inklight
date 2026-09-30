@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EPUB wheel regression</title>
+  <style>
+    body { margin: 0; font: 16px sans-serif; color: #202020; background: #fff; }
+    header { display: flex; gap: 12px; padding: 12px; flex-wrap: wrap; }
+    #reader { width: min(900px, 100%); height: 580px; overflow: hidden; }
+    .yh-epub-foliate-view { display: block; width: 100%; height: 100%; }
+    output { display: block; padding: 12px; overflow-wrap: anywhere; }
+  </style>
+</head>
+<body>
+  <header>
+    <label>Flow <select id="flow"><option value="scrolled">Scrolled</option><option value="paginated">Paginated</option></select></label>
+    <label>Search <input id="search"></label>
+    <button id="small">Wheel +24px</button>
+    <button id="back">Wheel -24px</button>
+    <button id="large">Wheel +900px</button>
+    <button id="page">Wheel +1 page</button>
+    <button id="burst">20 x 2px</button>
+    <button id="edge">Chapter end</button>
+  </header>
+  <div id="reader"></div>
+  <output id="status">Loading</output>
+  <script src="../../.browser-test/epub-wheel.js"></script>
+</body>
+</html>
