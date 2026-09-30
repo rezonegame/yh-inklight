@@ -20,7 +20,7 @@ tags/tagDomain.ts: 统一语义标签的默认值、名称校验、旧字段映�
 views/annotationPopover.ts: 窄屏与阅读模式弹层，点击高亮后展示 sidecar 中的高亮和便签内容。
 views/sidebarView.ts: 右侧总览面板，使用彩色卡片合并 highlight 与关联 note，并承载搜索、可折叠过滤、排序、导出、跳转与内联编辑。
 settings/settingsTab.ts: 插件设置页，管理默认颜色、统一标签、EPUB 阅读排版 profile、作者和迁移策略。
-epub/EpubReaderView.ts: EPUB FileView 生命周期、目录/搜索覆盖面板、进度、批注业务、尺寸变化恢复、电子墨水作用域与控制器装配；正常开书后异步缓存封面，SVG 高亮使用 Obsidian 样式助手。
+epub/EpubReaderView.ts: EPUB FileView 生命周期、目录/搜索覆盖面板、进度、批注业务、尺寸变化恢复、电子墨水作用域与控制器装配；正常开书后异步缓存封面，SVG 高亮通过导出的 shadow parts 使用外部 CSS。
 epub/EpubSearch.ts: EPUB 侧栏唯一搜索入口、结果标准化、过期查询保护与搜索监听清理。
 epub/EpubSelectionController.ts: foliate iframe 选区监听、CFI/坐标转换和事件释放。
 epub/EpubNavigationController.ts: 正文容器与 iframe 的方向键、分页滚轮和限幅连续滚动、章节边界接续、编辑控件保护及事件释放。

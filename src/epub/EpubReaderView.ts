@@ -6,7 +6,7 @@
  * [OUTPUT]: 对外提供 EpubReaderView，将 foliate-js 渲染引擎嵌入 Obsidian leaf，
  *          承载工具栏、侧边栏（目录/搜索）、阅读区（iframe）、进度条、
  *          选区上下文菜单、标注 CRUD、进度持久化、阅读时间追踪及开书后异步封面缓存；搜索、选区、布局和 iframe 导航由专用控制器承载
- * [POS]: epub 模块的唯一视图入口，由插件主类通过 registerView 注册；SVG 高亮使用 Obsidian 样式助手
+ * [POS]: epub 模块的唯一视图入口，由插件主类通过 registerView 注册；SVG 高亮通过导出的 shadow parts 使用外部 CSS
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
@@ -368,6 +368,13 @@ export class EpubReaderView extends FileView {
 			this.configureFoliateView(this.foliateView);
 			this.registerFoliateEvents(this.foliateView);
 			await openBookFromBuffer(this.foliateView, arrayBuffer, file.name);
+			// The overlay lives in the renderer's closed shadow root. Forward its
+			// parts through foliate-view so Obsidian's styles.css can style it.
+			const renderer = this.foliateView.renderer as unknown as HTMLElement | undefined;
+			if (renderer) {
+				const existingParts = renderer.getAttribute("exportparts") ?? "";
+				renderer.setAttribute("exportparts", [existingParts, "yh-epub-annotation-fill", "yh-epub-annotation-line"].filter(Boolean).join(","));
+			}
 			void this.cacheOpenedBookCover(file.path, sourceMtime, this.foliateView.book);
 			this.applyFoliateLayout();
 			this.tocEntries = this.buildFoliateTocEntries(this.foliateView.book?.toc ?? []);
@@ -1545,7 +1552,7 @@ export class EpubReaderView extends FileView {
 				highlight.setAttribute("height", String(height));
 				highlight.setAttribute("rx", "2");
 				highlight.setAttribute("fill", rgba);
-				highlight.setCssProps({ "mix-blend-mode": "multiply", "pointer-events": "none" });
+				highlight.setAttribute("part", "yh-epub-annotation-fill");
 				group.appendChild(highlight);
 				continue;
 			}
@@ -1561,7 +1568,7 @@ export class EpubReaderView extends FileView {
 			if (style === "wavy") {
 				line.setAttribute("stroke-dasharray", "2 2");
 			}
-			line.setCssProps({ "pointer-events": "none" });
+			line.setAttribute("part", "yh-epub-annotation-line");
 			group.appendChild(line);
 		}
 

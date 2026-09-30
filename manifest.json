@@ -1,7 +1,7 @@
 {
 	"id": "yh-inklight",
 	"name": "yh-InkLight",
-	"version": "0.23.6",
+	"version": "0.23.7",
 	"minAppVersion": "1.7.2",
 	"description": "Annotate Markdown, PDF, and EPUB with highlights, notes, and tags stored separately from source files.",
 	"author": "yhwang",

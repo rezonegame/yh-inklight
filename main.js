@@ -13889,6 +13889,11 @@ var EpubReaderView = class extends import_obsidian16.FileView {
       this.configureFoliateView(this.foliateView);
       this.registerFoliateEvents(this.foliateView);
       await openBookFromBuffer(this.foliateView, arrayBuffer, file.name);
+      const renderer = this.foliateView.renderer;
+      if (renderer) {
+        const existingParts = renderer.getAttribute("exportparts") ?? "";
+        renderer.setAttribute("exportparts", [existingParts, "yh-epub-annotation-fill", "yh-epub-annotation-line"].filter(Boolean).join(","));
+      }
       void this.cacheOpenedBookCover(file.path, sourceMtime, this.foliateView.book);
       this.applyFoliateLayout();
       this.tocEntries = this.buildFoliateTocEntries(this.foliateView.book?.toc ?? []);
@@ -14869,7 +14874,7 @@ var EpubReaderView = class extends import_obsidian16.FileView {
         highlight.setAttribute("height", String(height));
         highlight.setAttribute("rx", "2");
         highlight.setAttribute("fill", rgba);
-        highlight.setCssProps({ "mix-blend-mode": "multiply", "pointer-events": "none" });
+        highlight.setAttribute("part", "yh-epub-annotation-fill");
         group.appendChild(highlight);
         continue;
       }
@@ -14884,7 +14889,7 @@ var EpubReaderView = class extends import_obsidian16.FileView {
       if (style2 === "wavy") {
         line.setAttribute("stroke-dasharray", "2 2");
       }
-      line.setCssProps({ "pointer-events": "none" });
+      line.setAttribute("part", "yh-epub-annotation-line");
       group.appendChild(line);
     }
     return group;

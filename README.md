@@ -66,6 +66,10 @@ npm run build
 
 ## Release notes
 
+### 0.23.7
+
+- Move EPUB annotation styles into styles.css, exporting shadow parts so highlight blending and pointer behavior remain correct inside the reader.
+
 ### 0.23.6
 
 - Address community review errors: preserve workspace leaf positions on unload; render toolbar icons through Obsidian's icon API; use standard settings headings and SVG style helpers; and remove a malformed CSS fragment.

@@ -2518,3 +2518,13 @@ a.yh-epub-goto-link:hover {
 .yh-epub-bookshelf-view.yh-epub-eink .bookshelf-heading {
   color: #000000 !important;
 }
+
+/* EPUB annotations are exposed through the reader's nested shadow roots. */
+.yh-epub-foliate-view::part(yh-epub-annotation-fill) {
+  mix-blend-mode: multiply;
+  pointer-events: none;
+}
+
+.yh-epub-foliate-view::part(yh-epub-annotation-line) {
+  pointer-events: none;
+}

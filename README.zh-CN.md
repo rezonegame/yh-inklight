@@ -128,6 +128,9 @@ yh-InkLight is a non-invasive reading and annotation plugin for Markdown, PDF, a
 
 ## 📋 版本历史
 
+### v0.23.7
+- EPUB 高亮样式移入 styles.css，通过导出的 shadow parts 保留阅读器内部的混色与鼠标穿透效果，修复最后一项社区审核错误。
+
 ### v0.23.6
 - 修复社区自动审核指出的卸载视图布局、撤销通知 API 兼容、图标 DOM 写入、设置标题、SVG 样式写入和 CSS 语法问题。
 - 英文说明置于 README.md，完整中文说明保留于此文件；修正作者主页链接。
