@@ -1,4 +1,6 @@
-# 墨光批注（yh-inklight）
+# yh-InkLight（墨光批注）
+
+yh-InkLight is a non-invasive reading and annotation plugin for Markdown, PDF, and EPUB. Highlights, notes, and tags are stored separately from source files. Requires Obsidian 1.7.2 or later.
 
 一款非侵入式的 Obsidian 阅读 + 批注插件，支持 **EPUB / PDF / Markdown** 三种格式。高亮与笔记存储在独立 sidecar JSON 中，所有批注都汇入右侧统一面板——**绝不会修改你的原始文档**。
 
@@ -55,13 +57,13 @@
 ### 通过 BRAT（推荐）
 1. 安装 [BRAT](https://github.com/TfTHacker/obsidian42-brat) 插件
 2. BRAT → Add Plugin → 填入仓库地址：`rezonegame/yh-inklight`
-3. 安装后启用「墨光批注」
+3. 安装后启用「yh-InkLight」
 4. **重要**：更新后请**完全退出 Obsidian 再重开**（不是 reload 插件）
 
 ### 手动
 1. 从 [Releases](https://github.com/rezonegame/yh-inklight/releases) 下载 `main.js`、`manifest.json`、`styles.css`
 2. 放入 `<vault>/.obsidian/plugins/yh-inklight/`
-3. 设置 → 第三方插件 → 启用「墨光批注」
+3. 设置 → 第三方插件 → 启用「yh-InkLight」
 
 ### 打开 EPUB 的前置条件
 - 设置 → 文件与链接 → 开启**「检测所有文件扩展名」**
@@ -71,7 +73,7 @@
 
 ## ⚙️ 设置
 
-在 设置 → 墨光批注 中配置：
+在 设置 → yh-InkLight 中配置：
 
 | 设置 | 说明 |
 |------|------|
@@ -125,6 +127,11 @@
 ---
 
 ## 📋 版本历史
+
+### v0.23.5
+- 社区目录发布准备：商店显示名称改为 yh-InkLight，插件 ID 仍为 `yh-inklight`；中文功能界面和已有批注数据保持兼容。
+- 使用英文简短描述，并将最低 Obsidian 版本更正为 1.7.2，以覆盖阅读笔记文件夹建议等使用的 API。
+- 阅读、滚动、批注和笔记同步功能与 0.23.4 一致。
 
 ### v0.23.4
 - 根据 BRAT 反馈修复“已切为竖向滚动，滚轮却一次跳一屏”的体感问题：正文容器和 iframe 统一按距离滚动，兼容像素/行/整页信号，单次最多移动 120px 或短窗口的四分之一。

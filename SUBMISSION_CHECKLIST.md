@@ -1,66 +1,41 @@
-# Axl Light Obsidian Community Plugin Submission Checklist
+# yh-InkLight Community Directory Submission Checklist
 
-Use this checklist before submitting Axl Light to `obsidianmd/obsidian-releases`.
+Submit through https://community.obsidian.md/account/plugins/new.
+Official guide: https://docs.obsidian.md/plugins/releasing/submit-plugin.
 
-## Repository Readiness
+## Repository and manifest
 
-- [ ] Confirm `manifest.json` uses plugin id `axl-light`.
-- [ ] Confirm `manifest.json` version matches the GitHub release tag.
-- [ ] Confirm `manifest.json` includes `name`, `version`, `minAppVersion`, `description`, `author`, `authorUrl`, and `isDesktopOnly`.
-- [ ] Confirm `isDesktopOnly` is `false`.
-- [ ] Confirm `README.md` explains that Axl Light never modifies Markdown or PDF files.
-- [ ] Confirm `LICENSE` exists and matches the README license section.
+- [ ] Keep the plugin ID `yh-inklight` stable.
+- [ ] Use the Basic Latin display name `yh-InkLight`.
+- [ ] Keep the short description under 250 characters and end it with a period.
+- [ ] Set `minAppVersion` to a supported version; release 0.23.5 requires 1.7.2.
+- [ ] Keep `isDesktopOnly` consistent with the runtime APIs and tested devices.
+- [ ] Include README.md, LICENSE, source files, and third-party attribution.
+- [ ] Disclose any remote services, account/payment requirements, or access outside the vault.
+- [ ] Commit the current manifest on the repository's default branch.
 
-## Runtime Safety
+## Validation and release
 
-- [ ] Run `rg "require\\(|from ['\\\"]fs|from ['\\\"]path|eval\\(|new Function|fetch\\(|console\\." main.ts src styles.css manifest.json README.md`.
-- [ ] Confirm there is no Node.js filesystem API in plugin runtime code.
-- [ ] Confirm there is no `eval()` or `new Function()`.
-- [ ] Confirm there are no external network requests.
-- [ ] Confirm all vault writes go through Obsidian `app.vault` or `app.vault.adapter`.
-- [ ] Confirm annotations are stored under `.obsidian-annotations/`.
-- [ ] Confirm original Markdown and PDF files are not modified during highlight or note creation.
+- [ ] Run `npm run verify` (tests, type check, release metadata).
+- [ ] Run `npm run build` and confirm the committed main.js matches the production bundle.
+- [ ] Match manifest.json, package.json, package-lock.json, and versions.json metadata.
+- [ ] Create a non-draft GitHub release whose tag exactly matches the manifest version, without a `v` prefix.
+- [ ] Attach main.js, manifest.json, and styles.css individually.
+- [ ] Test the release in a separate vault, including Markdown, PDF, EPUB, and mobile behavior.
 
-## CSS and UI
+## Community directory submission
 
-- [ ] Confirm all custom CSS classes use the `.axl-` prefix.
-- [ ] Confirm TypeScript DOM class references use `axl-` classes.
-- [ ] Confirm custom data attributes use `data-axl-*`.
-- [ ] Test light theme and dark theme readability.
-- [ ] Test narrow pane behavior.
+- [ ] Sign in with the Obsidian account that will maintain this plugin.
+- [ ] Connect the GitHub repository owner's account; verify `Connected as rezonegame`.
+- [ ] Choose Plugins -> New plugin and enter https://github.com/rezonegame/yh-inklight.
+- [ ] Select the owner and acknowledge the developer policies and maintenance commitment.
+- [ ] Submit and inspect the manifest, assets, source, and build review results.
+- [ ] Resolve errors in a new incremented release. Warnings are recommendations to address.
+- [ ] Use Review branch for a preview scan when available.
+- [ ] Complete the listing and publish once installation-blocking errors are resolved.
 
-## Build
+## After submission
 
-- [ ] Run `npm install`.
-- [ ] Run `npm exec tsc -- --noEmit -p tsconfig.json`.
-- [ ] Run `npm run build`.
-- [ ] Confirm release assets exist: `main.js`, `manifest.json`, `styles.css`.
-- [ ] Install the built assets into a clean test vault.
-
-## Functional Testing
-
-- [ ] Markdown Live Preview: highlight, sticky note, edit, delete, jump, export.
-- [ ] Markdown Reading View desktop: highlights render and popover opens.
-- [ ] Markdown Reading View mobile: highlights render after delayed DOM stabilization.
-- [ ] PDF: highlight, sticky note, sidebar listing, jump, delete.
-- [ ] Windows path test: sidecar filenames use normalized paths and safe separators.
-- [ ] Rename test: note file rename migrates sidecar data when enabled.
-- [ ] Export test: generated notes file contains highlights and comments.
-
-## Release
-
-- [ ] Update `manifest.json` version.
-- [ ] Update `versions.json`.
-- [ ] Update `package.json` version.
-- [ ] Commit changes.
-- [ ] Create a GitHub release tag matching `manifest.json`.
-- [ ] Attach `main.js`, `manifest.json`, and `styles.css` to the release.
-- [ ] Verify BRAT can install the repository.
-
-## obsidian-releases PR
-
-- [ ] Fork `https://github.com/obsidianmd/obsidian-releases`.
-- [ ] Add Axl Light to `community-plugins.json` with id `axl-light`.
-- [ ] Add version entry to the release metadata as required by the current Obsidian submission instructions.
-- [ ] Open a PR from the fork to `obsidianmd/obsidian-releases`.
-- [ ] Include a short summary, repository URL, release URL, and testing notes.
+- [ ] Keep listing descriptions, categories, and screenshots accurate.
+- [ ] Publish future updates as GitHub releases; initial submission does not need to be repeated.
+- [ ] Use the management page's Check for new releases or Request review when needed.
