@@ -1,7 +1,7 @@
 /**
  * [INPUT]: 依赖 Obsidian workspace/vault、PDF viewer DOM selection、storage/types 的 PDF 注释模型
  * [OUTPUT]: 对外提供 PdfAnnotationLayer，在 PDF 页面上绘制非侵入式高亮与弹层批注
- * [POS]: pdf 模块的渲染与选区控制器，与 Markdown/CM6 通道并列，共享 sidecar store
+ * [POS]: PDF 选区与可见页投影；仅观察当前 viewer，隔离自身 DOM 并拒绝过期异步渲染
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
@@ -52,6 +52,10 @@ export class PdfAnnotationLayer {
   private progressSaveTimer: number | null = null;
   private sessionFilePath = "";
   private lifecycleHost: HTMLElement | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private renderRevision = 0;
+  private disposed = false;
+  private overlaySignature = "";
 
   constructor(private readonly options: PdfAnnotationLayerOptions) {}
 
@@ -76,10 +80,17 @@ export class PdfAnnotationLayer {
       this.options.app.workspace.on("layout-change", () => this.scheduleRender()),
     );
     // 全局滚动：检测 PDF 页面切换 → 更新进度
-    this.options.component.registerDomEvent(document, "scroll", () => this.updateCurrentPage(), { passive: true, capture: true });
+    this.options.component.registerDomEvent(document, "scroll", (event) => {
+      if (this.lifecycleHost && event.target instanceof Node && this.lifecycleHost.contains(event.target)) {
+        this.updateCurrentPage();
+        this.scheduleRender();
+      }
+    }, { passive: true, capture: true });
 
-    this.observer = new MutationObserver(() => this.scheduleRender());
-    this.observer.observe(document.body, { childList: true, subtree: true });
+    this.observer = new MutationObserver((records) => {
+      if (records.some(record => !isPdfOverlayMutation(record))) this.scheduleRender();
+    });
+    if (typeof ResizeObserver !== "undefined") this.resizeObserver = new ResizeObserver(() => this.scheduleRender());
     this.options.component.register(() => this.destroy());
     this.scheduleRender();
   }
@@ -277,6 +288,8 @@ export class PdfAnnotationLayer {
   }
 
   destroy(): void {
+    this.disposed = true;
+    this.renderRevision++;
     if (this.frame !== null) {
       cancelAnimationFrame(this.frame);
     }
@@ -284,11 +297,15 @@ export class PdfAnnotationLayer {
       window.clearTimeout(this.progressSaveTimer);
     }
     this.observer?.disconnect();
+    this.resizeObserver?.disconnect();
+    this.lifecycleHost = null;
     this.root?.remove();
     this.popover?.remove();
   }
 
   private scheduleRender = (): void => {
+    if (this.disposed) return;
+    this.renderRevision++;
     if (this.frame !== null) {
       return;
     }
@@ -299,8 +316,13 @@ export class PdfAnnotationLayer {
   };
 
   private async render(): Promise<void> {
+    const revision = this.renderRevision;
+    if (this.disposed) return;
     const context = this.viewerAdapter.getContext();
     if (!context) {
+      this.observer?.disconnect();
+      this.resizeObserver?.disconnect();
+      this.lifecycleHost = null;
       this.root?.remove();
       this.root = null;
       return;
@@ -309,12 +331,15 @@ export class PdfAnnotationLayer {
     this.attachViewerLifecycle(context.viewerEl);
 
     const document = await this.options.getDocument(file);
+    const current = this.viewerAdapter.getContext();
+    if (this.disposed || revision !== this.renderRevision || current?.viewerEl !== viewer || current.file.path !== file.path) return;
     const host = viewer.closest<HTMLElement>(".workspace-leaf-content") ?? viewer;
-    host.addClass("yh-pdf-host");
+    if (!host.classList.contains("yh-pdf-host")) host.addClass("yh-pdf-host");
 
     if (!this.root || this.root.parentElement !== host) {
       this.root?.remove();
       this.root = host.createDiv({ cls: "yh-pdf-layer" });
+      this.overlaySignature = "";
     }
 
     this.renderHighlights(host, document);
@@ -328,32 +353,45 @@ export class PdfAnnotationLayer {
       return;
     }
 
-    this.root.querySelectorAll(".yh-pdf-highlight").forEach((item) => item.remove());
     const hostRect = host.getBoundingClientRect();
+    const viewerRect = this.lifecycleHost?.getBoundingClientRect();
+    const pages = new Map(this.pages().map(page => [this.pageNumber(page), page]));
+    const pageRects = new Map<number, DOMRect>();
+    const overlays: Array<{ id: string; color: AnnotationColor; left: number; top: number; width: number; height: number }> = [];
     const annotations = [...document.pdfHighlights, ...document.pdfComments].filter((item) => !item.orphaned);
 
     for (const annotation of annotations) {
       for (const rect of annotation.anchor.rects) {
-        const page = this.pageElement(rect.pageNumber);
+        const page = pages.get(rect.pageNumber);
         if (!page) {
           continue;
         }
 
-        const pageRect = page.getBoundingClientRect();
-        const highlight = this.root.createDiv({
-          cls: `yh-pdf-highlight yh-pdf-highlight--${annotation.color}`,
-          attr: {
-            "data-yh-id": annotation.id,
-            "data-yh-color": annotation.color,
-          },
-        });
-        highlight.style.left = `${pageRect.left - hostRect.left + rect.left * pageRect.width}px`;
-        highlight.style.top = `${pageRect.top - hostRect.top + rect.top * pageRect.height}px`;
-        highlight.style.width = `${rect.width * pageRect.width}px`;
-        highlight.style.height = `${rect.height * pageRect.height}px`;
-        highlight.style.setProperty("background-color", pdfHighlightBackground(annotation.color), "important");
+        let pageRect = pageRects.get(rect.pageNumber);
+        if (!pageRect) { pageRect = page.getBoundingClientRect(); pageRects.set(rect.pageNumber, pageRect); }
+        if (viewerRect && (pageRect.bottom < viewerRect.top - 200 || pageRect.top > viewerRect.bottom + 200)) continue;
+        overlays.push({ id: annotation.id, color: annotation.color,
+          left: pageRect.left - hostRect.left + rect.left * pageRect.width,
+          top: pageRect.top - hostRect.top + rect.top * pageRect.height,
+          width: rect.width * pageRect.width, height: rect.height * pageRect.height });
       }
     }
+    const signature = JSON.stringify(overlays);
+    if (signature === this.overlaySignature && this.root.childElementCount === overlays.length) return;
+    const fragment = this.root.ownerDocument.createDocumentFragment();
+    for (const overlay of overlays) {
+      const highlight = this.root.ownerDocument.createElement("div");
+      highlight.className = `yh-pdf-highlight yh-pdf-highlight--${overlay.color}`;
+      highlight.dataset.yhId = overlay.id;
+      highlight.dataset.yhColor = overlay.color;
+      for (const name of ["left", "top", "width", "height"] as const) highlight.style[name] = `${overlay[name]}px`;
+      highlight.style.setProperty("background-color", pdfHighlightBackground(overlay.color), "important");
+      fragment.appendChild(highlight);
+    }
+    this.observer?.disconnect();
+    this.root.replaceChildren(fragment);
+    this.overlaySignature = signature;
+    this.observeViewer();
   }
 
   private attachViewerLifecycle(host: HTMLElement): void {
@@ -361,11 +399,17 @@ export class PdfAnnotationLayer {
       return;
     }
 
-    const pageEventsAttached = this.viewerAdapter.onPageReady(() => this.scheduleRender());
-    const textEventsAttached = this.viewerAdapter.onTextLayerReady(() => this.scheduleRender());
-    if (pageEventsAttached || textEventsAttached) {
-      this.lifecycleHost = host;
-    }
+    this.observer?.disconnect();
+    this.resizeObserver?.disconnect();
+    this.lifecycleHost = host;
+    this.observeViewer();
+    this.resizeObserver?.observe(host);
+  }
+
+  private observeViewer(): void {
+    if (!this.disposed && this.lifecycleHost) this.observer?.observe(this.lifecycleHost, {
+      childList: true, subtree: true, attributes: true, attributeFilter: ["class", "style"],
+    });
   }
 
   private captureSelection(): void {
@@ -525,6 +569,16 @@ export class PdfAnnotationLayer {
   private activePdfFile(): TFile | null {
     return this.viewerAdapter.getActiveFile();
   }
+}
+
+export function isPdfOverlayMutation(record: MutationRecord): boolean {
+  const own = (node: Node): boolean => {
+    const element = node.nodeType === 1 ? node as Element : node.parentElement;
+    return Boolean(element?.closest(".yh-pdf-layer, .yh-pdf-popover"));
+  };
+  if (own(record.target)) return true;
+  const changed = [...Array.from(record.addedNodes), ...Array.from(record.removedNodes)];
+  return changed.length > 0 && changed.every(own);
 }
 
 function selectionContainer(selection: Selection): Element | null {

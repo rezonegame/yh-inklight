@@ -1,13 +1,13 @@
 /**
  * [INPUT]: 依赖 Reading View 渲染 DOM、TextAnchor 数据与 fuzzyMatch 的容错定位能力
  * [OUTPUT]: 对外提供 installReadingViewHighlights，在非 CodeMirror 阅读模式中注入视觉高亮
- * [POS]: editor 模块的 Reading View 投影层，与 highlightExtension 分别覆盖 HTML DOM 与 CM6
+ * [POS]: editor 阅读投影层；单次文本索引、共享模糊预算及观察器暂停防止重复重绘
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
 import { MarkdownPostProcessorContext, MarkdownRenderChild, Platform } from "obsidian";
 
-import { findBestFuzzyMatch } from "../anchor/fuzzyMatch";
+import { findBestFuzzyMatch, FuzzyMatchBudget } from "../anchor/fuzzyMatch";
 import { AnnotationColor, CommentAnnotation, HighlightAnnotation, TextAnchor } from "../storage/types";
 import { highlightBackground } from "./highlightColors";
 
@@ -17,6 +17,7 @@ interface InstallReadingHighlightsOptions {
   root: HTMLElement;
   context: MarkdownPostProcessorContext;
   marks: ReadingMark[];
+  getMarks?: () => ReadingMark[];
 }
 
 interface TextSegment {
@@ -38,14 +39,16 @@ interface NormalizedIndex {
 const MARK_SELECTOR = ".yh-reading-highlight, mark.yh-highlight";
 const MOBILE_RENDER_DELAYS = [0, 80, 220, 520, 900];
 const DESKTOP_RENDER_DELAYS = [0, 40, 160];
+const projections = new Set<{ root: HTMLElement; pause: () => void; resume: () => void }>();
 
 export function installReadingViewHighlights(options: InstallReadingHighlightsOptions): void {
   const component = new MarkdownRenderChild(options.root);
   let frame: number | null = null;
   let disposed = false;
+  let dirty = true;
 
   const render = (): void => {
-    if (disposed) {
+    if (disposed || !dirty) {
       return;
     }
 
@@ -55,7 +58,9 @@ export function installReadingViewHighlights(options: InstallReadingHighlightsOp
 
     frame = requestAnimationFrame(() => {
       frame = null;
-      refreshReadingViewHighlights(options.root, options.marks);
+      if (disposed || !dirty) return;
+      dirty = false;
+      refreshReadingViewHighlights(options.root, options.getMarks?.() ?? options.marks);
     });
   };
 
@@ -66,13 +71,22 @@ export function installReadingViewHighlights(options: InstallReadingHighlightsOp
   }
 
   const observer = new MutationObserver((mutations) => {
-    if (mutations.every(isOwnHighlightMutation)) {
-      return;
-    }
-
+    if (!mutations.length) return;
+    dirty = true;
     render();
   });
-  observer.observe(options.root, { childList: true, subtree: true, characterData: true });
+  const projection = {
+    root: options.root,
+    pause: () => observer.disconnect(),
+    resume: () => {
+      if (disposed) return;
+      dirty = false;
+      observer.observe(options.root, { childList: true, subtree: true, characterData: true });
+    },
+  };
+  projection.resume();
+  dirty = true;
+  projections.add(projection);
 
   component.register(() => {
     disposed = true;
@@ -80,49 +94,55 @@ export function installReadingViewHighlights(options: InstallReadingHighlightsOp
       cancelAnimationFrame(frame);
     }
     observer.disconnect();
+    projections.delete(projection);
   });
   options.context.addChild(component);
 }
 
 export function refreshReadingViewHighlights(root: HTMLElement, marks: ReadingMark[]): void {
-  unwrapReadingHighlights(root);
-  renderReadingHighlights(root, marks);
-  renderCalloutReadingHighlights(root, marks);
+  const callouts = calloutRoots(root);
+  const roots = [root, ...callouts];
+  const paused = [...projections].filter((item) => roots.some((target) => target.contains(item.root) || item.root.contains(target)));
+  for (const item of paused) item.pause();
+  try {
+    unwrapReadingHighlights(root);
+    const budget: FuzzyMatchBudget = { comparisons: 256, cells: 250_000 };
+    const rendered = renderReadingHighlights(root, marks, budget);
+    for (const callout of callouts) {
+      const remaining = marks.filter(mark => !rendered.has(mark.id));
+      if (remaining.length) for (const id of renderReadingHighlights(callout, remaining, budget)) rendered.add(id);
+    }
+  } finally {
+    for (const item of paused) item.resume();
+  }
 }
 
-function renderReadingHighlights(root: HTMLElement, marks: ReadingMark[]): void {
+function renderReadingHighlights(root: HTMLElement, marks: ReadingMark[], budget: FuzzyMatchBudget): Set<string> {
   const liveMarks = marks
     .filter((mark) => !mark.orphaned && mark.anchor.selectedText.trim())
     .sort((left, right) => right.anchor.selectedText.length - left.anchor.selectedText.length);
 
+  const rendered = new Set(Array.from(root.querySelectorAll<HTMLElement>(MARK_SELECTOR)).map(element => element.dataset.yhId!));
+  if (!liveMarks.length) return rendered;
+  const snapshot = collectText(root);
+  const normalized = { value: undefined as NormalizedIndex | undefined };
+  const planned: Array<{ range: RenderedRange; mark: ReadingMark }> = [];
   for (const mark of liveMarks) {
-    if (root.querySelector(highlightSelectorForId(mark.id))) {
+    if (rendered.has(mark.id)) {
       continue;
     }
 
-    wrapRenderedAnchor(root, mark.anchor, mark.color, mark.id);
-  }
-}
-
-function renderCalloutReadingHighlights(root: HTMLElement, marks: ReadingMark[]): void {
-  const callouts = calloutRoots(root);
-  if (!callouts.length) {
-    return;
-  }
-
-  const liveMarks = marks
-    .filter((mark) => !mark.orphaned && mark.anchor.selectedText.trim())
-    .sort((left, right) => right.anchor.selectedText.length - left.anchor.selectedText.length);
-
-  for (const callout of callouts) {
-    for (const mark of liveMarks) {
-      if (root.querySelector(highlightSelectorForId(mark.id))) {
-        continue;
-      }
-
-      wrapRenderedAnchor(callout, mark.anchor, mark.color, mark.id);
+    const range = locateRenderedRange(snapshot.text, mark.anchor, normalized, budget);
+    if (range && !planned.some(item => item.range.start < range.end && item.range.end > range.start)) {
+      planned.push({ range, mark });
     }
   }
+  // Right-to-left wrapping preserves the original text-node offsets after splitting.
+  for (const { range, mark } of planned.sort((a, b) => b.range.start - a.range.start)) {
+    wrapRange(snapshot.segments, range, mark.color, mark.id);
+    rendered.add(mark.id);
+  }
+  return rendered;
 }
 
 function calloutRoots(root: HTMLElement): HTMLElement[] {
@@ -145,6 +165,7 @@ function calloutRoots(root: HTMLElement): HTMLElement[] {
 }
 
 function unwrapReadingHighlights(root: HTMLElement): void {
+  const parents = new Set<Node>();
   for (const mark of Array.from(root.querySelectorAll<HTMLElement>(MARK_SELECTOR))) {
     const parent = mark.parentNode;
     if (!parent) {
@@ -155,39 +176,29 @@ function unwrapReadingHighlights(root: HTMLElement): void {
       parent.insertBefore(mark.firstChild, mark);
     }
     parent.removeChild(mark);
-    parent.normalize();
+    parents.add(parent);
   }
+  for (const parent of parents) parent.normalize();
 }
 
-function wrapRenderedAnchor(root: HTMLElement, anchor: TextAnchor, color: AnnotationColor, id: string): boolean {
-  const snapshot = collectText(root);
-  if (!snapshot.text.trim()) {
-    return false;
-  }
-
-  const range = locateRenderedRange(snapshot.text, anchor);
-  if (!range || range.start === range.end) {
-    return false;
-  }
-
-  return wrapRange(snapshot.segments, range, color, id);
-}
-
-function locateRenderedRange(renderedText: string, anchor: TextAnchor): RenderedRange | null {
+function locateRenderedRange(renderedText: string, anchor: TextAnchor, normalized: { value?: NormalizedIndex }, budget: FuzzyMatchBudget): RenderedRange | null {
+  if (!renderedText.trim()) return null;
   const exact = locateBestTextRange(renderedText, anchor);
   if (exact) {
     return exact;
   }
 
-  const normalized = locateNormalizedRange(renderedText, anchor);
-  if (normalized) {
-    return normalized;
+  normalized.value ??= normalizeWithMap(renderedText);
+  const normalizedRange = locateNormalizedRange(renderedText, anchor, normalized.value);
+  if (normalizedRange) {
+    return normalizedRange;
   }
 
   const fuzzy = findBestFuzzyMatch(
     renderedText,
     anchor.selectedText,
     0,
+    budget,
   );
   if (!fuzzy || fuzzy.confidence < 0.55) {
     return null;
@@ -222,8 +233,7 @@ function locateBestTextRange(renderedText: string, anchor: TextAnchor): Rendered
   return best?.range ?? null;
 }
 
-function locateNormalizedRange(renderedText: string, anchor: TextAnchor): RenderedRange | null {
-  const rendered = normalizeWithMap(renderedText);
+function locateNormalizedRange(renderedText: string, anchor: TextAnchor, rendered: NormalizedIndex): RenderedRange | null {
   const selected = normalizeWithMap(anchor.selectedText);
   if (!rendered.text || !selected.text) {
     return null;
@@ -327,7 +337,7 @@ function normalizeWithMap(value: string): NormalizedIndex {
 function collectText(root: HTMLElement): { text: string; segments: TextSegment[] } {
   const segments: TextSegment[] = [];
   let text = "";
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+  const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node) {
       const parent = node.parentElement;
       if (!parent) {
@@ -376,7 +386,7 @@ function wrapRange(segments: TextSegment[], range: RenderedRange, color: Annotat
     }
 
     const selected = splitTextRange(segment.node, localStart, localEnd);
-    const mark = document.createElement("mark");
+    const mark = selected.ownerDocument.createElement("mark");
     mark.className = `yh-reading-highlight yh-highlight yh-highlight--${color}`;
     mark.dataset.yhColor = color;
     mark.dataset.yhId = id;
@@ -401,28 +411,4 @@ function splitTextRange(node: Text, start: number, end: number): Text {
   }
 
   return selected;
-}
-
-function isOwnHighlightMutation(mutation: MutationRecord): boolean {
-  const target = mutation.target;
-  if (target instanceof HTMLElement && target.closest(MARK_SELECTOR)) {
-    return true;
-  }
-
-  return Array.from(mutation.addedNodes).every((node) => {
-    return node instanceof HTMLElement && Boolean(node.closest(MARK_SELECTOR));
-  });
-}
-
-function cssEscape(value: string): string {
-  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
-    return CSS.escape(value);
-  }
-
-  return value.replace(/["\\]/g, "\\$&");
-}
-
-function highlightSelectorForId(id: string): string {
-  const escaped = cssEscape(id);
-  return `.yh-reading-highlight[data-yh-id="${escaped}"], mark.yh-highlight[data-yh-id="${escaped}"]`;
 }

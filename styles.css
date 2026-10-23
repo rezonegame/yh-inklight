@@ -219,6 +219,9 @@
 .yh-overview {
   display: flex;
   flex-direction: column;
+  min-height: 0;
+  max-height: var(--yh-ov-available-height, 100%);
+  overflow: hidden;
   background: var(--background-primary);
   color: var(--text-normal);
   font-size: var(--yh-font-base);
@@ -265,6 +268,7 @@
 
 .yh-ov-search-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
   padding: 8px 12px;
@@ -273,7 +277,7 @@
 }
 
 .yh-ov-search {
-  flex: 1;
+  flex: 1 1 160px;
   min-width: 0;
   padding: 5px 10px;
   border: 1px solid var(--yh-border);
@@ -297,6 +301,7 @@
   border-bottom: 1px solid var(--yh-border);
   flex-shrink: 0;
 }
+.yh-ov-filter-row:not(.is-open) { display: none; }
 
 .yh-filter-select {
   flex: 1;
@@ -325,12 +330,39 @@
 
 .yh-ov-list {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  overscroll-behavior: contain;
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
+
+.yh-ov-source-context {
+  flex-shrink: 0;
+  padding: 6px 12px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: var(--yh-font-sm);
+}
+
+.yh-ov-search-row .yh-filter-select { flex: 1 1 90px; min-width: 0; }
+.yh-ov-pagination {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  border-top: 1px solid var(--yh-border);
+  font-size: var(--yh-font-sm);
+}
+.yh-ov-pagination[hidden] { display: none; }
+.yh-ov-pagination button { width: 36px; height: 36px; flex-shrink: 0; }
+.yh-ov-card { flex-shrink: 0; min-width: 0; }
+.yh-ov-quote, .yh-ov-content { overflow-wrap: anywhere; }
 
 .yh-ov-card {
   border-radius: 8px;
@@ -2198,6 +2230,24 @@ a.yh-epub-goto-link:hover {
    ============================================================ */
 
 @media (pointer: coarse) {
+  .yh-overview.is-short .yh-ov-head { padding: 4px 8px; }
+  .yh-overview.is-short .yh-ov-foot { padding: 4px 8px max(4px, env(safe-area-inset-bottom)); }
+  .yh-overview.is-short .yh-ov-export-note { display: none; }
+  .yh-overview.is-short.has-filters .yh-ov-source-context,
+  .yh-overview.is-short.has-filters .yh-ov-count { display: none; }
+  .yh-overview.is-short.has-filters .yh-ov-pagination { padding: 0 8px; }
+  .yh-overview {
+    --yh-font-sm: max(13px, calc(var(--font-preferred-size, 16px) * 0.875));
+    --yh-font-xs: max(12px, calc(var(--font-preferred-size, 16px) * 0.75));
+  }
+  .yh-ov-search { flex-basis: 100%; }
+  .yh-ov-card .yh-ov-btn, .yh-ov-pagination button,
+  .yh-ov-save, .yh-ov-cancel, .yh-export-btn {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .yh-ov-actions { flex-wrap: wrap; }
+  .yh-ov-foot { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
   .yh-toolbar,
   .yh-selection-toolbar {
     position: fixed;
@@ -2374,6 +2424,12 @@ a.yh-epub-goto-link:hover {
     min-width: 0;
     font-size: var(--yh-font-sm);
   }
+}
+
+@media (pointer: coarse) and (max-height: 500px) {
+  .yh-ov-head { padding: 4px 8px; }
+  .yh-ov-foot { padding: 4px 8px max(4px, env(safe-area-inset-bottom)); }
+  .yh-ov-export-note { display: none; }
 }
 
 /* ============================================================

@@ -32,7 +32,7 @@ export function createHighlightExtension(options: HighlightExtensionOptions) {
 
       update(update: ViewUpdate): void {
         const nextVersion = options.getVersion();
-        if (update.docChanged || update.viewportChanged || update.selectionSet || this.version !== nextVersion) {
+        if (update.docChanged || this.version !== nextVersion) {
           this.version = nextVersion;
           this.decorations = this.buildDecorations();
         }

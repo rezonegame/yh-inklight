@@ -7761,7 +7761,7 @@ module.exports = __toCommonJS(main_exports);
 var import_obsidian21 = require("obsidian");
 
 // src/anchor/fuzzyMatch.ts
-function findBestFuzzyMatch(source, target, expectedStart) {
+function findBestFuzzyMatch(source, target, expectedStart, budget) {
   const needle = normalize(target);
   if (!needle) {
     return null;
@@ -7777,17 +7777,19 @@ function findBestFuzzyMatch(source, target, expectedStart) {
   const radius = Math.max(300, target.length * 8);
   const windowStart = Math.max(0, expectedStart - radius);
   const windowEnd = Math.min(source.length, expectedStart + radius + target.length);
-  const local = scanWindow(source, target, windowStart, windowEnd);
+  const local = scanWindow(source, target, windowStart, windowEnd, budget);
   if (local && local.confidence >= 0.6) {
     return local;
   }
-  return scanWindow(source, target, 0, source.length);
+  return scanWindow(source, target, 0, source.length, budget);
 }
-function scanWindow(source, target, windowStart, windowEnd) {
+function scanWindow(source, target, windowStart, windowEnd, budget) {
   const targetLength = target.length;
   const minLength = Math.max(1, Math.floor(targetLength * 0.75));
   const maxLength = Math.max(minLength, Math.ceil(targetLength * 1.35));
   let best = null;
+  const normalizedTarget = normalize(target);
+  const frequencies = characterCounts(normalizedTarget);
   for (let start = windowStart; start < windowEnd; start += Math.max(1, Math.floor(targetLength / 8))) {
     for (let length = minLength; length <= maxLength; length += Math.max(1, Math.floor(targetLength / 6))) {
       const end = Math.min(source.length, start + length);
@@ -7795,7 +7797,8 @@ function scanWindow(source, target, windowStart, windowEnd) {
         continue;
       }
       const candidate = source.slice(start, end);
-      const confidence = similarity(target, candidate);
+      const confidence = similarity(normalizedTarget, candidate, frequencies, budget);
+      if (budget?.exhausted) return null;
       if (!best || confidence > best.confidence) {
         best = { startOffset: start, endOffset: end, confidence };
       }
@@ -7803,30 +7806,57 @@ function scanWindow(source, target, windowStart, windowEnd) {
   }
   return best && best.confidence >= 0.55 ? best : null;
 }
-function similarity(a3, b3) {
-  const left = normalize(a3);
+function similarity(left, b3, frequencies, budget) {
   const right = normalize(b3);
   if (!left || !right) {
     return 0;
   }
-  const distance = levenshtein(left, right);
+  if (budget) {
+    const cells = left.length * right.length;
+    if (budget.exhausted || budget.comparisons < 1 || budget.cells < cells) {
+      budget.exhausted = true;
+      return 0;
+    }
+    budget.comparisons--;
+    budget.cells -= cells;
+  }
+  const maxDistance = Math.floor(Math.max(left.length, right.length) / 2);
+  const differences = new Map(frequencies);
+  for (let i3 = 0; i3 < right.length; i3++) differences.set(right[i3], (differences.get(right[i3]) ?? 0) - 1);
+  let missing = 0, extra = 0;
+  for (const value of differences.values()) {
+    if (value > 0) missing += value;
+    else extra -= value;
+  }
+  if (Math.max(missing, extra) > maxDistance) return 0;
+  const distance = levenshtein(left, right, maxDistance);
   return 1 - distance / Math.max(left.length, right.length);
+}
+function characterCounts(value) {
+  const counts = /* @__PURE__ */ new Map();
+  for (let i3 = 0; i3 < value.length; i3++) counts.set(value[i3], (counts.get(value[i3]) ?? 0) + 1);
+  return counts;
 }
 function normalize(value) {
   return value.replace(/\s+/g, " ").trim().toLowerCase();
 }
-function levenshtein(a3, b3) {
-  const previous = Array.from({ length: b3.length + 1 }, (_2, index) => index);
-  const current = Array.from({ length: b3.length + 1 }, () => 0);
+function levenshtein(a3, b3, limit) {
+  if (Math.abs(a3.length - b3.length) > limit) return limit + 1;
+  let previous = Array.from({ length: b3.length + 1 }, (_2, index) => index <= limit ? index : Infinity);
+  let current = Array.from({ length: b3.length + 1 }, () => Infinity);
   for (let i3 = 1; i3 <= a3.length; i3 += 1) {
     current[0] = i3;
-    for (let j2 = 1; j2 <= b3.length; j2 += 1) {
+    const start = Math.max(1, i3 - limit), end = Math.min(b3.length, i3 + limit);
+    if (start > 1) current[start - 1] = Infinity;
+    let minimum = current[0];
+    for (let j2 = start; j2 <= end; j2 += 1) {
       const substitution = previous[j2 - 1] + (a3[i3 - 1] === b3[j2 - 1] ? 0 : 1);
       current[j2] = Math.min(previous[j2] + 1, current[j2 - 1] + 1, substitution);
+      minimum = Math.min(minimum, current[j2]);
     }
-    for (let j2 = 0; j2 <= b3.length; j2 += 1) {
-      previous[j2] = current[j2];
-    }
+    if (end < b3.length) current[end + 1] = Infinity;
+    if (minimum > limit) return limit + 1;
+    [previous, current] = [current, previous];
   }
   return previous[b3.length];
 }
@@ -7989,7 +8019,7 @@ function createHighlightExtension(options) {
       }
       update(update) {
         const nextVersion = options.getVersion();
-        if (update.docChanged || update.viewportChanged || update.selectionSet || this.version !== nextVersion) {
+        if (update.docChanged || this.version !== nextVersion) {
           this.version = nextVersion;
           this.decorations = this.buildDecorations();
         }
@@ -8077,12 +8107,14 @@ var import_obsidian2 = require("obsidian");
 var MARK_SELECTOR = ".yh-reading-highlight, mark.yh-highlight";
 var MOBILE_RENDER_DELAYS = [0, 80, 220, 520, 900];
 var DESKTOP_RENDER_DELAYS = [0, 40, 160];
+var projections = /* @__PURE__ */ new Set();
 function installReadingViewHighlights(options) {
   const component = new import_obsidian2.MarkdownRenderChild(options.root);
   let frame = null;
   let disposed = false;
+  let dirty = true;
   const render = () => {
-    if (disposed) {
+    if (disposed || !dirty) {
       return;
     }
     if (frame !== null) {
@@ -8090,7 +8122,9 @@ function installReadingViewHighlights(options) {
     }
     frame = requestAnimationFrame(() => {
       frame = null;
-      refreshReadingViewHighlights(options.root, options.marks);
+      if (disposed || !dirty) return;
+      dirty = false;
+      refreshReadingViewHighlights(options.root, options.getMarks?.() ?? options.marks);
     });
   };
   const delays = import_obsidian2.Platform.isMobile ? MOBILE_RENDER_DELAYS : DESKTOP_RENDER_DELAYS;
@@ -8099,49 +8133,70 @@ function installReadingViewHighlights(options) {
     component.register(() => window.clearTimeout(timer));
   }
   const observer = new MutationObserver((mutations) => {
-    if (mutations.every(isOwnHighlightMutation)) {
-      return;
-    }
+    if (!mutations.length) return;
+    dirty = true;
     render();
   });
-  observer.observe(options.root, { childList: true, subtree: true, characterData: true });
+  const projection = {
+    root: options.root,
+    pause: () => observer.disconnect(),
+    resume: () => {
+      if (disposed) return;
+      dirty = false;
+      observer.observe(options.root, { childList: true, subtree: true, characterData: true });
+    }
+  };
+  projection.resume();
+  dirty = true;
+  projections.add(projection);
   component.register(() => {
     disposed = true;
     if (frame !== null) {
       cancelAnimationFrame(frame);
     }
     observer.disconnect();
+    projections.delete(projection);
   });
   options.context.addChild(component);
 }
 function refreshReadingViewHighlights(root, marks) {
-  unwrapReadingHighlights(root);
-  renderReadingHighlights(root, marks);
-  renderCalloutReadingHighlights(root, marks);
+  const callouts = calloutRoots(root);
+  const roots = [root, ...callouts];
+  const paused = [...projections].filter((item) => roots.some((target) => target.contains(item.root) || item.root.contains(target)));
+  for (const item of paused) item.pause();
+  try {
+    unwrapReadingHighlights(root);
+    const budget = { comparisons: 256, cells: 25e4 };
+    const rendered = renderReadingHighlights(root, marks, budget);
+    for (const callout of callouts) {
+      const remaining = marks.filter((mark) => !rendered.has(mark.id));
+      if (remaining.length) for (const id of renderReadingHighlights(callout, remaining, budget)) rendered.add(id);
+    }
+  } finally {
+    for (const item of paused) item.resume();
+  }
 }
-function renderReadingHighlights(root, marks) {
+function renderReadingHighlights(root, marks, budget) {
   const liveMarks = marks.filter((mark) => !mark.orphaned && mark.anchor.selectedText.trim()).sort((left, right) => right.anchor.selectedText.length - left.anchor.selectedText.length);
+  const rendered = new Set(Array.from(root.querySelectorAll(MARK_SELECTOR)).map((element) => element.dataset.yhId));
+  if (!liveMarks.length) return rendered;
+  const snapshot = collectText(root);
+  const normalized = { value: void 0 };
+  const planned = [];
   for (const mark of liveMarks) {
-    if (root.querySelector(highlightSelectorForId(mark.id))) {
+    if (rendered.has(mark.id)) {
       continue;
     }
-    wrapRenderedAnchor(root, mark.anchor, mark.color, mark.id);
-  }
-}
-function renderCalloutReadingHighlights(root, marks) {
-  const callouts = calloutRoots(root);
-  if (!callouts.length) {
-    return;
-  }
-  const liveMarks = marks.filter((mark) => !mark.orphaned && mark.anchor.selectedText.trim()).sort((left, right) => right.anchor.selectedText.length - left.anchor.selectedText.length);
-  for (const callout of callouts) {
-    for (const mark of liveMarks) {
-      if (root.querySelector(highlightSelectorForId(mark.id))) {
-        continue;
-      }
-      wrapRenderedAnchor(callout, mark.anchor, mark.color, mark.id);
+    const range = locateRenderedRange(snapshot.text, mark.anchor, normalized, budget);
+    if (range && !planned.some((item) => item.range.start < range.end && item.range.end > range.start)) {
+      planned.push({ range, mark });
     }
   }
+  for (const { range, mark } of planned.sort((a3, b3) => b3.range.start - a3.range.start)) {
+    wrapRange(snapshot.segments, range, mark.color, mark.id);
+    rendered.add(mark.id);
+  }
+  return rendered;
 }
 function calloutRoots(root) {
   const roots = /* @__PURE__ */ new Set();
@@ -8158,6 +8213,7 @@ function calloutRoots(root) {
   return Array.from(roots);
 }
 function unwrapReadingHighlights(root) {
+  const parents = /* @__PURE__ */ new Set();
   for (const mark of Array.from(root.querySelectorAll(MARK_SELECTOR))) {
     const parent = mark.parentNode;
     if (!parent) {
@@ -8167,33 +8223,26 @@ function unwrapReadingHighlights(root) {
       parent.insertBefore(mark.firstChild, mark);
     }
     parent.removeChild(mark);
-    parent.normalize();
+    parents.add(parent);
   }
+  for (const parent of parents) parent.normalize();
 }
-function wrapRenderedAnchor(root, anchor, color, id) {
-  const snapshot = collectText(root);
-  if (!snapshot.text.trim()) {
-    return false;
-  }
-  const range = locateRenderedRange(snapshot.text, anchor);
-  if (!range || range.start === range.end) {
-    return false;
-  }
-  return wrapRange(snapshot.segments, range, color, id);
-}
-function locateRenderedRange(renderedText, anchor) {
+function locateRenderedRange(renderedText, anchor, normalized, budget) {
+  if (!renderedText.trim()) return null;
   const exact = locateBestTextRange(renderedText, anchor);
   if (exact) {
     return exact;
   }
-  const normalized = locateNormalizedRange(renderedText, anchor);
-  if (normalized) {
-    return normalized;
+  normalized.value ?? (normalized.value = normalizeWithMap(renderedText));
+  const normalizedRange = locateNormalizedRange(renderedText, anchor, normalized.value);
+  if (normalizedRange) {
+    return normalizedRange;
   }
   const fuzzy = findBestFuzzyMatch(
     renderedText,
     anchor.selectedText,
-    0
+    0,
+    budget
   );
   if (!fuzzy || fuzzy.confidence < 0.55) {
     return null;
@@ -8222,8 +8271,7 @@ function locateBestTextRange(renderedText, anchor) {
   }
   return best?.range ?? null;
 }
-function locateNormalizedRange(renderedText, anchor) {
-  const rendered = normalizeWithMap(renderedText);
+function locateNormalizedRange(renderedText, anchor, rendered) {
   const selected = normalizeWithMap(anchor.selectedText);
   if (!rendered.text || !selected.text) {
     return null;
@@ -8313,7 +8361,7 @@ function normalizeWithMap(value) {
 function collectText(root) {
   const segments = [];
   let text = "";
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+  const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode(node2) {
       const parent = node2.parentElement;
       if (!parent) {
@@ -8353,7 +8401,7 @@ function wrapRange(segments, range, color, id) {
       continue;
     }
     const selected = splitTextRange(segment.node, localStart, localEnd);
-    const mark = document.createElement("mark");
+    const mark = selected.ownerDocument.createElement("mark");
     mark.className = `yh-reading-highlight yh-highlight yh-highlight--${color}`;
     mark.dataset.yhColor = color;
     mark.dataset.yhId = id;
@@ -8374,25 +8422,6 @@ function splitTextRange(node, start, end) {
     selected.splitText(selectedLength);
   }
   return selected;
-}
-function isOwnHighlightMutation(mutation) {
-  const target = mutation.target;
-  if (target instanceof HTMLElement && target.closest(MARK_SELECTOR)) {
-    return true;
-  }
-  return Array.from(mutation.addedNodes).every((node) => {
-    return node instanceof HTMLElement && Boolean(node.closest(MARK_SELECTOR));
-  });
-}
-function cssEscape(value) {
-  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
-    return CSS.escape(value);
-  }
-  return value.replace(/["\\]/g, "\\$&");
-}
-function highlightSelectorForId(id) {
-  const escaped = cssEscape(id);
-  return `.yh-reading-highlight[data-yh-id="${escaped}"], mark.yh-highlight[data-yh-id="${escaped}"]`;
 }
 
 // src/editor/selectionToolbar.ts
@@ -8840,7 +8869,13 @@ var PdfAnnotationLayer = class {
     this.progressSaveTimer = null;
     this.sessionFilePath = "";
     this.lifecycleHost = null;
+    this.resizeObserver = null;
+    this.renderRevision = 0;
+    this.disposed = false;
+    this.overlaySignature = "";
     this.scheduleRender = () => {
+      if (this.disposed) return;
+      this.renderRevision++;
       if (this.frame !== null) {
         return;
       }
@@ -8869,9 +8904,16 @@ var PdfAnnotationLayer = class {
     this.options.component.registerEvent(
       this.options.app.workspace.on("layout-change", () => this.scheduleRender())
     );
-    this.options.component.registerDomEvent(document, "scroll", () => this.updateCurrentPage(), { passive: true, capture: true });
-    this.observer = new MutationObserver(() => this.scheduleRender());
-    this.observer.observe(document.body, { childList: true, subtree: true });
+    this.options.component.registerDomEvent(document, "scroll", (event) => {
+      if (this.lifecycleHost && event.target instanceof Node && this.lifecycleHost.contains(event.target)) {
+        this.updateCurrentPage();
+        this.scheduleRender();
+      }
+    }, { passive: true, capture: true });
+    this.observer = new MutationObserver((records) => {
+      if (records.some((record) => !isPdfOverlayMutation(record))) this.scheduleRender();
+    });
+    if (typeof ResizeObserver !== "undefined") this.resizeObserver = new ResizeObserver(() => this.scheduleRender());
     this.options.component.register(() => this.destroy());
     this.scheduleRender();
   }
@@ -9044,6 +9086,8 @@ var PdfAnnotationLayer = class {
     }
   }
   destroy() {
+    this.disposed = true;
+    this.renderRevision++;
     if (this.frame !== null) {
       cancelAnimationFrame(this.frame);
     }
@@ -9051,12 +9095,19 @@ var PdfAnnotationLayer = class {
       window.clearTimeout(this.progressSaveTimer);
     }
     this.observer?.disconnect();
+    this.resizeObserver?.disconnect();
+    this.lifecycleHost = null;
     this.root?.remove();
     this.popover?.remove();
   }
   async render() {
+    const revision = this.renderRevision;
+    if (this.disposed) return;
     const context = this.viewerAdapter.getContext();
     if (!context) {
+      this.observer?.disconnect();
+      this.resizeObserver?.disconnect();
+      this.lifecycleHost = null;
       this.root?.remove();
       this.root = null;
       return;
@@ -9064,11 +9115,14 @@ var PdfAnnotationLayer = class {
     const { file, viewerEl: viewer } = context;
     this.attachViewerLifecycle(context.viewerEl);
     const document2 = await this.options.getDocument(file);
+    const current = this.viewerAdapter.getContext();
+    if (this.disposed || revision !== this.renderRevision || current?.viewerEl !== viewer || current.file.path !== file.path) return;
     const host = viewer.closest(".workspace-leaf-content") ?? viewer;
-    host.addClass("yh-pdf-host");
+    if (!host.classList.contains("yh-pdf-host")) host.addClass("yh-pdf-host");
     if (!this.root || this.root.parentElement !== host) {
       this.root?.remove();
       this.root = host.createDiv({ cls: "yh-pdf-layer" });
+      this.overlaySignature = "";
     }
     this.renderHighlights(host, document2);
     this.totalPages = this.pages().length;
@@ -9081,40 +9135,68 @@ var PdfAnnotationLayer = class {
     if (!this.root) {
       return;
     }
-    this.root.querySelectorAll(".yh-pdf-highlight").forEach((item) => item.remove());
     const hostRect = host.getBoundingClientRect();
+    const viewerRect = this.lifecycleHost?.getBoundingClientRect();
+    const pages = new Map(this.pages().map((page) => [this.pageNumber(page), page]));
+    const pageRects = /* @__PURE__ */ new Map();
+    const overlays = [];
     const annotations = [...document2.pdfHighlights, ...document2.pdfComments].filter((item) => !item.orphaned);
     for (const annotation of annotations) {
       for (const rect of annotation.anchor.rects) {
-        const page = this.pageElement(rect.pageNumber);
+        const page = pages.get(rect.pageNumber);
         if (!page) {
           continue;
         }
-        const pageRect = page.getBoundingClientRect();
-        const highlight = this.root.createDiv({
-          cls: `yh-pdf-highlight yh-pdf-highlight--${annotation.color}`,
-          attr: {
-            "data-yh-id": annotation.id,
-            "data-yh-color": annotation.color
-          }
+        let pageRect = pageRects.get(rect.pageNumber);
+        if (!pageRect) {
+          pageRect = page.getBoundingClientRect();
+          pageRects.set(rect.pageNumber, pageRect);
+        }
+        if (viewerRect && (pageRect.bottom < viewerRect.top - 200 || pageRect.top > viewerRect.bottom + 200)) continue;
+        overlays.push({
+          id: annotation.id,
+          color: annotation.color,
+          left: pageRect.left - hostRect.left + rect.left * pageRect.width,
+          top: pageRect.top - hostRect.top + rect.top * pageRect.height,
+          width: rect.width * pageRect.width,
+          height: rect.height * pageRect.height
         });
-        highlight.style.left = `${pageRect.left - hostRect.left + rect.left * pageRect.width}px`;
-        highlight.style.top = `${pageRect.top - hostRect.top + rect.top * pageRect.height}px`;
-        highlight.style.width = `${rect.width * pageRect.width}px`;
-        highlight.style.height = `${rect.height * pageRect.height}px`;
-        highlight.style.setProperty("background-color", pdfHighlightBackground(annotation.color), "important");
       }
     }
+    const signature = JSON.stringify(overlays);
+    if (signature === this.overlaySignature && this.root.childElementCount === overlays.length) return;
+    const fragment = this.root.ownerDocument.createDocumentFragment();
+    for (const overlay of overlays) {
+      const highlight = this.root.ownerDocument.createElement("div");
+      highlight.className = `yh-pdf-highlight yh-pdf-highlight--${overlay.color}`;
+      highlight.dataset.yhId = overlay.id;
+      highlight.dataset.yhColor = overlay.color;
+      for (const name of ["left", "top", "width", "height"]) highlight.style[name] = `${overlay[name]}px`;
+      highlight.style.setProperty("background-color", pdfHighlightBackground(overlay.color), "important");
+      fragment.appendChild(highlight);
+    }
+    this.observer?.disconnect();
+    this.root.replaceChildren(fragment);
+    this.overlaySignature = signature;
+    this.observeViewer();
   }
   attachViewerLifecycle(host) {
     if (this.lifecycleHost === host) {
       return;
     }
-    const pageEventsAttached = this.viewerAdapter.onPageReady(() => this.scheduleRender());
-    const textEventsAttached = this.viewerAdapter.onTextLayerReady(() => this.scheduleRender());
-    if (pageEventsAttached || textEventsAttached) {
-      this.lifecycleHost = host;
-    }
+    this.observer?.disconnect();
+    this.resizeObserver?.disconnect();
+    this.lifecycleHost = host;
+    this.observeViewer();
+    this.resizeObserver?.observe(host);
+  }
+  observeViewer() {
+    if (!this.disposed && this.lifecycleHost) this.observer?.observe(this.lifecycleHost, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["class", "style"]
+    });
   }
   captureSelection() {
     const file = this.activePdfFile();
@@ -9248,6 +9330,15 @@ var PdfAnnotationLayer = class {
     return this.viewerAdapter.getActiveFile();
   }
 };
+function isPdfOverlayMutation(record) {
+  const own = (node) => {
+    const element = node.nodeType === 1 ? node : node.parentElement;
+    return Boolean(element?.closest(".yh-pdf-layer, .yh-pdf-popover"));
+  };
+  if (own(record.target)) return true;
+  const changed = [...Array.from(record.addedNodes), ...Array.from(record.removedNodes)];
+  return changed.length > 0 && changed.every(own);
+}
 function selectionContainer(selection) {
   if (selection.rangeCount === 0) {
     return null;
@@ -11250,6 +11341,14 @@ var AnnotationSidebarView = class extends import_obsidian12.ItemView {
     this.exportFormat = "summary";
     this.renderToken = 0;
     this.renderTimer = null;
+    this.searchTimer = null;
+    this.sourcePath = null;
+    this.page = 0;
+    this.pageSize = 40;
+    this.closed = false;
+    this.cardComponent = null;
+    this.viewportCleanup = null;
+    this.cardCache = null;
   }
   getViewType() {
     return ANNOTATION_SIDEBAR_VIEW;
@@ -11260,86 +11359,191 @@ var AnnotationSidebarView = class extends import_obsidian12.ItemView {
   getIcon() {
     return "yh-inklight-icon";
   }
+  setSourceFile(file) {
+    if (file && (file.extension === "md" || isReadingNoteSource(file))) {
+      if (this.sourcePath !== file.path) this.page = 0;
+      this.sourcePath = file.path;
+    }
+  }
   async onOpen() {
+    this.closed = false;
     this.containerEl.addClass("yh-sidebar");
+    const viewport = this.containerEl.ownerDocument.defaultView?.visualViewport;
+    if (import_obsidian12.Platform.isMobile && viewport) {
+      const resize = () => this.syncViewport();
+      viewport.addEventListener("resize", resize);
+      viewport.addEventListener("scroll", resize);
+      const cleanup = () => {
+        viewport.removeEventListener("resize", resize);
+        viewport.removeEventListener("scroll", resize);
+      };
+      this.viewportCleanup = cleanup;
+      this.register(cleanup);
+    }
+    this.registerEvent(this.app.workspace.on("file-open", () => {
+      const before = this.sourcePath;
+      this.sourceFile();
+      if (before !== this.sourcePath) {
+        this.page = 0;
+        void this.render();
+      }
+    }));
     await this.render();
   }
+  async onClose() {
+    this.closed = true;
+    this.renderToken++;
+    if (this.renderTimer !== null) window.clearTimeout(this.renderTimer);
+    if (this.searchTimer !== null) window.clearTimeout(this.searchTimer);
+    this.renderTimer = this.searchTimer = null;
+    this.cardCache = null;
+    this.viewportCleanup?.();
+    this.viewportCleanup = null;
+    if (this.cardComponent) {
+      this.removeChild(this.cardComponent);
+      this.cardComponent = null;
+    }
+  }
+  syncViewport() {
+    if (this.closed || !import_obsidian12.Platform.isMobile) return;
+    const root = this.containerEl.children[1] ?? this.containerEl;
+    const viewport = root.ownerDocument.defaultView?.visualViewport;
+    if (!viewport) return;
+    const available = Math.max(0, viewport.offsetTop + viewport.height - root.getBoundingClientRect().top);
+    root.style.setProperty("--yh-ov-available-height", `${available}px`);
+    root.toggleClass("is-short", available < 500);
+  }
+  sourceFile() {
+    const active = this.app.workspace.getActiveFile();
+    this.setSourceFile(active);
+    const file = this.sourcePath ? this.app.vault.getAbstractFileByPath(this.sourcePath) : null;
+    return file instanceof import_obsidian12.TFile ? file : null;
+  }
+  async loadCards(file) {
+    const key = `${this.plugin.store.version}:${this.annotationScope}:${file?.path ?? ""}`;
+    if (this.cardCache?.key === key) return this.cardCache;
+    const documents = this.annotationScope === "all" ? await this.plugin.store.getIndexedDocuments() : file ? [await this.plugin.store.getDocument(file)] : [];
+    const result = { key, documents, cards: documents.flatMap((document2) => this.buildCards(document2)) };
+    if (!this.closed && key === `${this.plugin.store.version}:${this.annotationScope}:${this.sourceFile()?.path ?? ""}`) this.cardCache = result;
+    return result;
+  }
   requestRender() {
+    if (this.closed) return;
     if (this.renderTimer !== null) {
       window.clearTimeout(this.renderTimer);
     }
     this.renderTimer = window.setTimeout(() => {
       this.renderTimer = null;
-      void this.render();
+      void this.refreshList();
     }, 0);
   }
   async render() {
+    if (this.closed) return;
     const token = ++this.renderToken;
     const container = this.containerEl.children[1] ?? this.containerEl;
+    const file = this.sourceFile();
+    const { documents, cards: rawCards } = await this.loadCards(file);
+    if (token !== this.renderToken || this.closed || this.sourceFile()?.path !== file?.path) return;
+    if (this.searchTimer !== null) {
+      window.clearTimeout(this.searchTimer);
+      this.searchTimer = null;
+    }
+    if (this.cardComponent) {
+      this.removeChild(this.cardComponent);
+      this.cardComponent = null;
+    }
     container.empty();
     container.addClass("yh-overview");
-    const file = this.app.workspace.getActiveFile();
+    container.dataset.sourcePath = file?.path ?? "";
     this.renderHeader(container, file);
+    if (file) container.createDiv({ cls: "yh-ov-source-context", text: file.name, attr: { title: file.path } });
     if (this.annotationScope === "current" && !file) {
       this.renderControls(container, []);
-      container.createDiv({ cls: "yh-empty", text: "Open a Markdown or PDF file to inspect annotations." });
+      container.createDiv({ cls: "yh-empty", text: "\u8BF7\u5148\u6253\u5F00\u5E93\u5185\u7684 Markdown\u3001PDF \u6216\u7535\u5B50\u4E66\u3002" });
       this.renderExportFooter(container, null);
       return;
     }
-    const documents = this.annotationScope === "all" ? await this.plugin.store.getIndexedDocuments() : [await this.plugin.store.getDocument(file)];
-    if (token !== this.renderToken) {
-      return;
-    }
-    const rawCards = documents.flatMap((document2) => this.buildCards(document2));
     this.renderControls(container, rawCards);
     const cards = this.filterCards(rawCards);
     const highlightCount = rawCards.filter((card) => card.kind === "highlight" && !card.orphaned).length;
     const noteCount = rawCards.filter((card) => card.note && !card.orphaned).length;
     const scopeLabel = this.annotationScope === "all" ? `${documents.length} files` : "current file";
-    container.createDiv({ cls: "yh-ov-count", text: `${scopeLabel} \xB7 ${highlightCount} highlights \xB7 ${noteCount} notes` });
+    container.createDiv({ cls: "yh-ov-count", text: `${scopeLabel} \xB7 ${highlightCount} highlights \xB7 ${noteCount} notes \xB7 \u7B5B\u9009 ${cards.length}` });
     const list = container.createDiv({ cls: "yh-ov-list" });
-    if (!cards.length) {
-      list.createDiv({ cls: "yh-empty", text: "No matching annotations." });
-    } else {
-      for (const card of cards) {
-        this.renderCard(list, card);
-      }
-    }
+    this.renderPage(list, cards);
     this.renderExportFooter(container, this.annotationScope === "current" ? file : null);
+    this.syncViewport();
   }
   /**
    * 只刷新卡片列表（不重建搜索框等控件），用于搜索输入时保持焦点。
    */
   async refreshList() {
+    if (this.closed) return;
     const root = this.containerEl.children[1] ?? this.containerEl;
     const list = root.querySelector(".yh-ov-list");
     if (!list) {
       await this.render();
       return;
     }
-    const file = this.app.workspace.getActiveFile();
+    const file = this.sourceFile();
+    if (root.dataset.sourcePath !== (file?.path ?? "")) {
+      this.page = 0;
+      await this.render();
+      return;
+    }
     if (this.annotationScope === "current" && !file) {
       await this.render();
       return;
     }
-    const documents = this.annotationScope === "all" ? await this.plugin.store.getIndexedDocuments() : [await this.plugin.store.getDocument(file)];
-    const rawCards = documents.flatMap((document2) => this.buildCards(document2));
+    const token = ++this.renderToken;
+    const { documents, cards: rawCards } = await this.loadCards(file);
+    if (this.closed || token !== this.renderToken || this.sourceFile()?.path !== file?.path) return;
+    const tagSelect = root.querySelector(".yh-ov-tag-filter");
+    if (tagSelect) this.updateTagOptions(tagSelect, rawCards);
     const cards = this.filterCards(rawCards);
-    list.empty();
-    if (!cards.length) {
-      list.createDiv({ cls: "yh-empty", text: "No matching annotations." });
-    } else {
-      for (const card of cards) {
-        this.renderCard(list, card);
-      }
-    }
+    const scrollTop = list.scrollTop;
+    this.renderPage(list, cards);
+    list.scrollTop = scrollTop;
     const countEl = root.querySelector(".yh-ov-count");
     if (countEl) {
       const highlightCount = rawCards.filter((card) => card.kind === "highlight" && !card.orphaned).length;
       const noteCount = rawCards.filter((card) => card.note && !card.orphaned).length;
       const scopeLabel = this.annotationScope === "all" ? `${documents.length} files` : "current file";
-      countEl.textContent = `${scopeLabel} \xB7 ${highlightCount} highlights \xB7 ${noteCount} notes`;
+      countEl.textContent = `${scopeLabel} \xB7 ${highlightCount} highlights \xB7 ${noteCount} notes \xB7 \u7B5B\u9009 ${cards.length}`;
     }
+  }
+  renderPage(list, cards) {
+    if (this.cardComponent) this.removeChild(this.cardComponent);
+    this.cardComponent = this.addChild(new import_obsidian12.Component());
+    this.page = Math.min(this.page, Math.max(0, Math.ceil(cards.length / this.pageSize) - 1));
+    list.empty();
+    for (const card of cards.slice(this.page * this.pageSize, (this.page + 1) * this.pageSize)) this.renderCard(list, card);
+    if (!cards.length) list.createDiv({ cls: "yh-empty", text: "No matching annotations." });
+    const root = list.parentElement;
+    let pager = root.querySelector(".yh-ov-pagination");
+    if (!pager) {
+      pager = root.createDiv({ cls: "yh-ov-pagination" });
+      list.after(pager);
+    }
+    pager.empty();
+    pager.hidden = cards.length <= this.pageSize;
+    const previous = pager.createEl("button", { cls: "yh-icon-btn", attr: { type: "button", title: "\u4E0A\u4E00\u9875\u6279\u6CE8", "aria-label": "\u4E0A\u4E00\u9875\u6279\u6CE8" } });
+    (0, import_obsidian12.setIcon)(previous, "chevron-left");
+    previous.disabled = this.page === 0;
+    pager.createSpan({ text: `${cards.length ? this.page * this.pageSize + 1 : 0}\u2013${Math.min(cards.length, (this.page + 1) * this.pageSize)} / ${cards.length}`, attr: { "aria-live": "polite" } });
+    const next = pager.createEl("button", { cls: "yh-icon-btn", attr: { type: "button", title: "\u4E0B\u4E00\u9875\u6279\u6CE8", "aria-label": "\u4E0B\u4E00\u9875\u6279\u6CE8" } });
+    (0, import_obsidian12.setIcon)(next, "chevron-right");
+    next.disabled = (this.page + 1) * this.pageSize >= cards.length;
+    previous.onclick = () => {
+      this.page--;
+      this.renderPage(list, cards);
+      list.scrollTop = 0;
+    };
+    next.onclick = () => {
+      this.page++;
+      this.renderPage(list, cards);
+      list.scrollTop = 0;
+    };
   }
   buildCards(document2) {
     const usedNotes = /* @__PURE__ */ new Set();
@@ -11516,34 +11720,43 @@ var AnnotationSidebarView = class extends import_obsidian12.ItemView {
     });
     (0, import_obsidian12.setIcon)(close, "x");
     close.addEventListener("click", () => {
-      void this.leaf.detach();
+      if (import_obsidian12.Platform.isMobile) this.app.workspace.rightSplit.collapse();
+      else void this.leaf.detach();
     });
   }
   renderControls(container, cards) {
     const searchRow = container.createDiv({ cls: "yh-ov-search-row" });
     const search2 = searchRow.createEl("input", {
       cls: "yh-ov-search",
-      attr: { type: "search", placeholder: "\u641C\u7D22\u6279\u6CE8..." }
+      attr: { type: "search", placeholder: "\u641C\u7D22\u6279\u6CE8...", "aria-label": "\u641C\u7D22\u6279\u6CE8" }
     });
     search2.value = this.query;
-    let searchTimer = null;
     search2.addEventListener("input", () => {
       this.query = search2.value;
-      if (searchTimer !== null) {
-        window.clearTimeout(searchTimer);
+      this.page = 0;
+      if (this.searchTimer !== null) {
+        window.clearTimeout(this.searchTimer);
       }
-      searchTimer = window.setTimeout(() => {
-        searchTimer = null;
+      this.searchTimer = window.setTimeout(() => {
+        this.searchTimer = null;
         void this.refreshList();
       }, 200);
     });
-    const scope = searchRow.createEl("select", { cls: "yh-filter-select" });
+    const scope = searchRow.createEl("select", { cls: "yh-filter-select", attr: { "aria-label": "\u6279\u6CE8\u8303\u56F4" } });
     scope.createEl("option", { text: "\u5F53\u524D\u6587\u4EF6", value: "current" });
     scope.createEl("option", { text: "\u5168\u5E93", value: "all" });
     scope.value = this.annotationScope;
     scope.addEventListener("change", async () => {
       this.annotationScope = scope.value;
+      this.page = 0;
       await this.render();
+    });
+    const tag = searchRow.createEl("select", { cls: "yh-filter-select yh-ov-tag-filter", attr: { title: "\u6309\u6807\u7B7E\u7B5B\u9009", "aria-label": "\u6309\u6807\u7B7E\u7B5B\u9009" } });
+    this.updateTagOptions(tag, cards);
+    tag.addEventListener("change", async () => {
+      this.tag = tag.value;
+      this.page = 0;
+      await this.refreshList();
     });
     const filterButton = searchRow.createEl("button", {
       cls: "yh-icon-btn",
@@ -11551,12 +11764,16 @@ var AnnotationSidebarView = class extends import_obsidian12.ItemView {
     });
     (0, import_obsidian12.setIcon)(filterButton, "filter");
     filterButton.toggleClass("is-active", this.filtersOpen);
+    filterButton.setAttribute("aria-expanded", String(this.filtersOpen));
     const filterRow = container.createDiv({ cls: "yh-ov-filter-row" });
     filterRow.toggleClass("is-open", this.filtersOpen);
+    container.toggleClass("has-filters", this.filtersOpen);
     filterButton.addEventListener("click", () => {
       this.filtersOpen = !this.filtersOpen;
       filterRow.toggleClass("is-open", this.filtersOpen);
+      container.toggleClass("has-filters", this.filtersOpen);
       filterButton.toggleClass("is-active", this.filtersOpen);
+      filterButton.setAttribute("aria-expanded", String(this.filtersOpen));
     });
     const color = filterRow.createEl("select", { cls: "yh-filter-select" });
     color.createEl("option", { text: "\u5168\u90E8\u989C\u8272", value: "all" });
@@ -11566,7 +11783,8 @@ var AnnotationSidebarView = class extends import_obsidian12.ItemView {
     color.value = this.color;
     color.addEventListener("change", async () => {
       this.color = color.value;
-      await this.render();
+      this.page = 0;
+      await this.refreshList();
     });
     const type = filterRow.createEl("select", { cls: "yh-filter-select" });
     type.createEl("option", { text: "\u5168\u90E8\u7C7B\u578B", value: "all" });
@@ -11575,22 +11793,8 @@ var AnnotationSidebarView = class extends import_obsidian12.ItemView {
     type.value = this.type;
     type.addEventListener("change", async () => {
       this.type = type.value;
-      await this.render();
-    });
-    const tag = filterRow.createEl("select", { cls: "yh-filter-select", attr: { title: "\u6309\u6807\u7B7E\u7B5B\u9009" } });
-    tag.createEl("option", { text: "\u5168\u90E8\u6807\u7B7E", value: ALL_TAGS_FILTER });
-    tag.createEl("option", { text: "\u672A\u5206\u7C7B", value: UNTAGGED_FILTER });
-    for (const resolvedTag of this.availableTags(cards)) {
-      const suffix = resolvedTag.unavailable ? "\uFF08\u5DF2\u505C\u7528\uFF09" : "";
-      tag.createEl("option", { text: `${resolvedTag.name}${suffix}`, value: resolvedTag.id });
-    }
-    if (![...tag.options].some((option) => option.value === this.tag)) {
-      this.tag = ALL_TAGS_FILTER;
-    }
-    tag.value = this.tag;
-    tag.addEventListener("change", async () => {
-      this.tag = tag.value;
-      await this.render();
+      this.page = 0;
+      await this.refreshList();
     });
     const sort = filterRow.createEl("select", { cls: "yh-filter-select" });
     const sortOptions = { document: "\u6587\u6863\u987A\u5E8F", newest: "\u6700\u65B0\u4F18\u5148", oldest: "\u6700\u65E9\u4F18\u5148" };
@@ -11600,7 +11804,8 @@ var AnnotationSidebarView = class extends import_obsidian12.ItemView {
     sort.value = this.sort;
     sort.addEventListener("change", async () => {
       this.sort = sort.value;
-      await this.render();
+      this.page = 0;
+      await this.refreshList();
     });
     const exportFormat = filterRow.createEl("select", { cls: "yh-filter-select" });
     exportFormat.createEl("option", { text: "\u9ED8\u8BA4\u6458\u8981", value: "summary" });
@@ -11611,6 +11816,16 @@ var AnnotationSidebarView = class extends import_obsidian12.ItemView {
       this.exportFormat = exportFormat.value;
       await this.render();
     });
+  }
+  updateTagOptions(select, cards) {
+    const tags = this.availableTags(cards);
+    if (this.tag !== ALL_TAGS_FILTER && this.tag !== UNTAGGED_FILTER && !tags.some((tag) => tag.id === this.tag)) this.tag = ALL_TAGS_FILTER;
+    const options = [{ id: ALL_TAGS_FILTER, name: "\u5168\u90E8\u6807\u7B7E" }, { id: UNTAGGED_FILTER, name: "\u672A\u5206\u7C7B" }, ...tags.map((tag) => ({ id: tag.id, name: `${tag.name}${tag.unavailable ? "\uFF08\u5DF2\u505C\u7528\uFF09" : ""}` }))];
+    if (Array.from(select.options).map((option) => `${option.value}:${option.text}`).join("|") !== options.map((option) => `${option.id}:${option.name}`).join("|")) {
+      select.empty();
+      for (const option of options) select.createEl("option", { value: option.id, text: option.name });
+    }
+    select.value = this.tag;
   }
   renderCard(list, cardData) {
     const file = this.fileForCard(cardData);
@@ -11642,7 +11857,7 @@ var AnnotationSidebarView = class extends import_obsidian12.ItemView {
     this.addExpandToggle(quote, card);
     if (cardData.content) {
       const content = card.createDiv({ cls: "yh-ov-content" });
-      void import_obsidian12.MarkdownRenderer.render(this.app, cardData.content, content, cardData.sourcePath, this).then(() => {
+      void import_obsidian12.MarkdownRenderer.render(this.app, cardData.content, content, cardData.sourcePath, this.cardComponent ?? this).then(() => {
         this.addExpandToggle(content, card);
       });
     }
@@ -12022,6 +12237,7 @@ var AnnotationSidebarView = class extends import_obsidian12.ItemView {
   async jumpTo(file, offset, pageNumber, mode = "md", cfiRange) {
     const leaf = this.app.workspace.getLeaf(false);
     await leaf.openFile(file);
+    if (import_obsidian12.Platform.isMobile) this.app.workspace.rightSplit.collapse();
     if (mode === "epub" && cfiRange) {
       this.plugin.navigateEpubToCfi(file, cfiRange);
       return;
@@ -16047,7 +16263,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian21.Plugin {
       }
     }
   }
-  async refreshAnnotations() {
+  async refreshAnnotations(changedFile) {
     this.app.workspace.updateOptions();
     for (const leaf of this.app.workspace.getLeavesOfType(ANNOTATION_SIDEBAR_VIEW)) {
       const view = leaf.view;
@@ -16068,7 +16284,7 @@ var OverlayAnnotationsPlugin = class extends import_obsidian21.Plugin {
         view.refreshExternalSettings();
       }
     }
-    const activeFile = this.app.workspace.getActiveFile();
+    const activeFile = changedFile ?? this.app.workspace.getActiveFile();
     if (activeFile && activeFile.extension === "md") {
       await this.refreshActiveReadingViewHighlights(activeFile.path);
     }
@@ -16321,8 +16537,7 @@ ${lines.slice(0, 8).join("\n")}`);
       createdAt: (/* @__PURE__ */ new Date()).toISOString()
     };
     await this.store.addHighlight(file, highlight);
-    await this.refreshActiveReadingViewHighlights(file.path);
-    await this.refreshAnnotations();
+    await this.refreshAnnotations(file);
     this.offerAnnotationUndo(file, highlight.id, "\u9AD8\u4EAE");
     this.toolbar.hide();
   }
@@ -16373,8 +16588,7 @@ ${lines.slice(0, 8).join("\n")}`);
       resolved: false
     };
     await this.store.addComment(file, comment);
-    await this.refreshActiveReadingViewHighlights(file.path);
-    await this.refreshAnnotations();
+    await this.refreshAnnotations(file);
     this.toolbar.hide();
   }
   async refreshActiveReadingViewHighlights(filePath) {
@@ -16509,6 +16723,7 @@ ${lines.slice(0, 8).join("\n")}`);
     return view ? { editor: view.editor, file: view.file } : null;
   }
   async activateSidebar() {
+    const sourceFile = this.app.workspace.getActiveFile();
     let leaf = this.app.workspace.getLeavesOfType(ANNOTATION_SIDEBAR_VIEW)[0];
     if (!leaf) {
       const nextLeaf = this.app.workspace.getRightLeaf(false);
@@ -16521,6 +16736,7 @@ ${lines.slice(0, 8).join("\n")}`);
     this.app.workspace.revealLeaf(leaf);
     const view = leaf.view;
     if (view instanceof AnnotationSidebarView) {
+      view.setSourceFile(sourceFile);
       view.requestRender();
     }
   }
@@ -16682,7 +16898,15 @@ ${lines.slice(0, 8).join("\n")}`);
     }
     const document2 = await this.store.getDocument(file);
     const marks = [...document2.highlights, ...document2.comments].filter((item) => !item.orphaned);
-    installReadingViewHighlights({ root: element, context, marks });
+    installReadingViewHighlights({
+      root: element,
+      context,
+      marks,
+      getMarks: () => {
+        const latest = this.store.getCachedDocument(file.path);
+        return latest ? [...latest.highlights, ...latest.comments].filter((item) => !item.orphaned) : marks;
+      }
+    });
   }
 };
 function locateRenderedSelectionInSource(source, selectedText, occurrenceIndex = 0, preferRendered = false) {

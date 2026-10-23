@@ -31,3 +31,30 @@ Expected checks:
 
 This browser fixture does not replace Obsidian BRAT testing, Android/tablet
 testing, or testing the user's specific EPUB and physical input device.
+
+## Stability regression (0.23.8)
+
+`scripts/verify-ui.mjs` bundles the production reading, CM6, PDF and sidebar
+controllers against the test Obsidian API shim, serves them on an ephemeral
+loopback port and closes the server/browser on completion. No real vault is read
+or written. It uses an existing Playwright installation, not a production
+dependency. Set `PLAYWRIGHT_MODULE` to the installed module's absolute path when
+it is not resolvable normally. Set `PLAYWRIGHT_CHANNEL=msedge` to use an installed
+Edge instead of downloading Chromium.
+
+```powershell
+node scripts/benchmark-annotations.mjs
+node scripts/verify-ui.mjs
+```
+
+Checks cover a 211,000-character DOM with 0/100/500 annotations, a shared visual
+fuzzy budget, text preservation, cross-node wrapping, settled observers, current
+data after delayed repaint, CM6 cursor changes, PDF idle/self mutations and
+cancelled rendering, sidebar cache/source retention, 40-card pagination,
+off-page search, tags and stale async results. Mobile layout cases include
+360/390/430px, landscape, large system text, resized and overlay keyboard
+viewports; desktop uses a separate non-touch context.
+
+Screenshots and JSON metrics are written to ignored `output/playwright/`.
+These tests exercise actual Chromium DOM, but shim Obsidian's UI APIs/icons and
+cannot certify real iOS/Android drawers, OS keyboards or native PDF rendering.

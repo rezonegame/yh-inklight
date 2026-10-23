@@ -1,11 +1,11 @@
 /**
  * [INPUT]: 依赖 Obsidian ItemView、AnnotationStore 数据与插件主类回调
  * [OUTPUT]: 对外提供 AnnotationSidebarView，将当前文件或全库 annotation 合并为可筛选、可跳转、可导出的总览卡片，并提供打开/确认阅读笔记入口
- * [POS]: views 模块的右侧 Leaf 总览面板，承载搜索、筛选、排序、行内编辑、跳转、删除与导出模板
+ * [POS]: 右侧 Leaf 总览；来源保持、派生卡片缓存、分页与移动抽屉交互，过期异步查询不可回写
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
-import { ItemView, MarkdownRenderer, MarkdownView, Menu, Notice, Platform, setIcon, TFile, WorkspaceLeaf } from "obsidian";
+import { Component, ItemView, MarkdownRenderer, MarkdownView, Menu, Notice, Platform, setIcon, TFile, WorkspaceLeaf } from "obsidian";
 
 import type OverlayAnnotationsPlugin from "../../main";
 import { isReadingNoteSource } from "../readingNotes/readingNoteBinding";
@@ -91,6 +91,14 @@ export class AnnotationSidebarView extends ItemView {
   private exportFormat: AnnotationExportFormat = "summary";
   private renderToken = 0;
   private renderTimer: number | null = null;
+  private searchTimer: number | null = null;
+  private sourcePath: string | null = null;
+  private page = 0;
+  private readonly pageSize = 40;
+  private closed = false;
+  private cardComponent: Component | null = null;
+  private viewportCleanup: (() => void) | null = null;
+  private cardCache: { key: string; documents: FileAnnotationDocument[]; cards: SidebarCard[] } | null = null;
 
   constructor(leaf: WorkspaceLeaf, private readonly plugin: OverlayAnnotationsPlugin) {
     super(leaf);
@@ -108,100 +116,177 @@ export class AnnotationSidebarView extends ItemView {
     return "yh-inklight-icon";
   }
 
+  setSourceFile(file: TFile | null): void {
+    if (file && (file.extension === "md" || isReadingNoteSource(file))) {
+      if (this.sourcePath !== file.path) this.page = 0;
+      this.sourcePath = file.path;
+    }
+  }
+
   async onOpen(): Promise<void> {
+    this.closed = false;
     this.containerEl.addClass("yh-sidebar");
+    const viewport = this.containerEl.ownerDocument.defaultView?.visualViewport;
+    if (Platform.isMobile && viewport) {
+      const resize = () => this.syncViewport();
+      viewport.addEventListener("resize", resize);
+      viewport.addEventListener("scroll", resize);
+      const cleanup = () => { viewport.removeEventListener("resize", resize); viewport.removeEventListener("scroll", resize); };
+      this.viewportCleanup = cleanup;
+      this.register(cleanup);
+    }
+    this.registerEvent(this.app.workspace.on("file-open", () => {
+      const before = this.sourcePath;
+      this.sourceFile();
+      if (before !== this.sourcePath) { this.page = 0; void this.render(); }
+    }));
     await this.render();
   }
 
+  async onClose(): Promise<void> {
+    this.closed = true;
+    this.renderToken++;
+    if (this.renderTimer !== null) window.clearTimeout(this.renderTimer);
+    if (this.searchTimer !== null) window.clearTimeout(this.searchTimer);
+    this.renderTimer = this.searchTimer = null;
+    this.cardCache = null;
+    this.viewportCleanup?.();
+    this.viewportCleanup = null;
+    if (this.cardComponent) { this.removeChild(this.cardComponent); this.cardComponent = null; }
+  }
+
+  private syncViewport(): void {
+    if (this.closed || !Platform.isMobile) return;
+    const root = (this.containerEl.children[1] ?? this.containerEl) as HTMLElement;
+    const viewport = root.ownerDocument.defaultView?.visualViewport;
+    if (!viewport) return;
+    const available = Math.max(0, viewport.offsetTop + viewport.height - root.getBoundingClientRect().top);
+    root.style.setProperty("--yh-ov-available-height", `${available}px`);
+    root.toggleClass("is-short", available < 500);
+  }
+
+  private sourceFile(): TFile | null {
+    const active = this.app.workspace.getActiveFile();
+    this.setSourceFile(active);
+    const file = this.sourcePath ? this.app.vault.getAbstractFileByPath(this.sourcePath) : null;
+    return file instanceof TFile ? file : null;
+  }
+
+  private async loadCards(file: TFile | null): Promise<{ documents: FileAnnotationDocument[]; cards: SidebarCard[] }> {
+    const key = `${this.plugin.store.version}:${this.annotationScope}:${file?.path ?? ""}`;
+    if (this.cardCache?.key === key) return this.cardCache;
+    const documents = this.annotationScope === "all" ? await this.plugin.store.getIndexedDocuments() : file ? [await this.plugin.store.getDocument(file)] : [];
+    const result = { key, documents, cards: documents.flatMap(document => this.buildCards(document)) };
+    if (!this.closed && key === `${this.plugin.store.version}:${this.annotationScope}:${this.sourceFile()?.path ?? ""}`) this.cardCache = result;
+    return result;
+  }
+
   requestRender(): void {
+    if (this.closed) return;
     if (this.renderTimer !== null) {
       window.clearTimeout(this.renderTimer);
     }
     this.renderTimer = window.setTimeout(() => {
       this.renderTimer = null;
-      void this.render();
+      void this.refreshList();
     }, 0);
   }
 
   async render(): Promise<void> {
+    if (this.closed) return;
     const token = ++this.renderToken;
     const container = this.containerEl.children[1] ?? this.containerEl;
+    const file = this.sourceFile();
+    const { documents, cards: rawCards } = await this.loadCards(file);
+    if (token !== this.renderToken || this.closed || this.sourceFile()?.path !== file?.path) return;
+    if (this.searchTimer !== null) { window.clearTimeout(this.searchTimer); this.searchTimer = null; }
+    if (this.cardComponent) { this.removeChild(this.cardComponent); this.cardComponent = null; }
     container.empty();
     container.addClass("yh-overview");
+    (container as HTMLElement).dataset.sourcePath = file?.path ?? "";
 
-    const file = this.app.workspace.getActiveFile();
     this.renderHeader(container, file);
+    if (file) container.createDiv({ cls: "yh-ov-source-context", text: file.name, attr: { title: file.path } });
 
     if (this.annotationScope === "current" && !file) {
       this.renderControls(container, []);
-      container.createDiv({ cls: "yh-empty", text: "Open a Markdown or PDF file to inspect annotations." });
+      container.createDiv({ cls: "yh-empty", text: "请先打开库内的 Markdown、PDF 或电子书。" });
       this.renderExportFooter(container, null);
       return;
     }
 
-    const documents =
-      this.annotationScope === "all" ? await this.plugin.store.getIndexedDocuments() : [await this.plugin.store.getDocument(file!)];
-    if (token !== this.renderToken) {
-      return;
-    }
-    const rawCards = documents.flatMap((document) => this.buildCards(document));
     this.renderControls(container, rawCards);
     const cards = this.filterCards(rawCards);
     const highlightCount = rawCards.filter((card) => card.kind === "highlight" && !card.orphaned).length;
     const noteCount = rawCards.filter((card) => card.note && !card.orphaned).length;
     const scopeLabel = this.annotationScope === "all" ? `${documents.length} files` : "current file";
-    container.createDiv({ cls: "yh-ov-count", text: `${scopeLabel} · ${highlightCount} highlights · ${noteCount} notes` });
+    container.createDiv({ cls: "yh-ov-count", text: `${scopeLabel} · ${highlightCount} highlights · ${noteCount} notes · 筛选 ${cards.length}` });
 
     const list = container.createDiv({ cls: "yh-ov-list" });
-    if (!cards.length) {
-      list.createDiv({ cls: "yh-empty", text: "No matching annotations." });
-    } else {
-      for (const card of cards) {
-        this.renderCard(list, card);
-      }
-    }
+    this.renderPage(list, cards);
 
     this.renderExportFooter(container, this.annotationScope === "current" ? file : null);
+    this.syncViewport();
   }
 
   /**
    * 只刷新卡片列表（不重建搜索框等控件），用于搜索输入时保持焦点。
    */
   private async refreshList(): Promise<void> {
+    if (this.closed) return;
     const root = this.containerEl.children[1] ?? this.containerEl;
     const list = root.querySelector<HTMLElement>(".yh-ov-list");
     if (!list) {
       await this.render();
       return;
     }
-    const file = this.app.workspace.getActiveFile();
+    const file = this.sourceFile();
+    if ((root as HTMLElement).dataset.sourcePath !== (file?.path ?? "")) { this.page = 0; await this.render(); return; }
     if (this.annotationScope === "current" && !file) {
       await this.render();
       return;
     }
-    const documents =
-      this.annotationScope === "all"
-        ? await this.plugin.store.getIndexedDocuments()
-        : [await this.plugin.store.getDocument(file!)];
-    const rawCards = documents.flatMap((document) => this.buildCards(document));
+    const token = ++this.renderToken;
+    const { documents, cards: rawCards } = await this.loadCards(file);
+    if (this.closed || token !== this.renderToken || this.sourceFile()?.path !== file?.path) return;
+    const tagSelect = root.querySelector<HTMLSelectElement>(".yh-ov-tag-filter");
+    if (tagSelect) this.updateTagOptions(tagSelect, rawCards);
     const cards = this.filterCards(rawCards);
 
-    list.empty();
-    if (!cards.length) {
-      list.createDiv({ cls: "yh-empty", text: "No matching annotations." });
-    } else {
-      for (const card of cards) {
-        this.renderCard(list, card);
-      }
-    }
+    const scrollTop = list.scrollTop;
+    this.renderPage(list, cards);
+    list.scrollTop = scrollTop;
 
     const countEl = root.querySelector<HTMLElement>(".yh-ov-count");
     if (countEl) {
       const highlightCount = rawCards.filter((card) => card.kind === "highlight" && !card.orphaned).length;
       const noteCount = rawCards.filter((card) => card.note && !card.orphaned).length;
       const scopeLabel = this.annotationScope === "all" ? `${documents.length} files` : "current file";
-      countEl.textContent = `${scopeLabel} · ${highlightCount} highlights · ${noteCount} notes`;
+      countEl.textContent = `${scopeLabel} · ${highlightCount} highlights · ${noteCount} notes · 筛选 ${cards.length}`;
     }
+  }
+
+  private renderPage(list: HTMLElement, cards: SidebarCard[]): void {
+    if (this.cardComponent) this.removeChild(this.cardComponent);
+    this.cardComponent = this.addChild(new Component());
+    this.page = Math.min(this.page, Math.max(0, Math.ceil(cards.length / this.pageSize) - 1));
+    list.empty();
+    for (const card of cards.slice(this.page * this.pageSize, (this.page + 1) * this.pageSize)) this.renderCard(list, card);
+    if (!cards.length) list.createDiv({ cls: "yh-empty", text: "No matching annotations." });
+    const root = list.parentElement!;
+    let pager = root.querySelector<HTMLElement>(".yh-ov-pagination");
+    if (!pager) { pager = root.createDiv({ cls: "yh-ov-pagination" }); list.after(pager); }
+    pager.empty();
+    pager.hidden = cards.length <= this.pageSize;
+    const previous = pager.createEl("button", { cls: "yh-icon-btn", attr: { type: "button", title: "上一页批注", "aria-label": "上一页批注" } });
+    setIcon(previous, "chevron-left");
+    previous.disabled = this.page === 0;
+    pager.createSpan({ text: `${cards.length ? this.page * this.pageSize + 1 : 0}–${Math.min(cards.length, (this.page + 1) * this.pageSize)} / ${cards.length}`, attr: { "aria-live": "polite" } });
+    const next = pager.createEl("button", { cls: "yh-icon-btn", attr: { type: "button", title: "下一页批注", "aria-label": "下一页批注" } });
+    setIcon(next, "chevron-right");
+    next.disabled = (this.page + 1) * this.pageSize >= cards.length;
+    previous.onclick = () => { this.page--; this.renderPage(list, cards); list.scrollTop = 0; };
+    next.onclick = () => { this.page++; this.renderPage(list, cards); list.scrollTop = 0; };
   }
 
   private buildCards(document: FileAnnotationDocument): SidebarCard[] {
@@ -428,7 +513,8 @@ export class AnnotationSidebarView extends ItemView {
     });
     setIcon(close, "x");
     close.addEventListener("click", () => {
-      void this.leaf.detach();
+      if (Platform.isMobile) this.app.workspace.rightSplit.collapse();
+      else void this.leaf.detach();
     });
   }
 
@@ -436,28 +522,37 @@ export class AnnotationSidebarView extends ItemView {
     const searchRow = container.createDiv({ cls: "yh-ov-search-row" });
     const search = searchRow.createEl("input", {
       cls: "yh-ov-search",
-      attr: { type: "search", placeholder: "搜索批注..." },
+      attr: { type: "search", placeholder: "搜索批注...", "aria-label": "搜索批注" },
     });
     search.value = this.query;
-    let searchTimer: number | null = null;
     search.addEventListener("input", () => {
       this.query = search.value;
-      if (searchTimer !== null) {
-        window.clearTimeout(searchTimer);
+      this.page = 0;
+      if (this.searchTimer !== null) {
+        window.clearTimeout(this.searchTimer);
       }
-      searchTimer = window.setTimeout(() => {
-        searchTimer = null;
+      this.searchTimer = window.setTimeout(() => {
+        this.searchTimer = null;
         void this.refreshList();
       }, 200);
     });
 
-    const scope = searchRow.createEl("select", { cls: "yh-filter-select" });
+    const scope = searchRow.createEl("select", { cls: "yh-filter-select", attr: { "aria-label": "批注范围" } });
     scope.createEl("option", { text: "当前文件", value: "current" });
     scope.createEl("option", { text: "全库", value: "all" });
     scope.value = this.annotationScope;
     scope.addEventListener("change", async () => {
       this.annotationScope = scope.value as AnnotationScope;
+      this.page = 0;
       await this.render();
+    });
+
+    const tag = searchRow.createEl("select", { cls: "yh-filter-select yh-ov-tag-filter", attr: { title: "按标签筛选", "aria-label": "按标签筛选" } });
+    this.updateTagOptions(tag, cards);
+    tag.addEventListener("change", async () => {
+      this.tag = tag.value;
+      this.page = 0;
+      await this.refreshList();
     });
 
     const filterButton = searchRow.createEl("button", {
@@ -466,13 +561,17 @@ export class AnnotationSidebarView extends ItemView {
     });
     setIcon(filterButton, "filter");
     filterButton.toggleClass("is-active", this.filtersOpen);
+    filterButton.setAttribute("aria-expanded", String(this.filtersOpen));
 
     const filterRow = container.createDiv({ cls: "yh-ov-filter-row" });
     filterRow.toggleClass("is-open", this.filtersOpen);
+    container.toggleClass("has-filters", this.filtersOpen);
     filterButton.addEventListener("click", () => {
       this.filtersOpen = !this.filtersOpen;
       filterRow.toggleClass("is-open", this.filtersOpen);
+      container.toggleClass("has-filters", this.filtersOpen);
       filterButton.toggleClass("is-active", this.filtersOpen);
+      filterButton.setAttribute("aria-expanded", String(this.filtersOpen));
     });
     const color = filterRow.createEl("select", { cls: "yh-filter-select" });
     color.createEl("option", { text: "全部颜色", value: "all" });
@@ -482,7 +581,8 @@ export class AnnotationSidebarView extends ItemView {
     color.value = this.color;
     color.addEventListener("change", async () => {
       this.color = color.value as AnnotationColor | "all";
-      await this.render();
+      this.page = 0;
+      await this.refreshList();
     });
 
     const type = filterRow.createEl("select", { cls: "yh-filter-select" });
@@ -492,23 +592,8 @@ export class AnnotationSidebarView extends ItemView {
     type.value = this.type;
     type.addEventListener("change", async () => {
       this.type = type.value as TypeFilter;
-      await this.render();
-    });
-
-    const tag = filterRow.createEl("select", { cls: "yh-filter-select", attr: { title: "按标签筛选" } });
-    tag.createEl("option", { text: "全部标签", value: ALL_TAGS_FILTER });
-    tag.createEl("option", { text: "未分类", value: UNTAGGED_FILTER });
-    for (const resolvedTag of this.availableTags(cards)) {
-      const suffix = resolvedTag.unavailable ? "（已停用）" : "";
-      tag.createEl("option", { text: `${resolvedTag.name}${suffix}`, value: resolvedTag.id });
-    }
-    if (![...tag.options].some((option) => option.value === this.tag)) {
-      this.tag = ALL_TAGS_FILTER;
-    }
-    tag.value = this.tag;
-    tag.addEventListener("change", async () => {
-      this.tag = tag.value;
-      await this.render();
+      this.page = 0;
+      await this.refreshList();
     });
 
     const sort = filterRow.createEl("select", { cls: "yh-filter-select" });
@@ -519,7 +604,8 @@ export class AnnotationSidebarView extends ItemView {
     sort.value = this.sort;
     sort.addEventListener("change", async () => {
       this.sort = sort.value as AnnotationSortMode;
-      await this.render();
+      this.page = 0;
+      await this.refreshList();
     });
 
     const exportFormat = filterRow.createEl("select", { cls: "yh-filter-select" });
@@ -531,6 +617,17 @@ export class AnnotationSidebarView extends ItemView {
       this.exportFormat = exportFormat.value as AnnotationExportFormat;
       await this.render();
     });
+  }
+
+  private updateTagOptions(select: HTMLSelectElement, cards: SidebarCard[]): void {
+    const tags = this.availableTags(cards);
+    if (this.tag !== ALL_TAGS_FILTER && this.tag !== UNTAGGED_FILTER && !tags.some(tag => tag.id === this.tag)) this.tag = ALL_TAGS_FILTER;
+    const options = [{ id: ALL_TAGS_FILTER, name: "全部标签" }, { id: UNTAGGED_FILTER, name: "未分类" }, ...tags.map(tag => ({ id: tag.id, name: `${tag.name}${tag.unavailable ? "（已停用）" : ""}` }))];
+    if (Array.from(select.options).map(option => `${option.value}:${option.text}`).join("|") !== options.map(option => `${option.id}:${option.name}`).join("|")) {
+      select.empty();
+      for (const option of options) select.createEl("option", { value: option.id, text: option.name });
+    }
+    select.value = this.tag;
   }
 
   private renderCard(list: Element, cardData: SidebarCard): void {
@@ -565,7 +662,7 @@ export class AnnotationSidebarView extends ItemView {
     this.addExpandToggle(quote, card);
     if (cardData.content) {
       const content = card.createDiv({ cls: "yh-ov-content" });
-      void MarkdownRenderer.render(this.app, cardData.content, content, cardData.sourcePath, this).then(() => {
+      void MarkdownRenderer.render(this.app, cardData.content, content, cardData.sourcePath, this.cardComponent ?? this).then(() => {
         this.addExpandToggle(content, card);
       });
     }
@@ -995,6 +1092,7 @@ export class AnnotationSidebarView extends ItemView {
   ): Promise<void> {
     const leaf = this.app.workspace.getLeaf(false);
     await leaf.openFile(file);
+    if (Platform.isMobile) this.app.workspace.rightSplit.collapse();
 
     if (mode === "epub" && cfiRange) {
       // 统一走 plugin 的跳转入口（含轮询重试），不再自行 setTimeout 查 leaf

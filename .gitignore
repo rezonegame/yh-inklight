@@ -1,5 +1,6 @@
 node_modules/
 .test-build/
+output/playwright/
 main.js
 dist/
 *.map

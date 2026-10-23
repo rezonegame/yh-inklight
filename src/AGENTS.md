@@ -3,11 +3,11 @@
 
 成员清单
 anchor/textAnchor.ts: 文本锚点生成与恢复，维护 offset、selectedText、prefix、suffix 与 isCode 的定位语义。
-anchor/fuzzyMatch.ts: 模糊匹配恢复器，处理文件轻微改动后的锚点迁移。
-editor/highlightExtension.ts: CodeMirror 6 高亮装饰层，使用 Decoration.mark 非侵入式绘制。
-editor/readingViewHighlight.ts: Reading View DOM 高亮层，使用延迟渲染、MutationObserver 与 fuzzy matching 兼容移动端。
+anchor/fuzzyMatch.ts: 模糊匹配恢复器，持久化恢复保持原规则，视觉调用可传共享计算预算。
+editor/highlightExtension.ts: CodeMirror 6 高亮装饰层，仅数据或文本变化时重建，不因选区/视口变化全量排序。
+editor/readingViewHighlight.ts: 单轮文本索引、视觉模糊预算、右到左绘制及观察器暂停的阅读投影，延迟回调读取最新批注。
 editor/selectionToolbar.ts: 选中文本后的工具栏，桌面显示在选区附近，移动端固定在底部安全区，提供颜色、便签、复制和总览入口。
-pdf/pdfAnnotationLayer.ts: PDF 注释控制器，使用页码与矩形百分比坐标绘制非侵入式高亮和右侧便签栏。
+pdf/pdfAnnotationLayer.ts: 当前原生 PDF viewer 的局部观察、可见页矩形投影、坐标复用、自身变更隔离及过期渲染取消。
 storage/types.ts: sidecar JSON、设置、锚点、高亮、笔记、标签字段、代码选区标记、索引的类型真相源。
 storage/annotationStore.ts: .obsidian-annotations 持久化后端，读写文件 JSON 与全局 index；资料库只读取已有 sidecar，避免新书哈希。
 storage/documentMerge.ts: storage 纯逻辑三方合并器，保护跨设备新增、删除、修改和阅读进度。
@@ -18,7 +18,7 @@ readingNotes/readingNoteProjection.ts: PDF/EPUB 批注分组、去重、稳定�
 readingNotes/readingNoteSync.ts: 300ms 防抖和按笔记路径串行的自动同步编排。
 tags/tagDomain.ts: 统一语义标签的默认值、名称校验、旧字段映射与显示解析。
 views/annotationPopover.ts: 窄屏与阅读模式弹层，点击高亮后展示 sidecar 中的高亮和便签内容。
-views/sidebarView.ts: 右侧总览面板，使用彩色卡片合并 highlight 与关联 note，并承载搜索、可折叠过滤、排序、导出、跳转与内联编辑。
+views/sidebarView.ts: 来源保持与派生卡片缓存的批注总览；每页 40 条，标签入口常显，支持搜索/排序/导出和移动抽屉状态保持。
 settings/settingsTab.ts: 插件设置页，管理默认颜色、统一标签、EPUB 阅读排版 profile、作者和迁移策略。
 epub/EpubReaderView.ts: EPUB FileView 生命周期、目录/搜索覆盖面板、进度、批注业务、尺寸变化恢复、电子墨水作用域与控制器装配；正常开书后异步缓存封面，SVG 高亮通过导出的 shadow parts 使用外部 CSS。
 epub/EpubSearch.ts: EPUB 侧栏唯一搜索入口、结果标准化、过期查询保护与搜索监听清理。

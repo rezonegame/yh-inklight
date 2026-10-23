@@ -352,7 +352,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
   }
 
-  async refreshAnnotations(): Promise<void> {
+  async refreshAnnotations(changedFile?: TFile): Promise<void> {
     this.app.workspace.updateOptions();
     for (const leaf of this.app.workspace.getLeavesOfType(ANNOTATION_SIDEBAR_VIEW)) {
       const view = leaf.view;
@@ -376,7 +376,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     }
     // 刷新 Markdown 阅读视图高亮：从侧栏删除/编辑 MD 批注后，阅读区高亮 DOM 也需同步移除。
     // 只刷新当前活动 markdown 文件以控制开销（其余文件在切到时由 active-leaf-change 兜底）。
-    const activeFile = this.app.workspace.getActiveFile();
+    const activeFile = changedFile ?? this.app.workspace.getActiveFile();
     if (activeFile && activeFile.extension === "md") {
       await this.refreshActiveReadingViewHighlights(activeFile.path);
     }
@@ -655,8 +655,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     };
 
     await this.store.addHighlight(file, highlight);
-    await this.refreshActiveReadingViewHighlights(file.path);
-    await this.refreshAnnotations();
+    await this.refreshAnnotations(file);
     this.offerAnnotationUndo(file, highlight.id, "高亮");
     this.toolbar.hide();
   }
@@ -713,8 +712,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     };
 
     await this.store.addComment(file, comment);
-    await this.refreshActiveReadingViewHighlights(file.path);
-    await this.refreshAnnotations();
+    await this.refreshAnnotations(file);
     this.toolbar.hide();
   }
 
@@ -874,6 +872,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
   }
 
   async activateSidebar(): Promise<void> {
+    const sourceFile = this.app.workspace.getActiveFile();
     let leaf = this.app.workspace.getLeavesOfType(ANNOTATION_SIDEBAR_VIEW)[0];
     if (!leaf) {
       const nextLeaf = this.app.workspace.getRightLeaf(false);
@@ -886,6 +885,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
     this.app.workspace.revealLeaf(leaf);
     const view = leaf.view;
     if (view instanceof AnnotationSidebarView) {
+      view.setSourceFile(sourceFile);
       view.requestRender();
     }
   }
@@ -1074,7 +1074,12 @@ export default class OverlayAnnotationsPlugin extends Plugin {
 
     const document = await this.store.getDocument(file);
     const marks = [...document.highlights, ...document.comments].filter((item) => !item.orphaned);
-    installReadingViewHighlights({ root: element, context, marks });
+    installReadingViewHighlights({ root: element, context, marks,
+      getMarks: () => {
+        const latest = this.store.getCachedDocument(file.path);
+        return latest ? [...latest.highlights, ...latest.comments].filter((item) => !item.orphaned) : marks;
+      },
+    });
   }
 }
 
