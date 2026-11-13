@@ -43,6 +43,8 @@ After updating the EPUB engine, fully quit and restart Obsidian to reload its cu
 
 Select text in a supported reader to highlight it or attach a comment. Open the annotation sidebar to browse, filter, edit, export, or return to annotations. Open the reading library to find books and PDFs in the vault.
 
+To change where **Export annotations** saves Markdown summaries, set **批注导出文件夹** in the plugin settings. Use a vault-relative folder, enter `/` for the vault root, or leave it blank to keep the original locations: alongside the source for single-file exports and at the root for vault-wide exports. This setting does not move existing files or change where synchronized reading notes are created.
+
 Use the command palette for highlight, comment, annotation overview, reading library, and reading-note actions. Configure highlight colors, annotation tags, EPUB layout, reading-note folder, and PDF progress under **Settings -> yh-InkLight**.
 
 ## Storage and permissions
@@ -69,6 +71,11 @@ npm run build
 Optional browser/performance regression instructions are in [tests/browser/README.md](tests/browser/README.md). They use synthetic documents and test API shims, not a real vault or a mobile-device certification.
 
 ## Release notes
+
+### 0.23.9
+
+- Choose a vault folder for current-file and vault-wide Markdown annotation exports. New folders are created when needed; leaving the setting blank preserves the old destinations.
+- Re-export updates only an unchanged summary generated for the same source and format. Existing notes, edited summaries, and unmarked legacy exports are preserved by choosing a numbered filename.
 
 ### 0.23.8
 

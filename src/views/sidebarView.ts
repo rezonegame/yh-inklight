@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 Obsidian ItemView、AnnotationStore 数据与插件主类回调
- * [OUTPUT]: 对外提供 AnnotationSidebarView，将当前文件或全库 annotation 合并为可筛选、可跳转、可导出的总览卡片，并提供打开/确认阅读笔记入口
+ * [OUTPUT]: 对外提供 AnnotationSidebarView，将当前文件或全库 annotation 合并为可筛选、可跳转、可导出的总览卡片，并提供打开/确认阅读笔记入口和导出结果提示
  * [POS]: 右侧 Leaf 总览；来源保持、派生卡片缓存、分页与移动抽屉交互，过期异步查询不可回写
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -1065,11 +1065,18 @@ export class AnnotationSidebarView extends ItemView {
       if (this.annotationScope === "current" && !file) {
         return;
       }
-      const exported =
-        this.annotationScope === "all"
-          ? await this.plugin.store.exportAllNotes(this.exportFormat)
-          : await this.plugin.store.exportNotes(file!, this.exportFormat);
-      new Notice(`已导出笔记至 ${exported.path}`);
+      const folder = this.plugin.settings.exportFolder;
+      exportButton.disabled = true;
+      try {
+        const exported = this.annotationScope === "all"
+          ? await this.plugin.store.exportAllNotes(this.exportFormat, folder)
+          : await this.plugin.store.exportNotes(file!, this.exportFormat, folder);
+        new Notice(`已导出笔记至 ${exported.path}`);
+      } catch (error) {
+        new Notice(`批注导出失败：${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+        exportButton.disabled = false;
+      }
     });
     footer.createDiv({ cls: "yh-ov-export-note", text: this.exportFormatLabel() });
   }

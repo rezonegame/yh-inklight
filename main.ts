@@ -17,6 +17,7 @@ import { AnnotationLinkService } from "./src/links/annotationLinkService";
 import { readProtocolParam } from "./src/links/annotationLink";
 import { AnnotationSettingsTab } from "./src/settings/settingsTab";
 import { AnnotationStore } from "./src/storage/annotationStore";
+import { normalizeExportFolder } from "./src/storage/exportDestination";
 import {
   AnnotationTagDefinition,
   legacyTitleForTag,
@@ -276,6 +277,7 @@ export default class OverlayAnnotationsPlugin extends Plugin {
       epubReadingProfile: readingProfile,
       readingNoteFolder: normalizeReadingNoteFolder(storedSettings.readingNoteFolder ?? DEFAULT_SETTINGS.readingNoteFolder)
         ?? DEFAULT_SETTINGS.readingNoteFolder,
+      exportFolder: normalizeExportFolder(storedSettings.exportFolder) ?? DEFAULT_SETTINGS.exportFolder,
     };
     if (!storedSettings.epubReadingProfile) {
       try {

@@ -303,6 +303,7 @@ export interface AnnotationPluginSettings {
   // --- PDF 增强 ---
   pdfProgressTracking: boolean;
   readingNoteFolder: string;
+  exportFolder: string;
 }
 
 export interface SelectionSnapshot {
@@ -326,6 +327,7 @@ export const DEFAULT_SETTINGS: AnnotationPluginSettings = {
   // PDF 增强
   pdfProgressTracking: true,
   readingNoteFolder: "墨光阅读笔记",
+  exportFolder: "",
 };
 
 export const EMPTY_INDEX: AnnotationIndex = {

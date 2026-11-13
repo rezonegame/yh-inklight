@@ -10,6 +10,7 @@ editor/selectionToolbar.ts: 选中文本后的工具栏，桌面显示在选区�
 pdf/pdfAnnotationLayer.ts: 当前原生 PDF viewer 的局部观察、可见页矩形投影、坐标复用、自身变更隔离及过期渲染取消。
 storage/types.ts: sidecar JSON、设置、锚点、高亮、笔记、标签字段、代码选区标记、索引的类型真相源。
 storage/annotationStore.ts: .obsidian-annotations 持久化后端，读写文件 JSON 与全局 index；资料库只读取已有 sidecar，避免新书哈希。
+storage/exportDestination.ts: 校验独立的批注导出文件夹设置，保留默认位置与 Vault 根目录选项。
 storage/documentMerge.ts: storage 纯逻辑三方合并器，保护跨设备新增、删除、修改和阅读进度。
 readingNotes/readingNoteBinding.ts: PDF/电子书阅读笔记的路径、初始模板、同名冲突处理与显式 sidecar 绑定。
 readingNotes/readingNoteIdentity.ts: 阅读笔记来源 frontmatter 校验与源文件改名时的最小内容迁移。

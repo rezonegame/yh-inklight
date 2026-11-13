@@ -1,6 +1,6 @@
 /**
  * [INPUT]: 依赖 Obsidian PluginSettingTab/Setting 与 storage/types 的设置模型
- * [OUTPUT]: 对外提供 AnnotationSettingsTab，使用 Setting 标题组织默认颜色、统一标签、阅读笔记目录、阅读与迁移设置
+ * [OUTPUT]: 对外提供 AnnotationSettingsTab，使用 Setting 标题组织默认颜色、统一标签、导出与阅读笔记目录、阅读与迁移设置
  * [POS]: settings 模块的用户配置界面，被 main.ts 注册
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
@@ -9,6 +9,7 @@ import { AbstractInputSuggest, App, Notice, PluginSettingTab, Setting, setIcon, 
 
 import type OverlayAnnotationsPlugin from "../../main";
 import { normalizeReadingNoteFolder } from "../readingNotes/readingNoteBinding";
+import { normalizeExportFolder } from "../storage/exportDestination";
 import {
   ANNOTATION_COLORS,
   AnnotationColor,
@@ -75,9 +76,31 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       });
 
     this.renderTagSettings();
+    this.renderExportSettings();
     this.renderEpubSettings();
     this.renderPdfSettings();
     this.renderReadingNoteSettings();
+  }
+
+  private renderExportSettings(): void {
+    new Setting(this.containerEl).setName("导出批注").setHeading();
+    new Setting(this.containerEl)
+      .setName("批注导出文件夹")
+      .setDesc("仅影响之后导出的 Markdown 摘要。填写库内路径，输入 / 保存到库根目录；留空时单文件导出与原文同目录，全库导出到库根目录。")
+      .addText((text) => {
+        text.setValue(this.plugin.settings.exportFolder);
+        new VaultFolderSuggest(this.app, text.inputEl);
+        text.onChange(async (value) => {
+          const folder = normalizeExportFolder(value);
+          text.inputEl.setCustomValidity(folder === null ? "请输入有效的库内文件夹路径" : "");
+          if (folder === null) {
+            text.inputEl.reportValidity();
+            return;
+          }
+          this.plugin.settings.exportFolder = folder;
+          await this.plugin.saveSettings();
+        });
+      });
   }
 
   private renderReadingNoteSettings(): void {
@@ -88,7 +111,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
       .setDesc("PDF 和电子书的阅读笔记默认保存位置。")
       .addText((text) => {
         text.setValue(this.plugin.settings.readingNoteFolder);
-        new ReadingNoteFolderSuggest(this.app, text.inputEl);
+        new VaultFolderSuggest(this.app, text.inputEl);
         text.onChange(async (value) => {
           const folder = normalizeReadingNoteFolder(value);
           if (!folder) {
@@ -415,7 +438,7 @@ export class AnnotationSettingsTab extends PluginSettingTab {
   }
 }
 
-class ReadingNoteFolderSuggest extends AbstractInputSuggest<TFolder> {
+class VaultFolderSuggest extends AbstractInputSuggest<TFolder> {
   constructor(app: App, private readonly input: HTMLInputElement) {
     super(app, input);
   }

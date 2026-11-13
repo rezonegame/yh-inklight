@@ -8691,7 +8691,8 @@ var DEFAULT_SETTINGS = {
   epubReadingProfile: DEFAULT_EPUB_READING_PROFILE,
   // PDF 增强
   pdfProgressTracking: true,
-  readingNoteFolder: "\u58A8\u5149\u9605\u8BFB\u7B14\u8BB0"
+  readingNoteFolder: "\u58A8\u5149\u9605\u8BFB\u7B14\u8BB0",
+  exportFolder: ""
 };
 var EMPTY_INDEX = {
   version: 1,
@@ -9982,6 +9983,17 @@ var ReadingNoteBindingService = class {
   }
 };
 
+// src/storage/exportDestination.ts
+function normalizeExportFolder(value) {
+  if (typeof value !== "string") return null;
+  const path = value.trim().replace(/\\/g, "/");
+  if (!path || value.trim() === "/") return path;
+  if (path.startsWith("/") || /[\x00-\x1f:*?"<>|]/.test(path)) return null;
+  const parts = path.replace(/\/+$/, "").split("/");
+  if (parts.some((part) => !part || /[. ]$/.test(part) || /^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\.|$)/i.test(part))) return null;
+  return parts.join("/");
+}
+
 // src/settings/settingsTab.ts
 var AnnotationSettingsTab = class extends import_obsidian9.PluginSettingTab {
   constructor(plugin) {
@@ -10015,16 +10027,34 @@ var AnnotationSettingsTab = class extends import_obsidian9.PluginSettingTab {
       });
     });
     this.renderTagSettings();
+    this.renderExportSettings();
     this.renderEpubSettings();
     this.renderPdfSettings();
     this.renderReadingNoteSettings();
+  }
+  renderExportSettings() {
+    new import_obsidian9.Setting(this.containerEl).setName("\u5BFC\u51FA\u6279\u6CE8").setHeading();
+    new import_obsidian9.Setting(this.containerEl).setName("\u6279\u6CE8\u5BFC\u51FA\u6587\u4EF6\u5939").setDesc("\u4EC5\u5F71\u54CD\u4E4B\u540E\u5BFC\u51FA\u7684 Markdown \u6458\u8981\u3002\u586B\u5199\u5E93\u5185\u8DEF\u5F84\uFF0C\u8F93\u5165 / \u4FDD\u5B58\u5230\u5E93\u6839\u76EE\u5F55\uFF1B\u7559\u7A7A\u65F6\u5355\u6587\u4EF6\u5BFC\u51FA\u4E0E\u539F\u6587\u540C\u76EE\u5F55\uFF0C\u5168\u5E93\u5BFC\u51FA\u5230\u5E93\u6839\u76EE\u5F55\u3002").addText((text) => {
+      text.setValue(this.plugin.settings.exportFolder);
+      new VaultFolderSuggest(this.app, text.inputEl);
+      text.onChange(async (value) => {
+        const folder = normalizeExportFolder(value);
+        text.inputEl.setCustomValidity(folder === null ? "\u8BF7\u8F93\u5165\u6709\u6548\u7684\u5E93\u5185\u6587\u4EF6\u5939\u8DEF\u5F84" : "");
+        if (folder === null) {
+          text.inputEl.reportValidity();
+          return;
+        }
+        this.plugin.settings.exportFolder = folder;
+        await this.plugin.saveSettings();
+      });
+    });
   }
   renderReadingNoteSettings() {
     const { containerEl } = this;
     new import_obsidian9.Setting(containerEl).setName("\u9605\u8BFB\u7B14\u8BB0").setHeading();
     new import_obsidian9.Setting(containerEl).setName("\u9605\u8BFB\u7B14\u8BB0\u6587\u4EF6\u5939").setDesc("PDF \u548C\u7535\u5B50\u4E66\u7684\u9605\u8BFB\u7B14\u8BB0\u9ED8\u8BA4\u4FDD\u5B58\u4F4D\u7F6E\u3002").addText((text) => {
       text.setValue(this.plugin.settings.readingNoteFolder);
-      new ReadingNoteFolderSuggest(this.app, text.inputEl);
+      new VaultFolderSuggest(this.app, text.inputEl);
       text.onChange(async (value) => {
         const folder = normalizeReadingNoteFolder(value);
         if (!folder) {
@@ -10266,7 +10296,7 @@ var AnnotationSettingsTab = class extends import_obsidian9.PluginSettingTab {
     }
   }
 };
-var ReadingNoteFolderSuggest = class extends import_obsidian9.AbstractInputSuggest {
+var VaultFolderSuggest = class extends import_obsidian9.AbstractInputSuggest {
   constructor(app, input) {
     super(app, input);
     this.input = input;
@@ -10399,6 +10429,7 @@ var INDEX_PATH = (0, import_obsidian10.normalizePath)(`${STORE_DIR}/index.json`)
 var INDEX_BACKUP_PATH = (0, import_obsidian10.normalizePath)(`${INDEX_PATH}.bak`);
 var MAX_LEGACY_SIDECAR_NAME_LENGTH = 180;
 var MAX_COMPACT_SIDECAR_PREFIX_LENGTH = 96;
+var EXPORT_MARKER = /^<!-- yh-inklight:export:v1 ([a-f0-9]{64}) ([a-f0-9]{64})( custom)? -->\r?\n/;
 var AnnotationStoreReadError = class extends Error {
   constructor(path, originalError) {
     super(`Failed to read annotation sidecar JSON: ${path}`);
@@ -10717,12 +10748,21 @@ var AnnotationStore = class {
       }
       try {
         const content = await this.app.vault.read(excerptFile);
-        const updated = content.split(oldPath).join(newPath).split(encodeURIComponent(oldPath)).join(encodeURIComponent(newPath));
+        const marker = EXPORT_MARKER.exec(content);
+        const body = marker ? content.slice(marker[0].length) : content;
+        if (marker) {
+          if (marker[3] || marker[1] !== await this.exportKey(oldPath, "summary") || marker[2] !== await this.hashExportBody(body)) continue;
+        } else if (!isLegacyExport(content, oldPath, candidate === candidates[0])) {
+          continue;
+        }
+        const updatedBody = body.split(oldPath).join(newPath).split(encodeURIComponent(oldPath)).join(encodeURIComponent(newPath));
+        const updated = marker ? await this.markExport(await this.exportKey(newPath, "summary"), updatedBody) : updatedBody;
         const newName = candidate.replace(oldBase.split(/[\\/]/).pop(), newBase.split(/[\\/]/).pop());
         const targetPath = (0, import_obsidian10.normalizePath)(`${newParent}/${newName}`);
-        if (updated !== content) {
-          await this.app.vault.modify(excerptFile, updated);
-        }
+        await this.app.vault.process(excerptFile, (latest) => {
+          if (latest !== content) throw new Error("Export changed during source migration");
+          return updated;
+        });
         if (targetPath !== candidatePath && !this.app.vault.getAbstractFileByPath(targetPath)) {
           await this.app.vault.rename(excerptFile, targetPath);
         }
@@ -10778,31 +10818,76 @@ var AnnotationStore = class {
     }));
   }
   // ===== 旧版书签兼容字段（EPUB/PDF 通用）=====
-  async exportNotes(file, format = "summary") {
+  async exportNotes(file, format = "summary", folder = "") {
     const document2 = await this.getDocument(file);
     const baseName = file.basename || file.name.replace(/\.md$/i, "");
     const suffix = format === "summary" ? "" : `-${format}`;
-    const targetPath = (0, import_obsidian10.normalizePath)(`${file.parent?.path ?? ""}/${baseName}-notes${suffix}.md`);
     const lines = buildExportLines(`Notes for ${file.path}`, [{ filePath: file.path, document: document2 }], format, this.getAnnotationTags());
-    const existing = this.app.vault.getAbstractFileByPath(targetPath);
-    if (existing instanceof import_obsidian10.TFile) {
-      await this.app.vault.modify(existing, lines.join("\n"));
-      return existing;
-    }
-    return this.app.vault.create(targetPath, lines.join("\n"));
+    return this.writeExport(folder, file.parent?.path ?? "", `${baseName}-notes${suffix}`, file.path, format, lines.join("\n"));
   }
-  async exportAllNotes(format = "summary") {
+  async exportAllNotes(format = "summary", folder = "") {
     const documents = await this.getIndexedDocuments();
     const suffix = format === "summary" ? "" : `-${format}`;
-    const targetPath = (0, import_obsidian10.normalizePath)(`inklight-all-notes${suffix}.md`);
     const sources = documents.map((document2) => ({ filePath: document2.filePath, document: document2 }));
     const lines = buildExportLines("\u58A8\u5149\u6279\u6CE8\u5168\u5E93\u6C47\u603B", sources, format, this.getAnnotationTags());
-    const existing = this.app.vault.getAbstractFileByPath(targetPath);
-    if (existing instanceof import_obsidian10.TFile) {
-      await this.app.vault.modify(existing, lines.join("\n"));
-      return existing;
+    return this.writeExport(folder, "", `inklight-all-notes${suffix}`, null, format, lines.join("\n"));
+  }
+  async exportKey(source, format) {
+    return this.hashString(JSON.stringify([source, format]));
+  }
+  async hashExportBody(body) {
+    return this.hashString(body.replace(/\r\n/g, "\n"));
+  }
+  async markExport(key, body, custom = false) {
+    return `<!-- yh-inklight:export:v1 ${key} ${await this.hashExportBody(body)}${custom ? " custom" : ""} -->
+${body}`;
+  }
+  async writeExport(folder, fallback, name, source, format, body) {
+    const custom = normalizeExportFolder(folder);
+    if (custom === null) throw new Error("\u6279\u6CE8\u5BFC\u51FA\u6587\u4EF6\u5939\u65E0\u6548");
+    const destination = custom || fallback;
+    if (custom && custom !== "/") await this.ensureExportFolder(custom);
+    const key = await this.exportKey(source, format);
+    const content = await this.markExport(key, body, Boolean(custom));
+    for (let number = 1; number <= 1e3; number++) {
+      const filename = `${name}${number === 1 ? "" : ` (${number})`}.md`;
+      const path = destination && destination !== "/" ? (0, import_obsidian10.normalizePath)(`${destination}/${filename}`) : filename;
+      const existing = this.app.vault.getAbstractFileByPath(path);
+      if (!existing) {
+        if (await this.app.vault.adapter.exists(path)) continue;
+        try {
+          return await this.app.vault.create(path, content);
+        } catch (error) {
+          if (this.app.vault.getAbstractFileByPath(path) || await this.app.vault.adapter.exists(path)) continue;
+          throw error;
+        }
+      }
+      if (!(existing instanceof import_obsidian10.TFile)) continue;
+      const previous = await this.app.vault.read(existing);
+      const marker = EXPORT_MARKER.exec(previous);
+      if (!marker || marker[1] !== key || marker[2] !== await this.hashExportBody(previous.slice(marker[0].length))) continue;
+      let replaced = false;
+      await this.app.vault.process(existing, (latest) => {
+        replaced = latest === previous;
+        return replaced ? content : latest;
+      });
+      if (replaced) return existing;
     }
-    return this.app.vault.create(targetPath, lines.join("\n"));
+    throw new Error("\u540C\u540D\u5BFC\u51FA\u6587\u4EF6\u8FC7\u591A\uFF0C\u8BF7\u66F4\u6362\u6279\u6CE8\u5BFC\u51FA\u6587\u4EF6\u5939");
+  }
+  async ensureExportFolder(path) {
+    let current = "";
+    for (const part of path.split("/")) {
+      current = current ? `${current}/${part}` : part;
+      const existing = this.app.vault.getAbstractFileByPath(current);
+      if (existing instanceof import_obsidian10.TFolder) continue;
+      if (existing || await this.app.vault.adapter.exists(current)) throw new Error(`\u6279\u6CE8\u5BFC\u51FA\u76EE\u5F55\u4E0D\u53EF\u7528\uFF1A${current}`);
+      try {
+        await this.app.vault.createFolder(current);
+      } catch (error) {
+        if (!(this.app.vault.getAbstractFileByPath(current) instanceof import_obsidian10.TFolder)) throw error;
+      }
+    }
   }
   async testWriteAccess() {
     await this.ensureStoreDir();
@@ -11050,6 +11135,13 @@ function isAnnotationIndex(value) {
 }
 function cloneDocument2(document2) {
   return JSON.parse(JSON.stringify(document2));
+}
+function isLegacyExport(content, source, summary) {
+  const lines = content.split(/\r?\n/);
+  if (summary) {
+    return lines[0] === `# Notes for ${source}` && lines[1] === "" && /^Exported: \d{4}-\d{2}-\d{2}T/.test(lines[2] ?? "");
+  }
+  return lines[0] === "---" && lines[1] === `source: ${source}` && /^exportedAt: \d{4}-\d{2}-\d{2}T/.test(lines[2] ?? "");
 }
 function buildExportLines(title, sources, format, tags) {
   const entries = sources.flatMap((source) => collectExportEntries(source, tags));
@@ -12221,8 +12313,16 @@ var AnnotationSidebarView = class extends import_obsidian12.ItemView {
       if (this.annotationScope === "current" && !file) {
         return;
       }
-      const exported = this.annotationScope === "all" ? await this.plugin.store.exportAllNotes(this.exportFormat) : await this.plugin.store.exportNotes(file, this.exportFormat);
-      new import_obsidian12.Notice(`\u5DF2\u5BFC\u51FA\u7B14\u8BB0\u81F3 ${exported.path}`);
+      const folder = this.plugin.settings.exportFolder;
+      exportButton.disabled = true;
+      try {
+        const exported = this.annotationScope === "all" ? await this.plugin.store.exportAllNotes(this.exportFormat, folder) : await this.plugin.store.exportNotes(file, this.exportFormat, folder);
+        new import_obsidian12.Notice(`\u5DF2\u5BFC\u51FA\u7B14\u8BB0\u81F3 ${exported.path}`);
+      } catch (error) {
+        new import_obsidian12.Notice(`\u6279\u6CE8\u5BFC\u51FA\u5931\u8D25\uFF1A${error instanceof Error ? error.message : String(error)}`);
+      } finally {
+        exportButton.disabled = false;
+      }
     });
     footer.createDiv({ cls: "yh-ov-export-note", text: this.exportFormatLabel() });
   }
@@ -16194,7 +16294,8 @@ var OverlayAnnotationsPlugin = class extends import_obsidian21.Plugin {
       ...stored,
       annotationTags: normalizeAnnotationTags(stored.annotationTags),
       epubReadingProfile: readingProfile,
-      readingNoteFolder: normalizeReadingNoteFolder(storedSettings.readingNoteFolder ?? DEFAULT_SETTINGS.readingNoteFolder) ?? DEFAULT_SETTINGS.readingNoteFolder
+      readingNoteFolder: normalizeReadingNoteFolder(storedSettings.readingNoteFolder ?? DEFAULT_SETTINGS.readingNoteFolder) ?? DEFAULT_SETTINGS.readingNoteFolder,
+      exportFolder: normalizeExportFolder(storedSettings.exportFolder) ?? DEFAULT_SETTINGS.exportFolder
     };
     if (!storedSettings.epubReadingProfile) {
       try {

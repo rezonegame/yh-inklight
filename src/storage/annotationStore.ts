@@ -1,15 +1,16 @@
 /**
  * [INPUT]: 依赖 obsidian App/Vault/Adapter 的文件读写能力，依赖 storage/types 的 sidecar JSON 合约
- * [OUTPUT]: 对外提供 AnnotationStore，负责 Markdown/PDF 的 .obsidian-annotations sidecar 文件、索引、缓存、阅读笔记绑定持久化、批注变更通知与导出；源文件迁移不改名已绑定阅读笔记
+ * [OUTPUT]: 对外提供 AnnotationStore，负责批注 sidecar、索引、缓存与阅读笔记绑定；支持可选导出目录和同名文件保护
  * [POS]: storage 模块的唯一持久化入口，隔离原始 Markdown 与注释数据
  * [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
  */
 
-import { App, normalizePath, Notice, TFile } from "obsidian";
+import { App, normalizePath, Notice, TFile, TFolder } from "obsidian";
 
 import { createAnnotationUri } from "../links/annotationLink";
 import { AnnotationTagDefinition, resolveAnnotationTag } from "../tags/tagDomain";
 import { mergeAnnotationDocuments } from "./documentMerge";
+import { normalizeExportFolder } from "./exportDestination";
 import {
   AnnotationIndex,
   AnnotationIndexEntry,
@@ -35,6 +36,7 @@ const INDEX_PATH = normalizePath(`${STORE_DIR}/index.json`);
 const INDEX_BACKUP_PATH = normalizePath(`${INDEX_PATH}.bak`);
 const MAX_LEGACY_SIDECAR_NAME_LENGTH = 180;
 const MAX_COMPACT_SIDECAR_PREFIX_LENGTH = 96;
+const EXPORT_MARKER = /^<!-- yh-inklight:export:v1 ([a-f0-9]{64}) ([a-f0-9]{64})( custom)? -->\r?\n/;
 
 interface ExportDocumentSource {
   filePath: string;
@@ -434,15 +436,25 @@ export class AnnotationStore {
       }
       try {
         const content = await this.app.vault.read(excerptFile);
+        const marker = EXPORT_MARKER.exec(content);
+        const body = marker ? content.slice(marker[0].length) : content;
+        if (marker) {
+          if (marker[3] || marker[1] !== await this.exportKey(oldPath, "summary")
+            || marker[2] !== await this.hashExportBody(body)) continue;
+        } else if (!isLegacyExport(content, oldPath, candidate === candidates[0])) {
+          continue;
+        }
         // 替换内容中所有旧路径引用（标题、wikilink、hidden anchor）
-        const updated = content
+        const updatedBody = body
           .split(oldPath).join(newPath)
           .split(encodeURIComponent(oldPath)).join(encodeURIComponent(newPath));
+        const updated = marker ? await this.markExport(await this.exportKey(newPath, "summary"), updatedBody) : updatedBody;
         const newName = candidate.replace(oldBase.split(/[\\/]/).pop()!, newBase.split(/[\\/]/).pop()!);
         const targetPath = normalizePath(`${newParent}/${newName}`);
-        if (updated !== content) {
-          await this.app.vault.modify(excerptFile, updated);
-        }
+        await this.app.vault.process(excerptFile, (latest) => {
+          if (latest !== content) throw new Error("Export changed during source migration");
+          return updated;
+        });
         if (targetPath !== candidatePath && !this.app.vault.getAbstractFileByPath(targetPath)) {
           await this.app.vault.rename(excerptFile, targetPath);
         }
@@ -509,36 +521,85 @@ export class AnnotationStore {
 
   // ===== 旧版书签兼容字段（EPUB/PDF 通用）=====
 
-  async exportNotes(file: TFile, format: AnnotationExportFormat = "summary"): Promise<TFile> {
+  async exportNotes(file: TFile, format: AnnotationExportFormat = "summary", folder = ""): Promise<TFile> {
     const document = await this.getDocument(file);
     const baseName = file.basename || file.name.replace(/\.md$/i, "");
     const suffix = format === "summary" ? "" : `-${format}`;
-    const targetPath = normalizePath(`${file.parent?.path ?? ""}/${baseName}-notes${suffix}.md`);
     const lines = buildExportLines(`Notes for ${file.path}`, [{ filePath: file.path, document }], format, this.getAnnotationTags());
-
-    const existing = this.app.vault.getAbstractFileByPath(targetPath);
-    if (existing instanceof TFile) {
-      await this.app.vault.modify(existing, lines.join("\n"));
-      return existing;
-    }
-
-    return this.app.vault.create(targetPath, lines.join("\n"));
+    return this.writeExport(folder, file.parent?.path ?? "", `${baseName}-notes${suffix}`, file.path, format, lines.join("\n"));
   }
 
-  async exportAllNotes(format: AnnotationExportFormat = "summary"): Promise<TFile> {
+  async exportAllNotes(format: AnnotationExportFormat = "summary", folder = ""): Promise<TFile> {
     const documents = await this.getIndexedDocuments();
     const suffix = format === "summary" ? "" : `-${format}`;
-    const targetPath = normalizePath(`inklight-all-notes${suffix}.md`);
     const sources = documents.map((document) => ({ filePath: document.filePath, document }));
     const lines = buildExportLines("墨光批注全库汇总", sources, format, this.getAnnotationTags());
 
-    const existing = this.app.vault.getAbstractFileByPath(targetPath);
-    if (existing instanceof TFile) {
-      await this.app.vault.modify(existing, lines.join("\n"));
-      return existing;
-    }
+    return this.writeExport(folder, "", `inklight-all-notes${suffix}`, null, format, lines.join("\n"));
+  }
 
-    return this.app.vault.create(targetPath, lines.join("\n"));
+  private async exportKey(source: string | null, format: AnnotationExportFormat): Promise<string> {
+    return this.hashString(JSON.stringify([source, format]));
+  }
+
+  private async hashExportBody(body: string): Promise<string> {
+    return this.hashString(body.replace(/\r\n/g, "\n"));
+  }
+
+  private async markExport(key: string, body: string, custom = false): Promise<string> {
+    return `<!-- yh-inklight:export:v1 ${key} ${await this.hashExportBody(body)}${custom ? " custom" : ""} -->\n${body}`;
+  }
+
+  private async writeExport(folder: string, fallback: string, name: string, source: string | null,
+    format: AnnotationExportFormat, body: string): Promise<TFile> {
+    const custom = normalizeExportFolder(folder);
+    if (custom === null) throw new Error("批注导出文件夹无效");
+    const destination = custom || fallback;
+    if (custom && custom !== "/") await this.ensureExportFolder(custom);
+    const key = await this.exportKey(source, format);
+    const content = await this.markExport(key, body, Boolean(custom));
+    for (let number = 1; number <= 1000; number++) {
+      const filename = `${name}${number === 1 ? "" : ` (${number})`}.md`;
+      const path = destination && destination !== "/" ? normalizePath(`${destination}/${filename}`) : filename;
+      const existing = this.app.vault.getAbstractFileByPath(path);
+      if (!existing) {
+        if (await this.app.vault.adapter.exists(path)) continue;
+        try {
+          return await this.app.vault.create(path, content);
+        } catch (error) {
+          if (this.app.vault.getAbstractFileByPath(path) || await this.app.vault.adapter.exists(path)) continue;
+          throw error;
+        }
+      }
+      if (!(existing instanceof TFile)) continue;
+      const previous = await this.app.vault.read(existing);
+      const marker = EXPORT_MARKER.exec(previous);
+      if (!marker || marker[1] !== key || marker[2] !== await this.hashExportBody(previous.slice(marker[0].length))) continue;
+
+      // Recheck inside Vault.process so an edit made after read is never lost.
+      let replaced = false;
+      await this.app.vault.process(existing, (latest) => {
+        replaced = latest === previous;
+        return replaced ? content : latest;
+      });
+      if (replaced) return existing;
+    }
+    throw new Error("同名导出文件过多，请更换批注导出文件夹");
+  }
+
+  private async ensureExportFolder(path: string): Promise<void> {
+    let current = "";
+    for (const part of path.split("/")) {
+      current = current ? `${current}/${part}` : part;
+      const existing = this.app.vault.getAbstractFileByPath(current);
+      if (existing instanceof TFolder) continue;
+      if (existing || await this.app.vault.adapter.exists(current)) throw new Error(`批注导出目录不可用：${current}`);
+      try {
+        await this.app.vault.createFolder(current);
+      } catch (error) {
+        if (!(this.app.vault.getAbstractFileByPath(current) instanceof TFolder)) throw error;
+      }
+    }
   }
 
   async testWriteAccess(): Promise<string> {
@@ -842,6 +903,16 @@ function isAnnotationIndex(value: unknown): value is AnnotationIndex {
 
 function cloneDocument(document: FileAnnotationDocument): FileAnnotationDocument {
   return JSON.parse(JSON.stringify(document)) as FileAnnotationDocument;
+}
+
+function isLegacyExport(content: string, source: string, summary: boolean): boolean {
+  const lines = content.split(/\r?\n/);
+  if (summary) {
+    return lines[0] === `# Notes for ${source}` && lines[1] === ""
+      && /^Exported: \d{4}-\d{2}-\d{2}T/.test(lines[2] ?? "");
+  }
+  return lines[0] === "---" && lines[1] === `source: ${source}`
+    && /^exportedAt: \d{4}-\d{2}-\d{2}T/.test(lines[2] ?? "");
 }
 
 function buildExportLines(
